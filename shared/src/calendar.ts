@@ -45,3 +45,44 @@ export function isWeekend(iso: string): boolean {
   const dow = dayOfWeek(iso);
   return dow === 0 || dow === 6;
 }
+
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+
+export function weekdayName(iso: string): string {
+  return WEEKDAYS[dayOfWeek(iso)]!;
+}
+
+/**
+ * A lookup table of real dates for the extraction prompt.
+ *
+ * Language models are much more reliable at *looking up* "Friday" in a table
+ * than at doing calendar arithmetic, so we do the arithmetic here (where it's
+ * deterministic and unit-tested) and let the model pick from the table.
+ * Conventions: "Friday" = the next Friday on or after today; "next Friday" =
+ * the Friday in the following week; "end of the week" = this Friday;
+ * "this weekend" = this Saturday.
+ */
+export function buildDateContext(today: string): string {
+  const lines = [`Today: ${weekdayName(today)} ${today}`, `Tomorrow: ${weekdayName(addDays(today, 1))} ${addDays(today, 1)}`];
+
+  const dow = dayOfWeek(today);
+  // Each weekday's next occurrence (offset 0 = today), plus the one a week later.
+  for (let offset = 0; offset < 7; offset++) {
+    const date = addDays(today, offset);
+    const name = weekdayName(date);
+    lines.push(`"${name}" / "this ${name}": ${date}   |   "next ${name}": ${addDays(date, 7)}`);
+  }
+
+  const daysToFriday = (5 - dow + 7) % 7;
+  const daysToSaturday = (6 - dow + 7) % 7;
+  const daysToNextMonday = ((1 - dow + 7) % 7) || 7;
+  lines.push(`"end of the week": ${addDays(today, daysToFriday)}`);
+  lines.push(`"this weekend": ${addDays(today, daysToSaturday)}`);
+  lines.push(`"next week" (start): ${addDays(today, daysToNextMonday)}`);
+  lines.push(`"end of the month": ${lastDayOfMonth(today)}`);
+  return lines.join('\n');
+}
+
+export function lastDayOfMonth(iso: string): string {
+  return addDays(addMonths(iso.slice(0, 8) + '01', 1), -1);
+}

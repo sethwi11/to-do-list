@@ -14,8 +14,12 @@ const EnvSchema = z.object({
   // for their own purposes, and the API would silently start on their port.
   API_PORT: z.coerce.number().int().positive().default(3001),
   DB_PATH: z.string().default('data/todo.db'),
-  // Optional until Phase 3 adds AI extraction.
-  ANTHROPIC_API_KEY: z.string().optional(),
+  // Optional: without it the app works, but AI extraction returns a clear 503.
+  // An empty value (ANTHROPIC_API_KEY=) counts as unset.
+  ANTHROPIC_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

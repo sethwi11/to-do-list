@@ -12,6 +12,7 @@ interface Props {
   onCreateCategory: (name: string, color: CategoryColor) => Promise<boolean>;
   onUpdateCategory: (id: string, name: string, color: CategoryColor) => Promise<boolean>;
   onDeleteCategory: (category: Category) => void;
+  onOpenSettings: () => void;
 }
 
 const itemClass = (active: boolean) =>
@@ -21,7 +22,7 @@ const itemClass = (active: boolean) =>
       : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
   }`;
 
-export function Sidebar({ view, onSelect, countFor, categories, onCreateCategory, onUpdateCategory, onDeleteCategory }: Props) {
+export function Sidebar({ view, onSelect, countFor, categories, onCreateCategory, onUpdateCategory, onDeleteCategory, onOpenSettings }: Props) {
   // Which list is being edited ('new' = the create form).
   const [editing, setEditing] = useState<string | null>(null);
 
@@ -29,7 +30,18 @@ export function Sidebar({ view, onSelect, countFor, categories, onCreateCategory
     <nav aria-label="Views and lists" className="flex flex-col gap-5">
       <div className="flex items-center gap-2 px-2">
         <img src="/favicon.svg" alt="" className="h-7 w-7" />
-        <span className="text-lg font-semibold">Voice To-Do</span>
+        <span className="flex-1 text-lg font-semibold">Voice To-Do</span>
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          aria-label="Settings"
+          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+        >
+          <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+          </svg>
+        </button>
       </div>
 
       {/* Horizontal scrolling row on phones, vertical list from md up. */}

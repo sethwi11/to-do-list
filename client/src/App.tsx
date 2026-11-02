@@ -1,16 +1,32 @@
-import { useCallback, useMemo, useState } from 'react';
-import { nextOccurrence, type Category, type CategoryColor, type Task, type UpdateTaskInput } from '@todo/shared';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { nextOccurrence, type Category, type CategoryColor, type QueryRange, type Task, type UpdateTaskInput } from '@todo/shared';
+import { aiApi } from './api/ai';
 import { AddTaskForm } from './components/AddTaskForm';
 import { AppShell } from './components/AppShell';
 import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
+import { MorningBrief } from './components/MorningBrief';
+import { PlanDialog } from './components/PlanDialog';
+import { ReviewPanel } from './components/ReviewPanel';
+import { SettingsDialog } from './components/SettingsDialog';
+import { ShortcutsDialog } from './components/ShortcutsDialog';
 import { Sidebar } from './components/Sidebar';
+import { StatsCard } from './components/StatsCard';
 import { TaskList } from './components/TaskList';
 import { UndoToast, useToast } from './components/UndoToast';
+import { MicLiveBadge, VoicePanel } from './components/VoicePanel';
+import { useAssistant } from './hooks/useAssistant';
+import { useDueNotifications } from './hooks/useDueNotifications';
+import { usePlanMyDay } from './hooks/usePlanMyDay';
+import { useSettings } from './hooks/useSettings';
+import { useShortcuts } from './hooks/useShortcuts';
+import { useTheme } from './hooks/useTheme';
 import { useTodoData } from './hooks/useTodoData';
+import { useVoice } from './hooks/useVoice';
 import { formatDueDate, todayLocalISO } from './lib/dates';
 import { applyFilters, DEFAULT_FILTERS, isFiltering, sortByCompletedDesc, sortTasks, type Filters, type SortMode } from './lib/filters';
 import { computeMove } from './lib/ordering';
+import { computeStats } from './lib/stats';
 import { defaultDueDateFor, inView, openCount, viewTitle, type View } from './lib/views';
 
 // The sort choice is a per-browser preference, so localStorage is the right
@@ -27,6 +43,15 @@ function loadSortMode(): SortMode {
   return 'due';
 }
 
+const BRIEF_KEY = 'voice-todo.lastBrief';
+function briefSeenToday(today: string): boolean {
+  try {
+    return localStorage.getItem(BRIEF_KEY) === today;
+  } catch {
+    return true; // no storage: don't nag on every load
+  }
+}
+
 export default function App() {
   const data = useTodoData();
   const { tasks, categories, updateTask, deleteTask, restoreTask, reorderAll } = data;
@@ -34,6 +59,11 @@ export default function App() {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sortMode, setSortMode] = useState<SortMode>(loadSortMode);
   const { toast, show: showToast, dismiss: dismissToast } = useToast();
+  const { settings, update: updateSettings } = useSettings();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
+  useTheme(settings.theme);
 
   // Recomputed each render, so the app rolls over to the new day if left open past midnight.
   const today = todayLocalISO();
@@ -58,6 +88,18 @@ export default function App() {
   const visibleCount = openTasks.length + doneTasks.length;
 
   const countFor = useCallback((v: View) => openCount(tasks, v, today), [tasks, today]);
+  const stats = useMemo(() => computeStats(tasks, today), [tasks, today]);
+  const tasksById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+  const [showBrief, setShowBrief] = useState(() => !briefSeenToday(today));
+
+  useEffect(() => {
+    aiApi.status().then(
+      (s) => setAiConfigured(s.configured),
+      () => setAiConfigured(null),
+    );
+  }, []);
+
+  useDueNotifications(tasks, settings.notifications);
 
   // ---- task actions, with undo where it matters ---------------------------
 
@@ -138,6 +180,72 @@ export default function App() {
     setFilters(DEFAULT_FILTERS); // filters are per-visit; carrying them over is confusing
   }
 
+  // ---- voice + AI ------------------------------------------------------------
+
+  /** A voice query ("what do I have tomorrow?") switches the list to show the answer. */
+  function showQuery(range: QueryRange) {
+    if (range === 'tomorrow') {
+      setView({ type: 'smart', id: 'upcoming' });
+      setFilters({ ...DEFAULT_FILTERS, due: 'tomorrow' });
+    } else {
+      selectView({ type: 'smart', id: range === 'upcoming' ? 'upcoming' : range === 'overdue' ? 'overdue' : range === 'all' ? 'all' : 'today' });
+    }
+  }
+
+  // The assistant speaks through the voice layer (which pauses the mic while
+  // talking), and the voice layer sends transcripts to the assistant. A ref
+  // breaks that circular dependency between the two hooks.
+  const sayRef = useRef<(text: string) => Promise<void>>(async () => {});
+  const assistant = useAssistant({
+    tasks,
+    categories,
+    settings,
+    createTask: data.createTask,
+    updateTask,
+    deleteTask,
+    onQuery: showQuery,
+    speak: (text) => sayRef.current(text),
+    showToast,
+  });
+  const voice = useVoice(assistant.process);
+  sayRef.current = voice.say;
+
+  const planner = usePlanMyDay({
+    tasks,
+    today,
+    updateTask,
+    speak: settings.tts ? voice.say : null,
+    showToast,
+  });
+
+  function dismissBrief() {
+    setShowBrief(false);
+    try {
+      localStorage.setItem(BRIEF_KEY, today);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const pttEnabled = voice.supported && settings.voiceMode === 'push-to-talk';
+  useShortcuts({
+    newTask: () => {
+      if (isCompletedView) selectView({ type: 'smart', id: 'today' });
+      // Wait a frame in case the form had to render first.
+      requestAnimationFrame(() => document.getElementById('new-task-title')?.focus());
+    },
+    search: () => document.getElementById('task-search')?.focus(),
+    undo: () => {
+      if (toast?.onUndo) {
+        toast.onUndo();
+        dismissToast();
+      }
+    },
+    showHelp: () => setShortcutsOpen(true),
+    pttDown: pttEnabled ? voice.startHold : undefined,
+    pttUp: pttEnabled ? voice.endHold : undefined,
+  });
+
   return (
     <>
       <AppShell
@@ -150,16 +258,40 @@ export default function App() {
             onCreateCategory={handleCreateCategory}
             onUpdateCategory={handleUpdateCategory}
             onDeleteCategory={handleDeleteCategory}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         }
         main={
           <div className="flex flex-col gap-4">
-            <header>
-              <h1 className="text-2xl font-semibold">{viewTitle(view, categories)}</h1>
-              <p className="text-sm text-slate-500">
-                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
-              </p>
+            <header className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h1 className="text-2xl font-semibold">{viewTitle(view, categories)}</h1>
+                <p className="text-sm text-slate-500">
+                  {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+              {view.type === 'smart' && view.id === 'today' && (
+                <button
+                  type="button"
+                  onClick={() => void planner.start()}
+                  className="rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950"
+                >
+                  ✨ Plan my day
+                </button>
+              )}
             </header>
+
+            {showBrief && !data.loading && (
+              <MorningBrief
+                tasks={tasks}
+                today={today}
+                onDismiss={dismissBrief}
+                onPlan={() => {
+                  dismissBrief();
+                  void planner.start();
+                }}
+              />
+            )}
 
             {data.error && (
               <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
@@ -180,7 +312,7 @@ export default function App() {
                 categories={categories}
                 defaultDueDate={defaultDueDateFor(view, today)}
                 defaultCategoryId={view.type === 'category' ? view.id : null}
-                onCreate={data.createTask}
+                onCreate={async (input) => (await data.createTask(input)) !== null}
               />
             )}
 
@@ -222,13 +354,63 @@ export default function App() {
           </div>
         }
         panel={
-          <section className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700">
-            <h2 className="font-medium text-slate-700 dark:text-slate-300">Voice &amp; Review</h2>
-            <p className="mt-1">Brain dump, the mic button, and the review queue will live here (Phases 3–5).</p>
-          </section>
+          <div className="flex flex-col gap-4">
+            {aiConfigured === false && (
+              <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                AI isn't set up yet. Add your <code>ANTHROPIC_API_KEY</code> to the <code>.env</code> file in the project root and restart{' '}
+                <code>npm run dev</code>. The rest of the app works without it.
+              </p>
+            )}
+            <VoicePanel
+              settings={settings}
+              onSettingsChange={updateSettings}
+              voice={voice}
+              busy={assistant.busy}
+              aiError={assistant.error}
+              onDismissAiError={assistant.dismissError}
+              reply={assistant.reply}
+              onBrainDump={(text) => assistant.process(text, 'brain-dump')}
+            />
+            <ReviewPanel
+              items={assistant.items}
+              categories={categories}
+              today={today}
+              autoAccept={settings.autoAccept}
+              onAutoAcceptChange={(on) => updateSettings({ autoAccept: on })}
+              onAccept={(id) => void assistant.accept(id)}
+              onReject={assistant.reject}
+              onAcceptAll={() => void assistant.acceptAll()}
+              onClear={assistant.clearAll}
+              onToggle={assistant.toggleChecked}
+              onEdit={assistant.updateTaskDraft}
+            />
+            <StatsCard stats={stats} />
+          </div>
         }
       />
+      <MicLiveBadge live={voice.listening || voice.conversationOn} />
       <UndoToast toast={toast} onDismiss={dismissToast} />
+      <PlanDialog
+        open={planner.open}
+        onClose={planner.close}
+        loading={planner.loading}
+        error={planner.error}
+        plan={planner.plan}
+        tasksById={tasksById}
+        onAccept={() => void planner.accept()}
+      />
+      <SettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        settings={settings}
+        onChange={updateSettings}
+        onImported={() => void data.reload()}
+        onShowShortcuts={() => {
+          setSettingsOpen(false);
+          setShortcutsOpen(true);
+        }}
+      />
+      <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </>
   );
 }

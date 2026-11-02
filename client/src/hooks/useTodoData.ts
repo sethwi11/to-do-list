@@ -58,15 +58,16 @@ export function useTodoData() {
 
   // ---- tasks -------------------------------------------------------------
 
+  /** Returns the created task, or null on failure (the error banner shows why). */
   const createTask = useCallback(
-    async (input: CreateTaskInput) => {
+    async (input: CreateTaskInput): Promise<Task | null> => {
       try {
         const task = await tasksApi.create(input);
         setTasks((prev) => [...prev, task]);
-        return true;
+        return task;
       } catch (err) {
         fail(err);
-        return false;
+        return null;
       }
     },
     [fail],

@@ -1,18 +1,11 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../src/app';
-import { openDatabase } from '../src/db/connection';
-import { SqliteCategoryRepository } from '../src/repositories/SqliteCategoryRepository';
-import { SqliteTaskRepository } from '../src/repositories/SqliteTaskRepository';
+import { makeTestApp } from './helpers';
 
 // A fresh in-memory database for every test, so tests can't affect each other.
-let app: ReturnType<typeof createApp>;
+let app: ReturnType<typeof makeTestApp>;
 beforeEach(() => {
-  const db = openDatabase(':memory:');
-  app = createApp({
-    tasks: new SqliteTaskRepository(db),
-    categories: new SqliteCategoryRepository(db),
-  });
+  app = makeTestApp();
 });
 
 describe('tasks API', () => {

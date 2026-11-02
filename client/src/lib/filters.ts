@@ -6,7 +6,7 @@ export interface Filters {
   /** A category id, 'none' for uncategorized, or 'any'. */
   categoryId: string;
   status: 'any' | 'todo' | 'done';
-  due: 'any' | 'overdue' | 'today' | 'week' | 'none';
+  due: 'any' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'none';
 }
 
 export const DEFAULT_FILTERS: Filters = { query: '', priority: 'any', categoryId: 'any', status: 'any', due: 'any' };
@@ -33,6 +33,8 @@ export function applyFilters(tasks: Task[], f: Filters, today: string): Task[] {
         return t.dueDate !== null && t.dueDate < today;
       case 'today':
         return t.dueDate === today;
+      case 'tomorrow':
+        return t.dueDate === addDays(today, 1);
       case 'week':
         return t.dueDate !== null && t.dueDate >= today && t.dueDate <= addDays(today, 7);
       case 'none':

@@ -1,8 +1,26 @@
 @import 'tailwindcss';
 
+/* dark: follows a .dark class on <html> (set by useTheme), so a manual toggle
+   can override the OS setting. Tailwind's default would only follow the OS. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Visible keyboard focus everywhere (accessibility), without showing rings on mouse clicks. */
 @layer base {
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-indigo-500;
+  }
+}
+
+/* Mic "listening" pulse. Respect users who ask the OS to reduce motion. */
+@keyframes mic-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(239 68 68 / 0.55); }
+  100% { box-shadow: 0 0 0 18px rgb(239 68 68 / 0); }
+}
+.mic-pulse {
+  animation: mic-pulse 1.2s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mic-pulse {
+    animation: none;
   }
 }

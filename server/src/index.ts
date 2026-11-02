@@ -1,4 +1,7 @@
+import Anthropic from '@anthropic-ai/sdk';
+import { ClaudeAiService } from './ai/ClaudeAiService';
 import { createApp } from './app';
+import { BackupRepository } from './repositories/BackupRepository';
 import { openDatabase } from './db/connection';
 import { env } from './env';
 import { SqliteCategoryRepository } from './repositories/SqliteCategoryRepository';
@@ -7,7 +10,13 @@ import { SqliteTaskRepository } from './repositories/SqliteTaskRepository';
 const db = openDatabase(env.DB_PATH);
 
 const tasks = new SqliteTaskRepository(db);
-const app = createApp({ tasks, categories: new SqliteCategoryRepository(db) });
+const categories = new SqliteCategoryRepository(db);
+
+// The API key is read here, on the server, and never sent to the browser.
+const ai = env.ANTHROPIC_API_KEY ? new ClaudeAiService(new Anthropic({ apiKey: env.ANTHROPIC_API_KEY })) : null;
+if (!ai) console.warn('ANTHROPIC_API_KEY is not set: AI extraction is disabled (see README).');
+
+const app = createApp({ tasks, categories, backup: new BackupRepository(db, tasks, categories), ai });
 
 // Soft-deleted tasks only need to live long enough to be undone. Clear out
 // anything deleted more than 30 days ago on each startup.
