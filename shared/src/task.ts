@@ -62,6 +62,12 @@ export const TaskSchema = z.object({
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
   completedAt: z.iso.datetime().nullable(),
+  /**
+   * For a completed recurring task: the id of the occurrence its completion
+   * created. Lets the server remove that occurrence again if you un-complete
+   * (or undo), so toggling a checkbox never piles up duplicates.
+   */
+  nextOccurrenceId: z.uuid().nullable(),
 });
 
 /**

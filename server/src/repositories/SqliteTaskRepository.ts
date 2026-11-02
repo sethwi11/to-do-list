@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import type { Category, CreateTaskInput, Task, UpdateTaskInput } from '@todo/shared';
+import { nextOccurrence, type CreateTaskInput, type Task, type UpdateTaskInput } from '@todo/shared';
 import type { Db } from '../db/connection';
-import type { CategoryRepository, TaskRepository } from './TaskRepository';
+import type { RequestContext, TaskRepository } from './TaskRepository';
 
 /** Shape of a row in the `tasks` table (snake_case, JSON stored as text). */
 interface TaskRow {
@@ -22,19 +22,12 @@ interface TaskRow {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  next_occurrence_id: string | null;
 }
 
-interface CategoryRow {
-  id: string;
-  name: string;
-  color: Category['color'];
-  sort_order: number;
-  created_at: string;
-}
-
-// Gap between sortOrder values. Leaving room means a drag-and-drop move
-// (Phase 2) can land *between* two tasks by updating only the moved row.
-const SORT_GAP = 1024;
+// Gap between sortOrder values. Leaving room means a drag-and-drop move can
+// land *between* two tasks (at the midpoint) by updating only the moved row.
+export const SORT_GAP = 1024;
 
 function rowToTask(row: TaskRow): Task {
   return {
@@ -55,6 +48,7 @@ function rowToTask(row: TaskRow): Task {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     completedAt: row.completed_at,
+    nextOccurrenceId: row.next_occurrence_id,
   };
 }
 
@@ -77,8 +71,12 @@ function taskToRow(task: Task): TaskRow {
     created_at: task.createdAt,
     updated_at: task.updatedAt,
     completed_at: task.completedAt,
+    next_occurrence_id: task.nextOccurrenceId,
   };
 }
+
+// Column list derived from the mapper, so INSERT/UPDATE can't fall out of sync with it.
+const COLUMNS = Object.keys(taskToRow({} as Task));
 
 export class SqliteTaskRepository implements TaskRepository {
   // Prepared once, reused on every call: SQLite parses and plans each query only once.
@@ -86,30 +84,22 @@ export class SqliteTaskRepository implements TaskRepository {
 
   constructor(private readonly db: Db) {
     this.stmts = {
-      list: db.prepare<[], TaskRow>(
-        'SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY sort_order',
-      ),
+      list: db.prepare<[], TaskRow>('SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY sort_order'),
       get: db.prepare<[string], TaskRow>('SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL'),
+      getDeleted: db.prepare<[string], TaskRow>('SELECT * FROM tasks WHERE id = ? AND deleted_at IS NOT NULL'),
       maxSort: db.prepare<[], { max: number | null }>('SELECT MAX(sort_order) AS max FROM tasks'),
-      insert: db.prepare<TaskRow>(`
-        INSERT INTO tasks (id, title, notes, due_date, due_time, priority, category_id, status,
-          subtasks, recurrence, estimated_minutes, source, source_snippet, sort_order,
-          created_at, updated_at, completed_at)
-        VALUES (@id, @title, @notes, @due_date, @due_time, @priority, @category_id, @status,
-          @subtasks, @recurrence, @estimated_minutes, @source, @source_snippet, @sort_order,
-          @created_at, @updated_at, @completed_at)
-      `),
-      update: db.prepare<TaskRow>(`
-        UPDATE tasks SET title = @title, notes = @notes, due_date = @due_date, due_time = @due_time,
-          priority = @priority, category_id = @category_id, status = @status, subtasks = @subtasks,
-          recurrence = @recurrence, estimated_minutes = @estimated_minutes, source = @source,
-          source_snippet = @source_snippet, sort_order = @sort_order, updated_at = @updated_at,
-          completed_at = @completed_at
-        WHERE id = @id
-      `),
-      softDelete: db.prepare<[string, string]>(
-        'UPDATE tasks SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL',
+      insert: db.prepare<TaskRow>(
+        `INSERT INTO tasks (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map((c) => '@' + c).join(', ')})`,
       ),
+      update: db.prepare<TaskRow>(
+        `UPDATE tasks SET ${COLUMNS.filter((c) => c !== 'id' && c !== 'created_at')
+          .map((c) => `${c} = @${c}`)
+          .join(', ')} WHERE id = @id`,
+      ),
+      softDelete: db.prepare<[string, string]>('UPDATE tasks SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL'),
+      restore: db.prepare<[string]>('UPDATE tasks SET deleted_at = NULL WHERE id = ?'),
+      setSort: db.prepare<[number, string]>('UPDATE tasks SET sort_order = ? WHERE id = ?'),
+      purge: db.prepare<[string]>('DELETE FROM tasks WHERE deleted_at IS NOT NULL AND deleted_at < ?'),
     };
   }
 
@@ -123,6 +113,84 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   async create(input: CreateTaskInput): Promise<Task> {
+    return this.insert(input);
+  }
+
+  async update(id: string, changes: UpdateTaskInput, ctx: RequestContext): Promise<Task | null> {
+    // Read-modify-write inside a transaction, so two concurrent PATCHes can't
+    // interleave, and creating/removing a recurrence is all-or-nothing.
+    return this.db.transaction((): Task | null => {
+      const row = this.stmts.get.get(id);
+      if (!row) return null;
+      const existing = rowToTask(row);
+
+      // Drop keys explicitly set to undefined so they don't overwrite real values.
+      const defined = Object.fromEntries(
+        Object.entries(changes).filter(([, v]) => v !== undefined),
+      ) as Partial<Task>;
+
+      const now = new Date().toISOString();
+      const next: Task = { ...existing, ...defined, id: existing.id, updatedAt: now };
+
+      const completing = existing.status !== 'done' && next.status === 'done';
+      const reopening = existing.status === 'done' && next.status === 'todo';
+
+      // completedAt is derived from status transitions, never set directly.
+      if (completing) next.completedAt = now;
+      if (reopening) next.completedAt = null;
+
+      if (completing && next.recurrence !== 'none') {
+        const spawned = this.insert({
+          title: next.title,
+          notes: next.notes,
+          dueDate: nextOccurrence(next.dueDate, next.recurrence, ctx.today),
+          dueTime: next.dueTime,
+          priority: next.priority,
+          categoryId: next.categoryId,
+          subtasks: next.subtasks.map((s) => ({ ...s, done: false })),
+          recurrence: next.recurrence,
+          estimatedMinutes: next.estimatedMinutes,
+          source: next.source,
+          sourceSnippet: next.sourceSnippet,
+        });
+        next.nextOccurrenceId = spawned.id;
+      }
+
+      if (reopening && existing.nextOccurrenceId) {
+        // Remove the occurrence we created, unless you've already finished it.
+        const spawned = this.stmts.get.get(existing.nextOccurrenceId);
+        if (spawned && spawned.status === 'todo') this.stmts.softDelete.run(now, spawned.id);
+        next.nextOccurrenceId = null;
+      }
+
+      this.stmts.update.run(taskToRow(next));
+      return next;
+    })();
+  }
+
+  async delete(id: string): Promise<boolean> {
+    return this.stmts.softDelete.run(new Date().toISOString(), id).changes > 0;
+  }
+
+  async restore(id: string): Promise<Task | null> {
+    const row = this.stmts.getDeleted.get(id);
+    if (!row) return null;
+    this.stmts.restore.run(id);
+    return rowToTask(row);
+  }
+
+  async reorder(ids: string[]): Promise<void> {
+    this.db.transaction(() => {
+      ids.forEach((id, i) => this.stmts.setSort.run((i + 1) * SORT_GAP, id));
+    })();
+  }
+
+  async purgeDeleted(before: string): Promise<number> {
+    return this.stmts.purge.run(before).changes;
+  }
+
+  /** Synchronous insert, so it can run inside a transaction. */
+  private insert(input: CreateTaskInput): Task {
     const now = new Date().toISOString();
     const maxSort = this.stmts.maxSort.get()?.max ?? 0;
 
@@ -144,55 +212,10 @@ export class SqliteTaskRepository implements TaskRepository {
       createdAt: now,
       updatedAt: now,
       completedAt: null,
+      nextOccurrenceId: null,
     };
 
     this.stmts.insert.run(taskToRow(task));
     return task;
-  }
-
-  async update(id: string, changes: UpdateTaskInput): Promise<Task | null> {
-    // Read-modify-write inside a transaction so two concurrent PATCHes
-    // can't interleave and lose one another's changes.
-    return this.db.transaction((): Task | null => {
-      const row = this.stmts.get.get(id);
-      if (!row) return null;
-      const existing = rowToTask(row);
-
-      // Drop keys explicitly set to undefined so they don't overwrite real values.
-      const defined = Object.fromEntries(
-        Object.entries(changes).filter(([, v]) => v !== undefined),
-      ) as Partial<Task>;
-
-      const now = new Date().toISOString();
-      const next: Task = { ...existing, ...defined, id: existing.id, updatedAt: now };
-
-      // completedAt is derived from status transitions, never set directly.
-      if (existing.status !== 'done' && next.status === 'done') next.completedAt = now;
-      if (next.status === 'todo') next.completedAt = null;
-
-      this.stmts.update.run(taskToRow(next));
-      return next;
-    })();
-  }
-
-  async delete(id: string): Promise<boolean> {
-    return this.stmts.softDelete.run(new Date().toISOString(), id).changes > 0;
-  }
-}
-
-export class SqliteCategoryRepository implements CategoryRepository {
-  constructor(private readonly db: Db) {}
-
-  async list(): Promise<Category[]> {
-    const rows = this.db
-      .prepare<[], CategoryRow>('SELECT * FROM categories ORDER BY sort_order')
-      .all();
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      color: r.color,
-      sortOrder: r.sort_order,
-      createdAt: r.created_at,
-    }));
   }
 }

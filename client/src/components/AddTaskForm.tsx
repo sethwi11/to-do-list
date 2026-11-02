@@ -5,25 +5,29 @@ interface Props {
   categories: Category[];
   /** Pre-filled due date (today when you're in the Today view). */
   defaultDueDate: string | null;
+  /** Pre-selected list (the current list when you're in a list view). */
+  defaultCategoryId: string | null;
   onCreate: (input: CreateTaskInput) => Promise<boolean>;
 }
 
 const inputClass =
   'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900';
 
-export function AddTaskForm({ categories, defaultDueDate, onCreate }: Props) {
+export function AddTaskForm({ categories, defaultDueDate, defaultCategoryId, onCreate }: Props) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(defaultDueDate ?? '');
   const [priority, setPriority] = useState<Priority>('medium');
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, setCategoryId] = useState(defaultCategoryId ?? '');
   const [submitting, setSubmitting] = useState(false);
 
-  // Follow the view's default when it changes (e.g. switching Today -> All),
+  // Follow the view's defaults when the view changes (e.g. Today -> a list),
   // using React's "adjust state during render" pattern instead of an effect.
-  const [prevDefault, setPrevDefault] = useState(defaultDueDate);
-  if (prevDefault !== defaultDueDate) {
-    setPrevDefault(defaultDueDate);
+  const defaultsKey = `${defaultDueDate}|${defaultCategoryId}`;
+  const [prevDefaults, setPrevDefaults] = useState(defaultsKey);
+  if (prevDefaults !== defaultsKey) {
+    setPrevDefaults(defaultsKey);
     setDueDate(defaultDueDate ?? '');
+    setCategoryId(defaultCategoryId ?? '');
   }
 
   async function handleSubmit(e: FormEvent) {

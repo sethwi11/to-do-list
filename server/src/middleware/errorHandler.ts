@@ -20,6 +20,11 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
 
+  if (err?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    res.status(409).json({ error: 'Conflict', message: 'A list with that name already exists' });
+    return;
+  }
+
   console.error(err);
   res.status(500).json({ error: 'InternalError', message: 'Something went wrong on the server' });
 };

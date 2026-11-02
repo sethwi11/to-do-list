@@ -1,7 +1,8 @@
 import express from 'express';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import type { CategoryRepository, TaskRepository } from './repositories/TaskRepository';
-import { categoriesRouter, tasksRouter } from './routes/tasks';
+import { categoriesRouter } from './routes/categories';
+import { tasksRouter } from './routes/tasks';
 
 export interface AppDeps {
   tasks: TaskRepository;

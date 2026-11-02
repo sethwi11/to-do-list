@@ -29,3 +29,19 @@ export const CategorySchema = z.object({
 
 export type CategoryColor = z.infer<typeof CategoryColorSchema>;
 export type Category = z.infer<typeof CategorySchema>;
+
+export const CreateCategoryInputSchema = z.object({
+  name: CategorySchema.shape.name,
+  color: CategoryColorSchema.optional(),
+});
+
+export const UpdateCategoryInputSchema = z
+  .object({
+    name: CategorySchema.shape.name.optional(),
+    color: CategoryColorSchema.optional(),
+    sortOrder: z.number().optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+
+export type CreateCategoryInput = z.infer<typeof CreateCategoryInputSchema>;
+export type UpdateCategoryInput = z.infer<typeof UpdateCategoryInputSchema>;

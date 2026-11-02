@@ -62,6 +62,14 @@ const migrations: Migration[] = [
     ] as const;
     defaults.forEach(([name, color], i) => insert.run(randomUUID(), name, color, (i + 1) * 1024, now));
   },
+
+  // v2: link a completed recurring task to the occurrence its completion created
+  (db) => {
+    db.exec(`
+      ALTER TABLE tasks ADD COLUMN next_occurrence_id TEXT;
+      CREATE INDEX idx_tasks_deleted_at ON tasks(deleted_at) WHERE deleted_at IS NOT NULL;
+    `);
+  },
 ];
 
 export function runMigrations(db: Db): void {

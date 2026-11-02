@@ -1,3 +1,5 @@
+import { todayLocalISO } from '../lib/dates';
+
 /**
  * Error type for every failed API call. `status` is 0 when the server
  * couldn't be reached at all (it's down, or there's no network).
@@ -22,7 +24,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   try {
     res = await fetch(`/api${path}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      // X-Client-Date tells the server what "today" is for *you* (used for recurrences).
+      headers: { 'Content-Type': 'application/json', 'X-Client-Date': todayLocalISO(), ...init?.headers },
     });
   } catch {
     throw new ApiError(0, "Can't reach the server. Is it running? (npm run dev)");

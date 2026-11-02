@@ -1,14 +1,19 @@
 import { createApp } from './app';
 import { openDatabase } from './db/connection';
 import { env } from './env';
-import { SqliteCategoryRepository, SqliteTaskRepository } from './repositories/SqliteTaskRepository';
+import { SqliteCategoryRepository } from './repositories/SqliteCategoryRepository';
+import { SqliteTaskRepository } from './repositories/SqliteTaskRepository';
 
 const db = openDatabase(env.DB_PATH);
 
-const app = createApp({
-  tasks: new SqliteTaskRepository(db),
-  categories: new SqliteCategoryRepository(db),
-});
+const tasks = new SqliteTaskRepository(db);
+const app = createApp({ tasks, categories: new SqliteCategoryRepository(db) });
+
+// Soft-deleted tasks only need to live long enough to be undone. Clear out
+// anything deleted more than 30 days ago on each startup.
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const purged = await tasks.purgeDeleted(new Date(Date.now() - THIRTY_DAYS_MS).toISOString());
+if (purged > 0) console.log(`Purged ${purged} task(s) deleted more than 30 days ago`);
 
 // Bind to localhost only: there's no auth, so nothing else on the network should reach this.
 app.listen(env.API_PORT, '127.0.0.1', () => {
