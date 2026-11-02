@@ -1,10 +1,11 @@
+import { CheckCircle2, SearchX } from 'lucide-react';
 import type { View } from '../lib/views';
 
 const smartCopy = {
-  today: ['Nothing due today', 'Add a task above. It will be due today by default.'],
+  today: ['Nothing due today', 'Add a task above, or hold the mic and say what you need to do.'],
   upcoming: ['Nothing in the next 7 days', 'Tasks due tomorrow through next week show up here.'],
-  overdue: ['Nothing overdue', "You're all caught up. Nice."],
-  all: ['No tasks yet', 'Type your first task in the box above and press Enter.'],
+  overdue: ['Nothing overdue', "You're all caught up."],
+  all: ['No tasks yet', 'Add your first task above, or try a brain dump.'],
   completed: ['Nothing completed yet', 'Tasks you check off land here.'],
 } as const;
 
@@ -17,15 +18,17 @@ interface Props {
 
 export function EmptyState({ view, filtered, onClearFilters }: Props) {
   const [title, hint] = filtered
-    ? ['No tasks match your filters', 'Try a different search, or clear the filters.']
+    ? ['No matching tasks', 'Try a different search, or clear the filters.']
     : view.type === 'category'
-      ? ['This list is empty', 'Add a task above. It will go into this list.']
+      ? ['This list is empty', 'Add a task above and it goes into this list.']
       : smartCopy[view.id];
+  const Icon = filtered ? SearchX : CheckCircle2;
 
   return (
-    <div className="rounded-xl border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-700">
-      <p className="font-medium">{title}</p>
-      <p className="mt-1 text-sm text-slate-500">{hint}</p>
+    <div className="flex flex-col items-center px-6 py-14 text-center">
+      <Icon className="h-10 w-10 text-slate-300 dark:text-slate-700" strokeWidth={1.5} aria-hidden />
+      <p className="mt-3 font-medium text-slate-700 dark:text-slate-200">{title}</p>
+      <p className="mt-1 max-w-xs text-sm text-slate-500">{hint}</p>
       {filtered && (
         <button type="button" onClick={onClearFilters} className="mt-3 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400">
           Clear filters

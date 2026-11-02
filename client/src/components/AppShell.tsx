@@ -12,10 +12,10 @@ import type { ReactNode } from 'react';
 export function AppShell({ sidebar, main, panel }: { sidebar: ReactNode; main: ReactNode; panel: ReactNode }) {
   return (
     <div className="min-h-dvh bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-6 px-4 py-4 md:grid-cols-[220px_minmax(0,1fr)] md:py-6 lg:grid-cols-[220px_minmax(0,1fr)_320px]">
-        <aside className="md:sticky md:top-6 md:self-start">{sidebar}</aside>
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)] gap-6 px-4 pt-4 pb-28 md:grid-cols-[200px_minmax(0,1fr)] md:gap-8 md:py-8 lg:grid-cols-[200px_minmax(0,1fr)_300px] lg:pb-8 xl:grid-cols-[220px_minmax(0,1fr)_340px]">
+        <aside className="md:sticky md:top-8 md:self-start">{sidebar}</aside>
         <main className="min-w-0">{main}</main>
-        <aside aria-label="Voice and review" className="md:col-span-2 lg:col-span-1 lg:sticky lg:top-6 lg:self-start">
+        <aside aria-label="Voice and review" className="md:col-span-2 lg:sticky lg:top-8 lg:col-span-1 lg:self-start">
           {panel}
         </aside>
       </div>

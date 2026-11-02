@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CircleAlert, RotateCw, Sparkles, X } from 'lucide-react';
 import { nextOccurrence, type Category, type CategoryColor, type QueryRange, type Task, type UpdateTaskInput } from '@todo/shared';
 import { aiApi } from './api/ai';
 import { AddTaskForm } from './components/AddTaskForm';
@@ -14,7 +15,7 @@ import { Sidebar } from './components/Sidebar';
 import { StatsCard } from './components/StatsCard';
 import { TaskList } from './components/TaskList';
 import { UndoToast, useToast } from './components/UndoToast';
-import { MicLiveBadge, VoicePanel } from './components/VoicePanel';
+import { FloatingMic, MicLiveBadge, VoicePanel } from './components/VoicePanel';
 import { useAssistant } from './hooks/useAssistant';
 import { useDueNotifications } from './hooks/useDueNotifications';
 import { usePlanMyDay } from './hooks/usePlanMyDay';
@@ -259,57 +260,46 @@ export default function App() {
             onUpdateCategory={handleUpdateCategory}
             onDeleteCategory={handleDeleteCategory}
             onOpenSettings={() => setSettingsOpen(true)}
+            stats={stats}
           />
         }
         main={
           <div className="flex flex-col gap-4">
-            <header className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <h1 className="text-2xl font-semibold">{viewTitle(view, categories)}</h1>
+            <header className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="truncate text-2xl font-semibold tracking-tight">{viewTitle(view, categories)}</h1>
                 <p className="text-sm text-slate-500">
                   {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
               </div>
               {view.type === 'smart' && view.id === 'today' && (
-                <button
-                  type="button"
-                  onClick={() => void planner.start()}
-                  className="rounded-lg border border-indigo-200 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-300 dark:hover:bg-indigo-950"
-                >
-                  ✨ Plan my day
+                <button type="button" onClick={() => void planner.start()} className="pill shrink-0 text-indigo-600 dark:text-indigo-400">
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden /> Plan my day
                 </button>
               )}
             </header>
 
             {showBrief && !data.loading && (
-              <MorningBrief
-                tasks={tasks}
-                today={today}
-                onDismiss={dismissBrief}
-                onPlan={() => {
-                  dismissBrief();
-                  void planner.start();
-                }}
-              />
+              <MorningBrief tasks={tasks} today={today} onDismiss={dismissBrief} />
             )}
 
             {data.error && (
-              <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-                <span>{data.error}</span>
-                <span className="flex shrink-0 gap-2">
-                  <button type="button" onClick={() => void data.reload()} className="font-medium underline">
-                    Retry
-                  </button>
-                  <button type="button" onClick={data.dismissError} aria-label="Dismiss error" className="font-medium">
-                    ✕
-                  </button>
-                </span>
+              <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/50 dark:text-red-200">
+                <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="flex-1">{data.error}</span>
+                <button type="button" onClick={() => void data.reload()} className="pill text-red-800 hover:bg-red-100 dark:text-red-200 dark:hover:bg-red-900">
+                  <RotateCw className="h-3.5 w-3.5" aria-hidden /> Retry
+                </button>
+                <button type="button" onClick={data.dismissError} aria-label="Dismiss error" className="icon-btn h-7 w-7 text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-900">
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
               </div>
             )}
 
             {!isCompletedView && (
               <AddTaskForm
                 categories={categories}
+                today={today}
                 defaultDueDate={defaultDueDateFor(view, today)}
                 defaultCategoryId={view.type === 'category' ? view.id : null}
                 onCreate={async (input) => (await data.createTask(input)) !== null}
@@ -356,7 +346,7 @@ export default function App() {
         panel={
           <div className="flex flex-col gap-4">
             {aiConfigured === false && (
-              <p role="note" className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              <p role="note" className="rounded-2xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
                 AI isn't set up yet. Add your <code>ANTHROPIC_API_KEY</code> to the <code>.env</code> file in the project root and restart{' '}
                 <code>npm run dev</code>. The rest of the app works without it.
               </p>
@@ -371,24 +361,28 @@ export default function App() {
               reply={assistant.reply}
               onBrainDump={(text) => assistant.process(text, 'brain-dump')}
             />
-            <ReviewPanel
-              items={assistant.items}
-              categories={categories}
-              today={today}
-              autoAccept={settings.autoAccept}
-              onAutoAcceptChange={(on) => updateSettings({ autoAccept: on })}
-              onAccept={(id) => void assistant.accept(id)}
-              onReject={assistant.reject}
-              onAcceptAll={() => void assistant.acceptAll()}
-              onClear={assistant.clearAll}
-              onToggle={assistant.toggleChecked}
-              onEdit={assistant.updateTaskDraft}
-            />
-            <StatsCard stats={stats} />
+            {assistant.items.length > 0 && (
+              <ReviewPanel
+                items={assistant.items}
+                categories={categories}
+                today={today}
+                onAccept={(id) => void assistant.accept(id)}
+                onReject={assistant.reject}
+                onAcceptAll={() => void assistant.acceptAll()}
+                onClear={assistant.clearAll}
+                onToggle={assistant.toggleChecked}
+                onEdit={assistant.updateTaskDraft}
+              />
+            )}
+            {/* On phones the sidebar is a compact row, so stats live down here instead. */}
+            <div className="card py-4 md:hidden">
+              <StatsCard stats={stats} />
+            </div>
           </div>
         }
       />
       <MicLiveBadge live={voice.listening || voice.conversationOn} />
+      <FloatingMic voice={voice} ptt={settings.voiceMode === 'push-to-talk'} busy={assistant.busy} reply={assistant.reply} />
       <UndoToast toast={toast} onDismiss={dismissToast} />
       <PlanDialog
         open={planner.open}

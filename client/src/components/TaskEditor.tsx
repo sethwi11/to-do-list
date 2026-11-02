@@ -25,7 +25,7 @@ const RECURRENCE_LABELS: Record<Recurrence, string> = {
 };
 
 const field =
-  'rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950';
+  'rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950';
 
 export function TaskEditor({ task, categories, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(task.title);

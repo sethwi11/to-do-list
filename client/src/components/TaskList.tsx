@@ -17,6 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { ChevronRight } from 'lucide-react';
 import type { Category, Task, UpdateTaskInput } from '@todo/shared';
 import { TaskItem, type TaskItemProps } from './TaskItem';
 
@@ -71,39 +72,41 @@ export function TaskList({ openTasks, doneTasks, doneAsSection, draggable, onMov
   const mainTasks = doneAsSection ? openTasks : [...openTasks, ...doneTasks];
 
   return (
-    <div className="flex flex-col gap-4">
-      {draggable ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} accessibility={{ announcements }}>
-          <SortableContext items={openTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-            <ul aria-label="Tasks" className="flex flex-col gap-2">
-              {openTasks.map((task) => (
-                <SortableTaskItem key={task.id} task={task} {...item} />
-              ))}
-            </ul>
-          </SortableContext>
-        </DndContext>
-      ) : (
-        <ul aria-label="Tasks" className="flex flex-col gap-2">
-          {mainTasks.map((task) => (
-            <li key={task.id}>
-              <Item task={task} {...item} />
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className="flex flex-col gap-3">
+      {mainTasks.length > 0 &&
+        (draggable ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} accessibility={{ announcements }}>
+            <SortableContext items={openTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+              <ul aria-label="Tasks" className={LIST_CLASS}>
+                {openTasks.map((task) => (
+                  <SortableTaskItem key={task.id} task={task} {...item} />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <ul aria-label="Tasks" className={LIST_CLASS}>
+            {mainTasks.map((task) => (
+              <li key={task.id}>
+                <Item task={task} {...item} />
+              </li>
+            ))}
+          </ul>
+        ))}
 
       {doneAsSection && doneTasks.length > 0 && (
-        <section>
+        <section className="flex flex-col gap-2">
           <button
             type="button"
             onClick={() => setShowDone((x) => !x)}
             aria-expanded={showDone}
-            className="flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+            className="flex items-center gap-1 self-start rounded-md px-1 py-0.5 text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
           >
-            {showDone ? '▾' : '▸'} Completed ({doneTasks.length})
+            <ChevronRight className={`h-3.5 w-3.5 transition-transform ${showDone ? 'rotate-90' : ''}`} aria-hidden />
+            Completed · {doneTasks.length}
           </button>
           {showDone && (
-            <ul aria-label="Completed tasks" className="mt-2 flex flex-col gap-2">
+            <ul aria-label="Completed tasks" className={LIST_CLASS}>
               {doneTasks.map((task) => (
                 <li key={task.id}>
                   <Item task={task} {...item} />
@@ -116,6 +119,9 @@ export function TaskList({ openTasks, doneTasks, doneAsSection, draggable, onMov
     </div>
   );
 }
+
+// One panel with hairline dividers between rows reads far calmer than a stack of separate cards.
+const LIST_CLASS = 'card divide-y divide-slate-100 overflow-hidden dark:divide-slate-800/70';
 
 function Item({
   task,
@@ -132,7 +138,7 @@ function SortableTaskItem({ task, ...rest }: ItemCallbacks & { task: Task }) {
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={isDragging ? 'relative z-10 opacity-80 shadow-lg' : undefined}
+      className={isDragging ? 'relative z-10 bg-white shadow-lg dark:bg-slate-900' : undefined}
     >
       <Item task={task} {...rest} dragHandleProps={{ ...attributes, ...listeners }} />
     </li>

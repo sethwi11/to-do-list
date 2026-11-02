@@ -1,27 +1,39 @@
 import { useState, type FormEvent } from 'react';
+import { CircleAlert, Mic, MicOff, Volume2, VolumeX, X } from 'lucide-react';
 import type { Settings } from '../hooks/useSettings';
+
+export interface VoiceControls {
+  supported: boolean;
+  listening: boolean;
+  conversationOn: boolean;
+  speaking: boolean;
+  liveText: string;
+  error: string | null;
+  dismissError: () => void;
+  startHold: () => void;
+  endHold: () => void;
+  startConversation: () => void;
+  stopConversation: () => void;
+}
 
 interface Props {
   settings: Settings;
   onSettingsChange: (patch: Partial<Settings>) => void;
-  voice: {
-    supported: boolean;
-    listening: boolean;
-    conversationOn: boolean;
-    speaking: boolean;
-    liveText: string;
-    error: string | null;
-    dismissError: () => void;
-    startHold: () => void;
-    endHold: () => void;
-    startConversation: () => void;
-    stopConversation: () => void;
-  };
+  voice: VoiceControls;
   busy: boolean;
   aiError: string | null;
   onDismissAiError: () => void;
   reply: { text: string; question: string | null } | null;
   onBrainDump: (text: string) => Promise<unknown>;
+}
+
+/** Status line under the mic, shared by the panel and the phone's floating button. */
+export function voiceStatus(voice: VoiceControls, busy: boolean, ptt: boolean): string {
+  if (voice.speaking) return 'Speaking…';
+  if (busy) return 'Thinking…';
+  if (ptt) return voice.listening ? 'Listening, release to send' : 'Hold to talk (or hold Space)';
+  if (voice.conversationOn) return voice.listening ? 'Listening, I send after a pause' : 'Paused';
+  return 'Tap to start listening';
 }
 
 export function VoicePanel({ settings, onSettingsChange, voice, busy, aiError, onDismissAiError, reply, onBrainDump }: Props) {
@@ -42,27 +54,33 @@ export function VoicePanel({ settings, onSettingsChange, voice, busy, aiError, o
     onSettingsChange({ voiceMode: mode });
   }
 
+  const errors = [
+    voice.error && { text: voice.error, dismiss: voice.dismissError },
+    aiError && { text: aiError, dismiss: onDismissAiError },
+  ].filter((x): x is { text: string; dismiss: () => void } => Boolean(x));
+
   return (
-    <section aria-labelledby="voice-heading" className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <section aria-labelledby="voice-heading" className="card flex flex-col gap-4 p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 id="voice-heading" className="font-semibold">
-          Voice
+        <h2 id="voice-heading" className="text-sm font-semibold">
+          Capture
         </h2>
-        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-500">
-          <input
-            type="checkbox"
-            checked={settings.tts}
-            onChange={(e) => onSettingsChange({ tts: e.target.checked })}
-            className="accent-indigo-600"
-          />
-          Speak replies
-        </label>
+        <button
+          type="button"
+          onClick={() => onSettingsChange({ tts: !settings.tts })}
+          aria-pressed={settings.tts}
+          aria-label="Speak replies aloud"
+          title={settings.tts ? 'Replies are spoken aloud' : 'Replies are muted'}
+          className="icon-btn h-7 w-7"
+        >
+          {settings.tts ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}
+        </button>
       </div>
 
       {voice.supported ? (
         <>
           {/* Segmented control implemented as a radio group, so it's keyboard- and screen-reader-friendly. */}
-          <fieldset className="grid grid-cols-2 rounded-lg bg-slate-100 p-1 text-sm dark:bg-slate-800">
+          <fieldset className="grid grid-cols-2 rounded-lg bg-slate-100 p-0.5 text-xs dark:bg-slate-800">
             <legend className="sr-only">Voice mode</legend>
             {(
               [
@@ -79,101 +97,52 @@ export function VoicePanel({ settings, onSettingsChange, voice, busy, aiError, o
                   onChange={() => switchMode(value)}
                   className="peer sr-only"
                 />
-                <span className="block rounded-md px-2 py-1.5 text-center font-medium text-slate-600 peer-checked:bg-white peer-checked:text-slate-900 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-indigo-500 dark:text-slate-300 dark:peer-checked:bg-slate-950 dark:peer-checked:text-white">
+                <span className="block rounded-md px-2 py-1 text-center font-medium text-slate-500 peer-checked:bg-white peer-checked:text-slate-900 peer-checked:shadow-sm peer-focus-visible:outline-2 peer-focus-visible:outline-indigo-500 dark:text-slate-400 dark:peer-checked:bg-slate-950 dark:peer-checked:text-white">
                   {label}
                 </span>
               </label>
             ))}
           </fieldset>
 
-          <div className="flex flex-col items-center gap-2 py-2">
-            {ptt ? (
-              <button
-                type="button"
-                // Pointer events cover mouse, touch, and pen with one code path.
-                onPointerDown={(e) => {
-                  e.currentTarget.setPointerCapture(e.pointerId);
-                  voice.startHold();
-                }}
-                onPointerUp={voice.endHold}
-                onPointerCancel={voice.endHold}
-                // Keyboard users: Enter/Space on the focused button toggles hold.
-                onKeyDown={(e) => {
-                  if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
-                    e.preventDefault();
-                    voice.startHold();
-                  }
-                }}
-                onKeyUp={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') voice.endHold();
-                }}
-                onContextMenu={(e) => e.preventDefault()}
-                aria-label={voice.listening ? 'Listening. Release to send.' : 'Hold to talk'}
-                aria-pressed={voice.listening}
-                className={micClass(voice.listening)}
-              >
-                <MicIcon />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={voice.conversationOn ? voice.stopConversation : voice.startConversation}
-                aria-label={voice.conversationOn ? 'Stop listening' : 'Start conversation mode'}
-                aria-pressed={voice.conversationOn}
-                className={micClass(voice.conversationOn)}
-              >
-                <MicIcon />
-              </button>
-            )}
+          <div className="flex flex-col items-center gap-2">
+            <MicButton voice={voice} ptt={ptt} size="lg" />
             <p className="text-center text-xs text-slate-500" aria-live="polite">
-              {voice.speaking
-                ? 'Speaking…'
-                : busy
-                  ? 'Thinking…'
-                  : ptt
-                    ? voice.listening
-                      ? 'Listening, release to send'
-                      : 'Hold the button (or hold Space) and talk'
-                    : voice.conversationOn
-                      ? voice.listening
-                        ? 'Listening. Just talk; I send after a pause.'
-                        : 'Paused'
-                      : 'Tap to start listening'}
+              {voiceStatus(voice, busy, ptt)}
             </p>
           </div>
 
           {(voice.liveText || voice.listening) && (
-            <div aria-label="Live transcript" className="min-h-10 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:bg-slate-950 dark:text-slate-300">
+            <p aria-label="Live transcript" className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:bg-slate-950 dark:text-slate-300">
               {voice.liveText || <span className="text-slate-400">…</span>}
-            </div>
+            </p>
           )}
         </>
       ) : (
-        <p role="note" className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          This browser doesn't support speech recognition. Use Chrome or Edge on desktop for voice. The brain dump box below works everywhere.
+        <p role="note" className="flex gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+          <MicOff className="h-4 w-4 shrink-0" aria-hidden />
+          Voice needs Chrome or Edge on desktop. You can still type below.
         </p>
       )}
 
       {reply && (reply.text || reply.question) && (
-        <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-900 dark:bg-indigo-950 dark:text-indigo-200">
+        <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm text-indigo-950 dark:bg-indigo-950/50 dark:text-indigo-100">
           {reply.text && <p>{reply.text}</p>}
-          {reply.question && <p className="mt-1 font-medium">{reply.question}</p>}
+          {reply.question && <p className="mt-0.5 font-medium">{reply.question}</p>}
         </div>
       )}
 
-      {[voice.error && { text: voice.error, dismiss: voice.dismissError }, aiError && { text: aiError, dismiss: onDismissAiError }]
-        .filter((x): x is { text: string; dismiss: () => void } => Boolean(x))
-        .map(({ text, dismiss }) => (
-          <div key={text} role="alert" className="flex items-start justify-between gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
-            <span>{text}</span>
-            <button type="button" onClick={dismiss} aria-label="Dismiss" className="shrink-0">
-              ✕
-            </button>
-          </div>
-        ))}
+      {errors.map(({ text, dismiss }) => (
+        <div key={text} role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-800 dark:bg-red-950/50 dark:text-red-200">
+          <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="flex-1">{text}</span>
+          <button type="button" onClick={dismiss} aria-label="Dismiss" className="shrink-0 opacity-70 hover:opacity-100">
+            <X className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+      ))}
 
-      <form onSubmit={submitDump} className="flex flex-col gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
-        <label htmlFor="brain-dump" className="text-sm font-medium">
+      <form onSubmit={submitDump} className="group flex flex-col gap-2">
+        <label htmlFor="brain-dump" className="sr-only">
           Brain dump
         </label>
         <textarea
@@ -183,39 +152,102 @@ export function VoicePanel({ settings, onSettingsChange, voice, busy, aiError, o
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submitDump(e);
           }}
-          rows={4}
+          rows={1}
           maxLength={20000}
-          placeholder="Type everything on your mind: “lab due Friday, email Valencia tomorrow morning, groceries at some point…”"
-          className="resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+          placeholder="Or type a brain dump…"
+          // Grows from one line to a real text box while you're using it.
+          className="field-sizing-content max-h-60 min-h-9 resize-none rounded-lg bg-slate-50 px-3 py-2 text-sm group-focus-within:min-h-24 dark:bg-slate-950"
         />
-        <button
-          type="submit"
-          disabled={!dump.trim() || busy}
-          className="self-end rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {busy ? 'Extracting…' : 'Extract tasks'}
-          <span className="sr-only"> (Ctrl+Enter)</span>
-        </button>
+        {dump.trim() && (
+          <div className="flex items-center justify-end gap-2">
+            <span className="text-xs text-slate-400">Ctrl+Enter</span>
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {busy ? 'Extracting…' : 'Extract tasks'}
+            </button>
+          </div>
+        )}
       </form>
-
-      {voice.supported && (
-        <p className="text-xs text-slate-400">Speech is transcribed by your browser. In Chrome, audio is sent to Google for recognition.</p>
-      )}
     </section>
   );
 }
 
-const micClass = (active: boolean) =>
-  `flex h-20 w-20 touch-none select-none items-center justify-center rounded-full text-white shadow-md transition-colors ${
-    active ? 'mic-pulse bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'
-  }`;
+/** The mic button itself: hold-to-talk or a conversation toggle, depending on the mode. */
+export function MicButton({ voice, ptt, size }: { voice: VoiceControls; ptt: boolean; size: 'lg' | 'fab' }) {
+  const active = ptt ? voice.listening : voice.conversationOn;
+  const className = `flex shrink-0 touch-none items-center justify-center rounded-full text-white transition-colors select-none ${
+    size === 'lg' ? 'h-16 w-16' : 'h-14 w-14 shadow-lg shadow-indigo-500/30'
+  } ${active ? 'mic-pulse bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'}`;
+  const icon = <Mic className={size === 'lg' ? 'h-7 w-7' : 'h-6 w-6'} aria-hidden />;
+  // In Chrome, recognition runs on Google's servers; say so where people decide to use it.
+  const privacy = 'Speech is transcribed by your browser (Chrome sends audio to Google).';
 
-function MicIcon() {
+  if (!ptt) {
+    return (
+      <button
+        type="button"
+        onClick={voice.conversationOn ? voice.stopConversation : voice.startConversation}
+        aria-label={voice.conversationOn ? 'Stop listening' : 'Start conversation mode'}
+        aria-pressed={voice.conversationOn}
+        title={privacy}
+        className={className}
+      >
+        {icon}
+      </button>
+    );
+  }
+
   return (
-    <svg aria-hidden viewBox="0 0 24 24" className="h-9 w-9" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="9" y="2" width="6" height="12" rx="3" />
-      <path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8" />
-    </svg>
+    <button
+      type="button"
+      // Pointer events cover mouse, touch, and pen with one code path.
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        voice.startHold();
+      }}
+      onPointerUp={voice.endHold}
+      onPointerCancel={voice.endHold}
+      // Keyboard users: hold Enter/Space on the focused button.
+      onKeyDown={(e) => {
+        if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
+          e.preventDefault();
+          voice.startHold();
+        }
+      }}
+      onKeyUp={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') voice.endHold();
+      }}
+      onContextMenu={(e) => e.preventDefault()}
+      aria-label={voice.listening ? 'Listening. Release to send.' : 'Hold to talk'}
+      aria-pressed={voice.listening}
+      title={privacy}
+      className={className}
+    >
+      {icon}
+    </button>
+  );
+}
+
+/**
+ * Phones only: the capture panel sits below the task list there, so a
+ * floating mic keeps voice one tap away, with a small status bubble above it.
+ */
+export function FloatingMic({ voice, ptt, busy, reply }: { voice: VoiceControls; ptt: boolean; busy: boolean; reply: Props['reply'] }) {
+  if (!voice.supported) return null;
+  const bubble = voice.error ?? (voice.listening || voice.liveText ? voice.liveText || '…' : busy ? 'Thinking…' : voice.speaking ? reply?.text : null);
+
+  return (
+    <div className="fixed right-4 bottom-4 z-40 flex flex-col items-end gap-2 lg:hidden">
+      {bubble && (
+        <p aria-live="polite" className="max-w-[min(18rem,calc(100vw-2rem))] rounded-2xl bg-slate-900 px-3 py-2 text-sm text-white shadow-lg dark:bg-slate-100 dark:text-slate-900">
+          {bubble}
+        </p>
+      )}
+      <MicButton voice={voice} ptt={ptt} size="fab" />
+    </div>
   );
 }
 
@@ -223,7 +255,7 @@ function MicIcon() {
 export function MicLiveBadge({ live }: { live: boolean }) {
   if (!live) return null;
   return (
-    <div role="status" className="fixed left-1/2 top-2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow-lg">
+    <div role="status" className="fixed top-2 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white shadow-lg">
       <span className="h-2 w-2 animate-pulse rounded-full bg-white motion-reduce:animate-none" aria-hidden />
       Microphone on
     </div>

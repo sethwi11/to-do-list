@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from 'react';
+import { CornerDownLeft, Flag, Plus } from 'lucide-react';
 import { PRIORITIES, type Category, type CreateTaskInput, type Priority } from '@todo/shared';
+import { categoryDotClass } from '../lib/categoryColors';
+import { DueDatePicker } from './DueDatePicker';
 
 interface Props {
   categories: Category[];
+  today: string;
   /** Pre-filled due date (today when you're in the Today view). */
   defaultDueDate: string | null;
   /** Pre-selected list (the current list when you're in a list view). */
@@ -10,10 +14,17 @@ interface Props {
   onCreate: (input: CreateTaskInput) => Promise<boolean>;
 }
 
-const inputClass =
-  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900';
+const PRIORITY_COLOR: Record<Priority, string> = {
+  high: 'text-red-500',
+  medium: 'text-slate-400',
+  low: 'text-slate-300 dark:text-slate-600',
+};
 
-export function AddTaskForm({ categories, defaultDueDate, defaultCategoryId, onCreate }: Props) {
+/**
+ * One-line quick add. The options row (date, priority, list) only appears
+ * while you're using the form, so the resting state is a single calm input.
+ */
+export function AddTaskForm({ categories, today, defaultDueDate, defaultCategoryId, onCreate }: Props) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(defaultDueDate ?? '');
   const [priority, setPriority] = useState<Priority>('medium');
@@ -45,76 +56,61 @@ export function AddTaskForm({ categories, defaultDueDate, defaultCategoryId, onC
     if (ok) setTitle('');
   }
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      aria-label="Add a task"
-      className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-center dark:border-slate-800 dark:bg-slate-900"
-    >
-      <label className="sr-only" htmlFor="new-task-title">
-        Task title
-      </label>
-      <input
-        id="new-task-title"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Add a task… e.g. Finish COMP 365 lab"
-        maxLength={200}
-        className={`${inputClass} min-w-0 flex-1 sm:min-w-64`}
-      />
+  const category = categories.find((c) => c.id === categoryId);
 
-      <div className="flex flex-wrap gap-2">
-        <label className="sr-only" htmlFor="new-task-due">
-          Due date
+  return (
+    <form onSubmit={handleSubmit} aria-label="Add a task" className="group card px-3 py-2 focus-within:border-indigo-300 dark:focus-within:border-indigo-800">
+      <div className="flex items-center gap-2">
+        <Plus className="h-5 w-5 shrink-0 text-indigo-500" aria-hidden />
+        <label className="sr-only" htmlFor="new-task-title">
+          Task title
         </label>
         <input
-          id="new-task-due"
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className={inputClass}
+          id="new-task-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Add a task"
+          maxLength={200}
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent py-1.5 text-sm outline-none focus-visible:outline-none"
         />
+        {title.trim() && (
+          <button
+            type="submit"
+            disabled={submitting}
+            className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+          >
+            Add <CornerDownLeft className="h-3 w-3" aria-hidden />
+          </button>
+        )}
+      </div>
 
-        <label className="sr-only" htmlFor="new-task-priority">
-          Priority
-        </label>
-        <select
-          id="new-task-priority"
-          value={priority}
-          onChange={(e) => setPriority(e.target.value as Priority)}
-          className={inputClass}
-        >
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p[0]!.toUpperCase() + p.slice(1)} priority
-            </option>
-          ))}
-        </select>
+      {/* Options: visible while the form has focus or text in it. */}
+      <div className={`flex-wrap items-center gap-1 pt-1 pl-6 group-focus-within:flex ${title ? 'flex' : 'hidden'}`}>
+        <DueDatePicker value={dueDate} onChange={setDueDate} today={today} />
 
-        <label className="sr-only" htmlFor="new-task-list">
-          List
-        </label>
-        <select
-          id="new-task-list"
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className={inputClass}
-        >
-          <option value="">No list</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
+        <span className="inline-flex items-center">
+          <Flag className={`h-3.5 w-3.5 ${PRIORITY_COLOR[priority]}`} aria-hidden />
+          <select value={priority} onChange={(e) => setPriority(e.target.value as Priority)} aria-label="Priority" className="select-quiet">
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p[0]!.toUpperCase() + p.slice(1)}
+              </option>
+            ))}
+          </select>
+        </span>
 
-        <button
-          type="submit"
-          disabled={!title.trim() || submitting}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Add
-        </button>
+        <span className="inline-flex items-center">
+          <span className={`h-2 w-2 rounded-full ${category ? categoryDotClass[category.color] : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden />
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} aria-label="List" className="select-quiet">
+            <option value="">No list</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </span>
       </div>
     </form>
   );

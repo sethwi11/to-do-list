@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Plus, X } from 'lucide-react';
 import type { Subtask } from '@todo/shared';
 
 interface Props {
@@ -30,28 +31,29 @@ export function SubtaskList({ parentTitle, subtasks, onChange }: Props) {
               checked={s.done}
               onChange={() => onChange(subtasks.map((x) => (x.id === s.id ? { ...x, done: !x.done } : x)))}
               aria-label={`Mark subtask "${s.title}" as ${s.done ? 'not done' : 'done'}`}
-              className="h-4 w-4 cursor-pointer accent-indigo-600"
+              className="check check-sm"
             />
-            <span className={`flex-1 break-words ${s.done ? 'text-slate-400 line-through' : ''}`}>{s.title}</span>
+            <span className={`flex-1 break-words ${s.done ? 'text-slate-400 line-through dark:text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}>{s.title}</span>
             <button
               type="button"
               onClick={() => onChange(subtasks.filter((x) => x.id !== s.id))}
               aria-label={`Delete subtask "${s.title}"`}
-              className="rounded px-1 text-xs text-slate-400 hover:text-red-600 sm:opacity-0 sm:group-hover/sub:opacity-100 sm:focus:opacity-100"
+              className="rounded p-0.5 text-slate-400 hover:text-red-600 sm:opacity-0 sm:group-hover/sub:opacity-100 sm:focus:opacity-100"
             >
-              ✕
+              <X className="h-3.5 w-3.5" aria-hidden />
             </button>
           </li>
         ))}
       </ul>
-      <form onSubmit={add}>
+      <form onSubmit={add} className="flex items-center gap-2">
+        <Plus className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add a subtask and press Enter"
+          placeholder="Add subtask"
           aria-label={`Add a subtask to ${parentTitle}`}
           maxLength={200}
-          className="w-full rounded-md border border-transparent bg-transparent px-1 py-1 text-sm placeholder:text-slate-400 hover:border-slate-200 focus:border-slate-300 dark:hover:border-slate-700"
+          className="w-full bg-transparent py-0.5 text-sm"
         />
       </form>
     </div>

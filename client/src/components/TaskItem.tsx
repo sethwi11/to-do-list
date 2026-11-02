@@ -1,6 +1,7 @@
 import { useState, type HTMLAttributes } from 'react';
-import type { Category, Priority, Task, UpdateTaskInput } from '@todo/shared';
-import { categoryChipClass } from '../lib/categoryColors';
+import { ChevronRight, Clock, GripVertical, ListChecks, Pencil, Repeat, StickyNote, Trash2 } from 'lucide-react';
+import type { Category, Task, UpdateTaskInput } from '@todo/shared';
+import { categoryDotClass } from '../lib/categoryColors';
 import { formatDueDate, formatTime } from '../lib/dates';
 import { SubtaskList } from './SubtaskList';
 import { TaskEditor } from './TaskEditor';
@@ -17,27 +18,28 @@ export interface TaskItemProps {
   dragHandleProps?: HTMLAttributes<HTMLButtonElement>;
 }
 
-const priorityBadge: Record<Priority, string> = {
-  high: 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300',
-  medium: 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
-  low: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400',
-};
-
 const formatMinutes = (m: number) => (m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}`);
 
+/**
+ * One row in the task list. Design choices for a calm list:
+ * - Priority is shown by the checkbox ring (red = high), not a badge on
+ *   every row; "medium" is the default and shows nothing.
+ * - Details sit on one quiet line and only appear when there's something to say.
+ * - Edit/delete icons appear on hover (desktop) or inside the expanded row (touch).
+ */
 export function TaskItem({ task, category, categories, today, onToggle, onUpdate, onDelete, dragHandleProps }: TaskItemProps) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
   const done = task.status === 'done';
   const overdue = !done && task.dueDate !== null && task.dueDate < today;
+  const dueToday = task.dueDate === today;
   const subDone = task.subtasks.filter((s) => s.done).length;
-  const hasDetails = task.notes !== null || task.subtasks.length > 0;
   const detailsId = `task-details-${task.id}`;
 
   if (editing) {
     return (
-      <div className="rounded-xl border border-indigo-300 bg-white p-3 dark:border-indigo-800 dark:bg-slate-900">
+      <div className="px-4 py-3">
         <TaskEditor
           task={task}
           categories={categories}
@@ -51,17 +53,66 @@ export function TaskItem({ task, category, categories, today, onToggle, onUpdate
     );
   }
 
+  const meta: React.ReactNode[] = [];
+  if (task.dueDate) {
+    meta.push(
+      <span
+        key="due"
+        className={
+          overdue ? 'font-medium text-red-600 dark:text-red-400' : dueToday && !done ? 'text-indigo-600 dark:text-indigo-400' : ''
+        }
+      >
+        {overdue && 'Overdue · '}
+        {formatDueDate(task.dueDate, today)}
+        {task.dueTime && ` ${formatTime(task.dueTime)}`}
+      </span>,
+    );
+  }
+  if (category) {
+    meta.push(
+      <span key="list" className="inline-flex items-center gap-1">
+        <span className={`h-1.5 w-1.5 rounded-full ${categoryDotClass[category.color]}`} aria-hidden />
+        {category.name}
+      </span>,
+    );
+  }
+  if (task.recurrence !== 'none') {
+    meta.push(
+      <span key="rec" className="inline-flex items-center gap-0.5" title={`Repeats ${task.recurrence}`}>
+        <Repeat className="h-3 w-3" aria-hidden />
+        <span className="sr-only">Repeats</span> {task.recurrence}
+      </span>,
+    );
+  }
+  if (task.subtasks.length > 0) {
+    meta.push(
+      <span key="sub" className="inline-flex items-center gap-0.5">
+        <ListChecks className="h-3 w-3" aria-hidden />
+        <span className="sr-only">Subtasks</span> {subDone}/{task.subtasks.length}
+      </span>,
+    );
+  }
+  if (task.estimatedMinutes !== null) {
+    meta.push(
+      <span key="est" className="inline-flex items-center gap-0.5">
+        <Clock className="h-3 w-3" aria-hidden />
+        <span className="sr-only">Estimated</span> {formatMinutes(task.estimatedMinutes)}
+      </span>,
+    );
+  }
+  if (task.notes) meta.push(<StickyNote key="notes" className="h-3 w-3" aria-label="Has notes" />);
+
   return (
-    <div className="group rounded-xl border border-slate-200 bg-white px-3 py-3 dark:border-slate-800 dark:bg-slate-900">
-      <div className="flex items-start gap-3">
+    <div className="group relative">
+      <div className="flex items-start gap-3 px-4 py-2.5">
         {dragHandleProps && (
           <button
             type="button"
             {...dragHandleProps}
             aria-label={`Reorder "${task.title}"`}
-            className="-ml-1 mt-0.5 cursor-grab touch-none rounded px-0.5 text-slate-300 hover:text-slate-500 active:cursor-grabbing dark:text-slate-600"
+            className="absolute top-3 left-0.5 cursor-grab touch-none rounded text-slate-300 opacity-0 group-hover:opacity-100 focus:opacity-100 active:cursor-grabbing dark:text-slate-600"
           >
-            ⠿
+            <GripVertical className="h-4 w-4" aria-hidden />
           </button>
         )}
 
@@ -69,83 +120,54 @@ export function TaskItem({ task, category, categories, today, onToggle, onUpdate
           type="checkbox"
           checked={done}
           onChange={() => onToggle(task)}
-          aria-label={`Mark "${task.title}" as ${done ? 'not done' : 'done'}`}
-          className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-indigo-600"
+          aria-label={`Mark "${task.title}" as ${done ? 'not done' : 'done'}${task.priority === 'high' ? ' (high priority)' : ''}`}
+          className={`check mt-0.5 ${task.priority === 'high' && !done ? 'border-red-400 dark:border-red-500' : ''}`}
         />
 
         <div className="min-w-0 flex-1">
-          <p
-            className={`break-words text-sm font-medium ${done ? 'text-slate-400 line-through' : ''}`}
-            onDoubleClick={() => setEditing(true)}
-          >
-            {task.title}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-            {task.dueDate && (
-              <span className={overdue ? 'font-medium text-red-600 dark:text-red-400' : ''}>
-                {overdue && 'Overdue · '}
-                {formatDueDate(task.dueDate, today)}
-                {task.dueTime && ` · ${formatTime(task.dueTime)}`}
-              </span>
-            )}
-            <span className={`rounded px-1.5 py-0.5 font-medium ${priorityBadge[task.priority]}`}>{task.priority}</span>
-            {category && (
-              <span className={`rounded px-1.5 py-0.5 font-medium ${categoryChipClass[category.color]}`}>{category.name}</span>
-            )}
-            {task.recurrence !== 'none' && <span title={`Repeats ${task.recurrence}`}>↻ {task.recurrence}</span>}
-            {task.estimatedMinutes !== null && <span>~{formatMinutes(task.estimatedMinutes)}</span>}
-            {task.subtasks.length > 0 && (
-              <span aria-label={`${subDone} of ${task.subtasks.length} subtasks done`}>
-                ☑ {subDone}/{task.subtasks.length}
-              </span>
-            )}
-            {task.notes && <span aria-label="Has notes">✎ notes</span>}
-          </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
             onClick={() => setExpanded((x) => !x)}
+            onDoubleClick={() => setEditing(true)}
             aria-expanded={expanded}
             aria-controls={detailsId}
-            aria-label={`${expanded ? 'Hide' : 'Show'} details for "${task.title}"`}
-            className={`rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 ${
-              hasDetails ? '' : 'sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100'
-            }`}
+            className={`block w-full text-left text-sm break-words ${done ? 'text-slate-400 line-through dark:text-slate-500' : ''}`}
           >
-            {expanded ? '▾' : '▸'}
+            {task.title}
+            {task.priority === 'low' && <span className="sr-only"> (low priority)</span>}
           </button>
-          {/* Always visible on touch screens; on desktop they appear on hover or keyboard focus. */}
-          <div className="flex gap-1 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
-            <button
-              type="button"
-              onClick={() => setEditing(true)}
-              aria-label={`Edit "${task.title}"`}
-              className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(task)}
-              aria-label={`Delete "${task.title}"`}
-              className="rounded-md px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-            >
-              Delete
-            </button>
-          </div>
+          {meta.length > 0 && (
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">{meta}</div>
+          )}
         </div>
+
+        {/* Desktop: icons on hover/focus. Touch: these live in the expanded row instead. */}
+        <div className="-my-1 hidden shrink-0 items-center opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 sm:flex">
+          <button type="button" onClick={() => setEditing(true)} aria-label={`Edit "${task.title}"`} className="icon-btn">
+            <Pencil className="h-4 w-4" aria-hidden />
+          </button>
+          <button type="button" onClick={() => onDelete(task)} aria-label={`Delete "${task.title}"`} className="icon-btn hover:text-red-600 dark:hover:text-red-400">
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
+        <ChevronRight
+          aria-hidden
+          className={`mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition-transform sm:hidden dark:text-slate-600 ${expanded ? 'rotate-90' : ''}`}
+        />
       </div>
 
       {expanded && (
-        <div id={detailsId} className="mt-2 flex flex-col gap-2 border-t border-slate-100 pt-2 pl-8 dark:border-slate-800">
-          {task.notes && <p className="whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">{task.notes}</p>}
-          <SubtaskList
-            parentTitle={task.title}
-            subtasks={task.subtasks}
-            onChange={(subtasks) => onUpdate(task.id, { subtasks })}
-          />
+        <div id={detailsId} className="flex flex-col gap-2 pr-4 pb-3 pl-12">
+          {task.notes && <p className="text-sm whitespace-pre-wrap text-slate-600 dark:text-slate-300">{task.notes}</p>}
+          <SubtaskList parentTitle={task.title} subtasks={task.subtasks} onChange={(subtasks) => onUpdate(task.id, { subtasks })} />
+          <div className="flex gap-1 sm:hidden">
+            <button type="button" onClick={() => setEditing(true)} className="pill">
+              <Pencil className="h-3.5 w-3.5" aria-hidden /> Edit
+            </button>
+            <button type="button" onClick={() => onDelete(task)} className="pill text-red-600 dark:text-red-400">
+              <Trash2 className="h-3.5 w-3.5" aria-hidden /> Delete
+            </button>
+          </div>
         </div>
       )}
     </div>
