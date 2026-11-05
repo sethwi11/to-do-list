@@ -123,10 +123,13 @@ export function SettingsDialog({ open, onClose, settings, onChange, onImported, 
           <p className="w-full text-xs text-slate-500">Import merges: it adds and updates tasks but never deletes anything.</p>
         </div>
 
-        <div className="py-3">
+        <div className="flex gap-4 py-3">
           <button type="button" onClick={onShowShortcuts} className="text-indigo-600 hover:underline dark:text-indigo-400">
             Keyboard shortcuts (?)
           </button>
+          <a href="/styleguide" className="text-indigo-600 hover:underline dark:text-indigo-400">
+            Style guide
+          </a>
         </div>
 
         {message && (

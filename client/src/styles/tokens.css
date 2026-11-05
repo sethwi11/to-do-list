@@ -1,0 +1,129 @@
+/*
+ * Design tokens: every color, shadow, and motion value in the app lives here,
+ * once, as a CSS variable. Components never contain hex values; they refer to
+ * these names (through the Tailwind classes mapped in theme.css).
+ *
+ * Two modes. Light is "paper"; dark is "night desk": the same notebook under a
+ * lamp, warm rather than blue-black. The mode is chosen by a `.dark` class on
+ * <html> (see hooks/useTheme.ts). `.light` and `.dark` also work on any
+ * element, which is how the style guide shows both modes side by side.
+ *
+ * `.dark` must come after `:root` (equal specificity, so the later rule wins).
+ */
+
+:root,
+.light {
+  color-scheme: light;
+
+  /* Surfaces and lines */
+  --paper: #f5f1ea;
+  --surface: #fbf8f3;
+  --hairline: #e3dccf;
+  --rule: #cfc6b6;
+
+  /* Text. muted passes 4.5:1 on paper; faint does not, so it is for disabled controls only. */
+  --ink: #1c1b19;
+  --ink-muted: #6e6658;
+  --ink-faint: #a39b8c;
+
+  /* Accent (tomato). --accent is for marks that aren't text: the today circle, the current-time
+     line, focus rings, priority bars. It is only 3.6:1 on paper, too faint for small text, so
+     --accent-ink (5.4:1) is for accent text and the primary button's fill. */
+  --accent: #e04a2f;
+  --accent-ink: #b5331d;
+  --accent-soft: #f7ded6;
+  --on-accent: #f5f1ea;
+
+  /* Status. Marks only (bars, dots, icons); text uses ink, ink-muted, danger, or accent-ink. */
+  --success: #4f7a4a;
+  --warning: #c28a1e;
+  --danger: #b23a28;
+
+  /* Toast link (the toast itself is inverted: see the shared block at the bottom). */
+  --toast-link: #ff6b4e;
+
+  /* Calendar colors: the "highlighter" palette. */
+  --cal-dusty-blue: #5a7ba6;
+  --cal-slate: #4a4f57;
+  --cal-tomato: #e04a2f;
+  --cal-sage: #6e9a78;
+  --cal-crimson: #a3243b;
+  --cal-plum: #8a5c8f;
+  --cal-ochre: #c28a1e;
+  --cal-teal: #3f8a8c;
+  --cal-terracotta: #b8653f;
+
+  /* Workload heatmap: four warm tints from paper toward a soft tomato wash. */
+  --heat-1: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --heat-2: color-mix(in srgb, var(--accent) 20%, var(--paper));
+  --heat-3: color-mix(in srgb, var(--accent) 32%, var(--paper));
+  --heat-4: color-mix(in srgb, var(--accent) 46%, var(--paper));
+
+  /* The one soft shadow, for popovers, menus, and modals only. */
+  --shadow-popover: 0 1px 2px rgb(28 27 25 / 0.06), 0 12px 32px rgb(28 27 25 / 0.1);
+  --backdrop: rgb(28 27 25 / 0.4);
+
+  /* A very faint paper grain: SVG noise at 3% opacity (2% in dark mode). */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
+}
+
+.dark {
+  color-scheme: dark;
+
+  --paper: #141311;
+  --surface: #1c1b18;
+  --hairline: #2d2b27;
+  --rule: #3a3732;
+
+  --ink: #ede8df;
+  --ink-muted: #a39c90;
+  --ink-faint: #6e685e;
+
+  --accent: #ff6b4e;
+  --accent-ink: #ff6b4e;
+  --accent-soft: #3a221c;
+  --on-accent: #141311;
+
+  --success: #7fb07a;
+  --warning: #d9a33a;
+  --danger: #f0806c;
+
+  --toast-link: #b5331d;
+
+  /* Slate ink and crimson would nearly vanish on the dark page, so they are lifted. */
+  --cal-slate: #9aa0a8;
+  --cal-crimson: #c2405a;
+
+  --heat-1: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  --heat-2: color-mix(in srgb, var(--accent) 18%, var(--paper));
+  --heat-3: color-mix(in srgb, var(--accent) 28%, var(--paper));
+  --heat-4: color-mix(in srgb, var(--accent) 40%, var(--paper));
+
+  --shadow-popover: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.45);
+  --backdrop: rgb(0 0 0 / 0.55);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.02'/%3E%3C/svg%3E");
+}
+
+/*
+ * Tokens derived from other tokens. They are declared for every mode block, not just
+ * :root, because a CSS variable is computed where it is declared: declared only on :root,
+ * a nested .dark or .light section would inherit the root's already-computed value.
+ */
+:root,
+.light,
+.dark {
+  --weekend: color-mix(in srgb, var(--ink) 3%, var(--paper));
+  /* Toast: inverted (light text on dark, or dark text on light). */
+  --toast-bg: var(--ink);
+  --toast-text: var(--paper);
+  /* An event's fill: its calendar color at 16% over the page. */
+  --cal-dusty-blue-soft: color-mix(in srgb, var(--cal-dusty-blue) 16%, var(--paper));
+  --cal-slate-soft: color-mix(in srgb, var(--cal-slate) 16%, var(--paper));
+  --cal-tomato-soft: color-mix(in srgb, var(--cal-tomato) 16%, var(--paper));
+  --cal-sage-soft: color-mix(in srgb, var(--cal-sage) 16%, var(--paper));
+  --cal-crimson-soft: color-mix(in srgb, var(--cal-crimson) 16%, var(--paper));
+  --cal-plum-soft: color-mix(in srgb, var(--cal-plum) 16%, var(--paper));
+  --cal-ochre-soft: color-mix(in srgb, var(--cal-ochre) 16%, var(--paper));
+  --cal-teal-soft: color-mix(in srgb, var(--cal-teal) 16%, var(--paper));
+  --cal-terracotta-soft: color-mix(in srgb, var(--cal-terracotta) 16%, var(--paper));
+}

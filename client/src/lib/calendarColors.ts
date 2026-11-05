@@ -21,3 +21,12 @@ export const calendarDotClass: Record<CalendarColor, string> = {
   teal: 'bg-[var(--cal-teal)]',
   terracotta: 'bg-[var(--cal-terracotta)]',
 };
+
+/**
+ * Sets two CSS variables on an element: --c (the calendar's solid color) and --c-soft (its
+ * soft tint). Blocks then style themselves with border-l-(--c) and bg-(--c-soft), so one
+ * component handles every calendar color with no per-color class names.
+ */
+export function calendarVars(color: CalendarColor): React.CSSProperties {
+  return { '--c': `var(--cal-${color})`, '--c-soft': `var(--cal-${color}-soft)` } as React.CSSProperties;
+}

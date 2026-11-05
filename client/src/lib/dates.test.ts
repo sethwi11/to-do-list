@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { daysBetween, formatDueDate, parseLocalISODate, todayLocalISO } from './dates';
+import { daysBetween, formatCountdown, formatDueDate, parseLocalISODate, todayLocalISO } from './dates';
 
 describe('local date helpers', () => {
   it('formats today using local date parts, not UTC', () => {
@@ -23,5 +23,19 @@ describe('local date helpers', () => {
     expect(formatDueDate('2026-10-22', today)).toBe('Tomorrow');
     expect(formatDueDate('2026-10-20', today)).toBe('Yesterday');
     expect(formatDueDate('2026-10-23', today)).toMatch(/Friday/);
+  });
+});
+
+describe('formatCountdown', () => {
+  const min = 60_000;
+  it('formats minutes, hours, and days', () => {
+    expect(formatCountdown(0)).toBe('now');
+    expect(formatCountdown(-5 * min)).toBe('now');
+    expect(formatCountdown(30_000)).toBe('<1m');
+    expect(formatCountdown(45 * min)).toBe('45m');
+    expect(formatCountdown(2 * 60 * min + 15 * min)).toBe('2h 15m');
+    expect(formatCountdown(3 * 60 * min)).toBe('3h');
+    expect(formatCountdown(27 * 60 * min)).toBe('1d 3h');
+    expect(formatCountdown(48 * 60 * min)).toBe('2d');
   });
 });

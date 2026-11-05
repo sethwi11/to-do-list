@@ -1,25 +1,11 @@
 @import 'tailwindcss';
+@import './styles/tokens.css';
+@import './styles/theme.css';
+@import './styles/paper.css';
 
 /* dark: follows a .dark class on <html> (set by useTheme), so a manual toggle
    can override the OS setting. Tailwind's default would only follow the OS. */
 @custom-variant dark (&:where(.dark, .dark *));
-
-/* Calendar colors: the "highlighter" palette. Components refer to these by name only (see lib/calendarColors.ts). */
-:root {
-  --cal-dusty-blue: #5a7ba6;
-  --cal-slate: #4a4f57;
-  --cal-tomato: #e04a2f;
-  --cal-sage: #6e9a78;
-  --cal-crimson: #a3243b;
-  --cal-plum: #8a5c8f;
-  --cal-ochre: #c28a1e;
-  --cal-teal: #3f8a8c;
-  --cal-terracotta: #b8653f;
-}
-.dark {
-  /* Slate ink would vanish on a dark page; lift it. */
-  --cal-slate: #9aa0a8;
-}
 
 @layer base {
   html {

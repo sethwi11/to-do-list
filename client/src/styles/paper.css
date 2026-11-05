@@ -1,0 +1,94 @@
+/*
+ * The "modern paper planner" look: base page styles plus the few effects that
+ * plain utility classes can't express. Everything is scoped to `.paper-page`, so
+ * screens opt in one at a time; the old screens stay exactly as they are until
+ * they are restyled.
+ */
+
+@layer components {
+  .paper-page {
+    min-height: 100dvh;
+    background-color: var(--paper);
+    background-image: var(--grain);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    line-height: 1.5;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Lucide icons default to a 2px stroke; the design calls for 1.5px. */
+  .paper-page .lucide {
+    stroke-width: 1.5;
+  }
+
+  /* Placeholders use muted ink, not faint: faint is 2.5:1, below the 4.5:1 minimum for text. */
+  .paper-page ::placeholder {
+    color: var(--ink-muted);
+    opacity: 1;
+  }
+
+  .paper-page ::selection {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  /* One focus ring everywhere: 2px accent, 2px offset. */
+  .paper-page :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* A task title getting crossed out: a solid 1.5px line that draws left to right. It is a
+     background (not text-decoration) because text-decoration can't animate, and a background
+     line keeps working when the title wraps onto a second line. */
+  .strike {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 0 58%;
+    background-size: 0% 1.5px;
+    transition:
+      background-size 250ms var(--ease-out),
+      color 250ms var(--ease-out);
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .strike[data-done='true'] {
+    background-size: 100% 1.5px;
+    color: var(--ink-muted);
+  }
+
+  /* A time block: thin 45-degree hatch lines in its calendar color. */
+  .hatch {
+    border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+    background-color: color-mix(in srgb, var(--c) 5%, var(--paper));
+    background-image: repeating-linear-gradient(
+      45deg,
+      color-mix(in srgb, var(--c) 32%, transparent) 0 1px,
+      transparent 1px 6px
+    );
+  }
+}
+
+@layer utilities {
+  /* Fraunces: optical sizing on, slightly soft serifs. */
+  .font-display {
+    font-optical-sizing: auto;
+    font-variation-settings:
+      'SOFT' 50,
+      'WONK' 0;
+  }
+}
+
+/* People who ask their system for less motion get none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,92 @@
+/*
+ * Maps the tokens onto Tailwind, so components can write bg-paper, text-ink-muted,
+ * border-hairline, rounded-control, font-display, and so on.
+ *
+ * `@theme inline` makes each utility point at the live CSS variable (rather than
+ * a copy of its value), which is what lets dark mode flip every color without a
+ * single `dark:` class in any component.
+ */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-hairline: var(--hairline);
+  --color-rule: var(--rule);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-weekend: var(--weekend);
+  --color-toast-bg: var(--toast-bg);
+  --color-toast-text: var(--toast-text);
+  --color-toast-link: var(--toast-link);
+  --color-heat-1: var(--heat-1);
+  --color-heat-2: var(--heat-2);
+  --color-heat-3: var(--heat-3);
+  --color-heat-4: var(--heat-4);
+
+  --shadow-popover: var(--shadow-popover);
+}
+
+@theme {
+  /* Type: Fraunces for display, Instrument Sans for the interface, JetBrains Mono for numbers and times. */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Instrument Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* The type scale. Each size carries its own line height and weight, so text-page is the whole 40px title style. */
+  --text-label: 11px;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 600;
+  --text-meta: 13px;
+  --text-meta--line-height: 1.5;
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-title: 16px;
+  --text-title--line-height: 1.4;
+  --text-section: 22px;
+  --text-section--line-height: 1.15;
+  --text-page: 40px;
+  --text-page--line-height: 1.15;
+  --text-page--letter-spacing: -0.02em;
+  --text-page--font-weight: 400;
+  --text-time: 11px;
+  --text-time--line-height: 1.3;
+  --text-timer: 96px;
+  --text-timer--line-height: 1;
+
+  /* Corners: 4px for controls and event blocks, 8px for popovers and modals. Nothing rounder except circles. */
+  --radius-control: 4px;
+  --radius-panel: 8px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --animate-pop: pop 180ms var(--ease-out);
+  --animate-breathe: breathe 2.4s ease-in-out infinite;
+
+  @keyframes pop {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes breathe {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+}

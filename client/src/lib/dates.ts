@@ -52,3 +52,15 @@ export function formatTime(hhmm: string): string {
   const [h, m] = hhmm.split(':').map(Number);
   return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
+
+/** "2h 15m", "45m", "1d 3h": a live countdown label. Returns "now" once the time has arrived. */
+export function formatCountdown(ms: number): string {
+  if (ms <= 0) return 'now';
+  const minutes = Math.floor(ms / 60_000);
+  if (minutes < 1) return '<1m';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return minutes % 60 ? `${hours}h ${minutes % 60}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return hours % 24 ? `${days}d ${hours % 24}h` : `${days}d`;
+}

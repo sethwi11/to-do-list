@@ -55,3 +55,16 @@ export function weekdayName(iso: string): string {
 export function lastDayOfMonth(iso: string): string {
   return addDays(addMonths(iso.slice(0, 8) + '01', 1), -1);
 }
+
+/**
+ * ISO 8601 week number (weeks start on Monday; week 1 is the week containing the
+ * year's first Thursday). Late-December dates can belong to week 1 of the next year,
+ * and early-January dates to week 52 or 53 of the last.
+ */
+export function isoWeekNumber(iso: string): number {
+  const d = toUTC(iso);
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 3); // this week's Thursday decides the year
+  const firstThursday = toUTC(`${d.getUTCFullYear()}-01-04`); // Jan 4 is always in week 1
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - ((firstThursday.getUTCDay() + 6) % 7) + 3);
+  return 1 + Math.round((d.getTime() - firstThursday.getTime()) / (7 * 86_400_000));
+}
