@@ -6,11 +6,13 @@ A personal planner built from a to-do app: tasks today, with a calendar, courses
 
 ## What works today
 
-- Tasks with subtasks, priorities, due dates and times, recurrence, estimates, notes, and drag-and-drop ordering
-- Calendars (color-coded areas of life such as School, ACM, Personal) with views per calendar
-- Views: Today, Upcoming, Overdue, All, Completed; search, filters, sorting
-- Undo for delete and complete
-- Dark mode, JSON export and import
+- **Today** page: what's overdue and due today, with the week's completion bars
+- **Tasks** page with tabs (All, Upcoming, Overdue, Completed), search, filters, sorting, and drag-to-reorder
+- Tasks with subtasks, priorities, due dates and times, recurrence, estimates, and notes
+- **Calendars** (color-coded areas of life such as School, ACM, Personal): create, rename, recolor, delete, and filter the task list by one
+- Quick-add at the top of every page, a mini month in the sidebar (click a day to see what's due), and a New menu
+- Undo for delete and complete, keyboard shortcuts (press `?`), dark mode, JSON export and import
+- Works on a phone-width screen: the sidebar becomes a drawer, and a + button replaces the New menu
 - Data foundation for everything coming next: events, event types, time blocks, courses and semesters, internship applications, templates, focus sessions, weekly reviews, settings, attachments
 
 ## Setup
@@ -53,6 +55,14 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 - **Dates are local.** A due date is a plain `YYYY-MM-DD` string and an event time is a local `YYYY-MM-DDTHH:mm` with no timezone, so "class at 10:00" stays at 10:00 through daylight saving changes.
 - **Versioned migrations** (`PRAGMA user_version`): new schema changes are appended, never edited, so an existing database upgrades in place.
 - **TanStack Query** caches server data in the browser and does optimistic updates: the screen changes immediately and rolls back if the server refuses.
+
+## The app shell
+
+- `client/src/app/`: the frame around every page. `Shell` (sidebar on desktop, drawer and + button on a phone), `AppProvider` (the tasks and calendars plus everything you can do to them, the dialogs, and the undo toast), `PageHeader`, `QuickAdd`, `MiniMonth`, `NewMenu`.
+- `client/src/pages/`: one file per page (`TodayPage`, `TasksPage`). Routes are set in `main.tsx`; `/styleguide` sits outside the shell.
+- `client/src/features/`: the parts a page is built from, grouped by subject (`tasks/`, `calendars/`, `settings/`).
+- **The address bar is the state.** What the Tasks page shows (`/tasks?view=...&calendar=...&date=...`) lives in the URL, so a sidebar link, a mini-month day, and the browser's back button all just work.
+- **One dialog at a time.** Task, calendar, settings and shortcuts dialogs are all driven by a single piece of state in `AppProvider`, so opening one from inside another can't stack them.
 
 ## Design system
 

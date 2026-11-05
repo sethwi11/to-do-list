@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import { cx } from '../lib/cx';
 
 interface SegmentedProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
-  options: readonly { value: T; label: string; /** Longer name for screen readers, when the label is a single letter. */ title?: string }[];
+  options: readonly { value: T; label: ReactNode; /** Name for screen readers and the tooltip, needed when the label is a letter or an icon. */ title?: string }[];
   /** What the control chooses, e.g. "Calendar view". */
   label: string;
   className?: string;

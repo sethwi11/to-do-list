@@ -41,7 +41,12 @@ export function Dialog({ open, onClose, title, children, footer }: DialogProps) 
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // React's autoFocus runs while the dialog is still closed (so it does nothing), and the
+      // browser then focuses the first button. A field marked data-autofocus gets focus instead.
+      dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 

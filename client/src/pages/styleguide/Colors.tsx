@@ -102,7 +102,7 @@ function ContrastTable() {
         </thead>
         <tbody>
           {CONTRAST_PAIRS.map((p) => (
-            <tr key={`${p.fg}/${p.bg}`} className="border-b border-hairline">
+            <tr key={`${p.fg}/${p.bg}/${p.use}`} className="border-b border-hairline">
               <td className="py-2 pr-4 font-mono text-ink">{p.fg} on {p.bg}</td>
               <td className="py-2 pr-4 font-mono text-ink-muted">{p.min}:1</td>
               {cell('light', p.fg, p.bg, p.min)}

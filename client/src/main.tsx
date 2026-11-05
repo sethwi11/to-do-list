@@ -6,22 +6,47 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Route, Routes } from 'react-router';
-import App from './App';
+import { AppProvider } from './app/AppProvider';
+import { Shell } from './app/Shell';
 import { queryClient } from './data/queryClient';
+import { SettingsProvider } from './hooks/useSettings';
+import NotFoundPage from './pages/NotFoundPage';
 import StyleGuide from './pages/StyleGuide';
+import TasksPage from './pages/TasksPage';
+import TodayPage from './pages/TodayPage';
 import './index.css';
 
-// Routes. Only the style guide has its own address so far; every other path shows the existing
-// app. The planner's pages (Calendar, Applications, Courses...) get their routes as they are built.
+/*
+ * Providers, outside in:
+ *  - SettingsProvider: the saved settings, and it applies the theme to <html>. Outermost so
+ *    even the style guide follows the chosen theme.
+ *  - QueryClientProvider: server data cache.
+ *  - BrowserRouter: the address bar drives which page shows.
+ *  - AppProvider: tasks and calendars plus the actions on them, the dialogs, and the toast.
+ *    It sits inside the router because its dialogs navigate.
+ * The style guide lives outside the Shell so it has no sidebar.
+ */
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/styleguide" element={<StyleGuide />} />
-          <Route path="*" element={<App />} />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <SettingsProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/styleguide" element={<StyleGuide />} />
+            <Route
+              element={
+                <AppProvider>
+                  <Shell />
+                </AppProvider>
+              }
+            >
+              <Route index element={<TodayPage />} />
+              <Route path="tasks" element={<TasksPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </SettingsProvider>
   </StrictMode>,
 );

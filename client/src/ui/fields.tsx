@@ -54,9 +54,9 @@ export function Textarea({ className, ...rest }: TextareaHTMLAttributes<HTMLText
   return <textarea className={cx(control, 'min-h-24 py-2 aria-invalid:border-danger', className)} {...rest} />;
 }
 
-export function Select({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ className, wrapperClassName, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement> & { wrapperClassName?: string }) {
   return (
-    <div className="relative">
+    <div className={cx('relative', wrapperClassName)}>
       <select className={cx(control, 'h-9 appearance-none pr-9', className)} {...rest}>
         {children}
       </select>
@@ -69,13 +69,15 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigat
 
 interface QuickAddProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
   className?: string;
+  /** The key shown at the right edge. Defaults to the command-palette shortcut. */
+  shortcut?: string;
 }
 
 /**
  * The quick-add box: a single underlined line, no box. The shortcut hint on the right
- * is decoration (screen readers skip it).
+ * is decoration (screen readers skip it) and is hidden on a phone.
  */
-export function QuickAddInput({ className, placeholder = 'Add a task or event…', ...rest }: QuickAddProps) {
+export function QuickAddInput({ className, placeholder = 'Add a task or event…', shortcut = isMac ? '⌘K' : 'Ctrl K', ...rest }: QuickAddProps) {
   return (
     <div
       className={cx(
@@ -90,8 +92,9 @@ export function QuickAddInput({ className, placeholder = 'Add a task or event…
         className="h-9 min-w-0 flex-1 bg-transparent text-body text-ink outline-none focus-visible:outline-none"
         {...rest}
       />
-      <kbd aria-hidden className="ml-3 shrink-0 font-mono text-time text-ink-muted">
-        {isMac ? '⌘K' : 'Ctrl K'}
+      {/* Hidden on a phone, where there is no keyboard to press it on. */}
+      <kbd aria-hidden className="ml-3 hidden shrink-0 font-mono text-time text-ink-muted sm:block">
+        {shortcut}
       </kbd>
     </div>
   );

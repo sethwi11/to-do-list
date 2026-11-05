@@ -1,7 +1,6 @@
 import { useToast, ToastHost } from '../ui/Toast';
 import { Segmented } from '../ui/Segmented';
 import { useSettings, type Settings } from '../hooks/useSettings';
-import { useTheme } from '../hooks/useTheme';
 import { CalendarParts } from './styleguide/CalendarParts';
 import { Colors } from './styleguide/Colors';
 import { Controls } from './styleguide/Controls';
@@ -26,7 +25,6 @@ const SECTIONS = [
  */
 export default function StyleGuide() {
   const { settings, update } = useSettings();
-  useTheme(settings.theme);
   const { toast, show, dismiss } = useToast();
 
   return (

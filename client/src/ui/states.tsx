@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { RotateCw, X } from 'lucide-react';
+import { Button, IconButton } from './Button';
 import { cx } from '../lib/cx';
 
 /** An empty list: one line of Fraunces italic and one ghost button. No illustrations, left-aligned. */
@@ -25,6 +27,21 @@ export function SkeletonRows({ count = 4, className }: { count?: number; classNa
           <span className="h-3 animate-breathe rounded-control bg-hairline" style={{ width: `${70 - ((i * 13) % 35)}%`, animationDelay: `${i * 150}ms` }} />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** A problem the person should know about, with a way to retry and a way to dismiss it. */
+export function ErrorBanner({ message, onRetry, onDismiss }: { message: string; onRetry?: () => void; onDismiss?: () => void }) {
+  return (
+    <div role="alert" className="mb-6 flex items-center gap-3 border-l-[3px] border-danger bg-surface py-2 pr-1 pl-3">
+      <p className="min-w-0 flex-1 text-body text-danger">{message}</p>
+      {onRetry && (
+        <Button variant="ghost" icon={RotateCw} onClick={onRetry}>
+          Retry
+        </Button>
+      )}
+      {onDismiss && <IconButton icon={X} label="Dismiss" onClick={onDismiss} />}
     </div>
   );
 }

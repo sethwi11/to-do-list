@@ -6,6 +6,15 @@
  * a copy of its value), which is what lets dark mode flip every color without a
  * single `dark:` class in any component.
  */
+/*
+ * Remove Tailwind's built-in color palette. Every color in the app now comes from the tokens
+ * below, so a stray bg-slate-100 or text-indigo-600 can't sneak in: it simply produces no CSS.
+ * (transparent, current, and inherit still work.)
+ */
+@theme {
+  --color-*: initial;
+}
+
 @theme inline {
   --color-paper: var(--paper);
   --color-surface: var(--surface);
@@ -69,11 +78,22 @@
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --animate-pop: pop 180ms var(--ease-out);
   --animate-breathe: breathe 2.4s ease-in-out infinite;
+  --animate-drawer: drawer 180ms var(--ease-out);
 
   @keyframes pop {
     from {
       opacity: 0;
       transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes drawer {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
     }
     to {
       opacity: 1;

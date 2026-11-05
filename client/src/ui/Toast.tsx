@@ -44,7 +44,7 @@ export function ToastView({ message, onUndo, onDismiss, className, ...rest }: To
 const DURATION_MS = 5000;
 
 /**
- * Shows the current toast bottom-left and dismisses it after 5 seconds. The timer
+ * Shows the current toast bottom-center (above the + button on a phone, so it never covers it, and clear of the sidebar's Settings link on a desktop) and dismisses it after 5 seconds. The timer
  * pauses while the pointer or keyboard focus is on the toast, so nobody is racing a clock
  * to hit Undo.
  */
@@ -60,7 +60,7 @@ export function ToastHost({ toast, onDismiss }: { toast: ToastMessage | null; on
 
   return (
     // The region stays in the page so screen readers announce each new message.
-    <div aria-live="polite" className="pointer-events-none fixed bottom-4 left-4 z-50 max-sm:right-4 sm:bottom-6 sm:left-6">
+    <div aria-live="polite" className="pointer-events-none fixed right-4 bottom-24 left-4 z-50 sm:right-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2">
       {toast && (
         <ToastView
           key={toast.id}

@@ -32,7 +32,8 @@ export function Checkbox({ checked, onChange, label, size = 'md', className }: C
       <span
         aria-hidden
         className={cx(
-          'grid place-items-center border-[1.5px] border-ink transition-colors duration-150 ease-out peer-checked:bg-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-checked:[&_svg]:opacity-100',
+          // pointer-events-none: the check icon (opacity 0 makes it a stacking context) would otherwise paint over the input and swallow clicks.
+          'pointer-events-none grid place-items-center border-[1.5px] border-ink transition-colors duration-150 ease-out peer-checked:bg-ink peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent peer-checked:[&_svg]:opacity-100',
           md ? 'size-4 rounded-[3px]' : 'size-3 rounded-[2px]',
         )}
       >

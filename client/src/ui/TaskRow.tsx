@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { CalendarPlus, CircleAlert, ListChecks, Pencil, Timer } from 'lucide-react';
+import { useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type Ref } from 'react';
+import { CalendarPlus, CircleAlert, GripVertical, ListChecks, Pencil, Timer } from 'lucide-react';
 import type { CalendarColor, Priority } from '@todo/shared';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
@@ -31,6 +31,12 @@ export interface TaskRowProps {
    * completed tasks stay visible.
    */
   leaveOnComplete?: boolean;
+  /** Manual ordering: pass the drag listeners and the row shows a grip handle. */
+  dragHandle?: HTMLAttributes<HTMLButtonElement>;
+  /** Passed by a sortable list, which needs a handle on the row's <li> to move it. */
+  liRef?: Ref<HTMLLIElement>;
+  liStyle?: CSSProperties;
+  dragging?: boolean;
 }
 
 // The sequence, from the click: the line draws for 250ms; at 400ms the row starts to fade and
@@ -62,6 +68,10 @@ export function TaskRow({
   onSchedule,
   onTimer,
   leaveOnComplete = false,
+  dragHandle,
+  liRef,
+  liStyle,
+  dragging = false,
 }: TaskRowProps) {
   const reduced = useReducedMotion();
   const [leaving, setLeaving] = useState<'idle' | 'striking' | 'collapsing'>('idle');
@@ -118,8 +128,13 @@ export function TaskRow({
   return (
     // Collapse: animating a grid row from 1fr to 0fr smoothly shrinks the row to nothing (height itself can't animate from "auto").
     <li
+      ref={liRef}
+      style={liStyle}
       data-collapsing={leaving === 'collapsing'}
-      className="grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-250 ease-out data-[collapsing=true]:grid-rows-[0fr] data-[collapsing=true]:opacity-0"
+      className={cx(
+        'grid grid-rows-[1fr] transition-[grid-template-rows,opacity] duration-250 ease-out data-[collapsing=true]:grid-rows-[0fr] data-[collapsing=true]:opacity-0',
+        dragging && 'relative z-10 bg-surface outline-1 outline-rule',
+      )}
     >
       <div className="min-h-0 overflow-hidden">
         <div className="group relative flex min-h-11 items-center gap-1 border-b border-hairline pr-1 pl-2 transition-colors duration-150 ease-out hover:bg-surface focus-within:bg-surface">
@@ -175,13 +190,28 @@ export function TaskRow({
                   {dueLabel}
                 </span>
               )}
-              {calendar && (
+              {calendar ? (
                 <span title={calendar.name} style={calendarVars(calendar.color)} className="inline-flex items-center">
                   <span aria-hidden className="size-2 bg-(color:--c)" />
                   <span className="sr-only">Calendar: {calendar.name}</span>
                 </span>
+              ) : (
+                // Same width as the swatch, so the due dates of all rows line up on their right edge.
+                <span aria-hidden className="inline-block size-2" />
               )}
             </div>
+          )}
+
+          {/* The grip is always there on a phone (no hover), and appears on hover or focus elsewhere. */}
+          {dragHandle && (
+            <button
+              type="button"
+              aria-label={`Reorder "${title}"`}
+              {...dragHandle}
+              className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-control text-ink-muted opacity-0 transition-opacity duration-150 ease-out group-focus-within:opacity-100 group-hover:opacity-100 active:cursor-grabbing max-sm:opacity-100"
+            >
+              <GripVertical className="size-4" aria-hidden />
+            </button>
           )}
 
           {/* Hover or keyboard focus reveals the actions. */}

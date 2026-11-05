@@ -3,81 +3,17 @@
 @import './styles/theme.css';
 @import './styles/paper.css';
 
-/* dark: follows a .dark class on <html> (set by useTheme), so a manual toggle
-   can override the OS setting. Tailwind's default would only follow the OS. */
-@custom-variant dark (&:where(.dark, .dark *));
-
+/*
+ * Global base. Everything else is a component using the tokens (no `dark:` classes: the
+ * tokens flip under .dark, so components don't know which mode they are in).
+ */
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
+    background-color: var(--paper);
   }
-  /* Visible keyboard focus everywhere (accessibility), without showing rings on mouse clicks. */
-  :focus-visible {
-    @apply outline-2 outline-offset-2 outline-indigo-500;
-  }
-  input::placeholder,
-  textarea::placeholder {
-    @apply text-slate-400 dark:text-slate-500;
-  }
-}
-
-@layer components {
-  /* Round checkbox. Still a native <input type="checkbox">, so keyboard,
-     screen-reader, and form behavior come for free; only the look changes. */
-  .check {
-    @apply grid h-5 w-5 shrink-0 cursor-pointer appearance-none place-content-center rounded-full border-2 border-slate-300 transition-colors hover:border-indigo-500 dark:border-slate-600 dark:hover:border-indigo-400;
-  }
-  .check::after {
-    content: '';
-    @apply h-1.5 w-2.5 -translate-y-px -rotate-45 border-b-2 border-l-2 border-white opacity-0;
-  }
-  .check:checked {
-    @apply border-indigo-500 bg-indigo-500;
-  }
-  .check:checked::after {
-    @apply opacity-100;
-  }
-  .check-sm {
-    @apply h-4 w-4 border-[1.5px];
-  }
-  .check-sm::after {
-    @apply h-1 w-2;
-  }
-
-  /* Small borderless control used for quick-add options and the toolbar. */
-  .pill {
-    @apply inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800;
-  }
-
-  /* Native <select> styled as a quiet control, with its own chevron. */
-  .select-quiet {
-    @apply cursor-pointer appearance-none rounded-md bg-transparent bg-[length:14px] bg-[right_0.4rem_center] bg-no-repeat py-1 pr-6 pl-2 text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  }
-
-  .card {
-    @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none;
-  }
-
-  .icon-btn {
-    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200;
-  }
-}
-
-/* Mic "listening" pulse. Respect users who ask the OS to reduce motion. */
-@keyframes mic-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgb(239 68 68 / 0.5);
-  }
-  100% {
-    box-shadow: 0 0 0 16px rgb(239 68 68 / 0);
-  }
-}
-.mic-pulse {
-  animation: mic-pulse 1.2s ease-out infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .mic-pulse {
-    animation: none;
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
   }
 }

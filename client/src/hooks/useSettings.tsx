@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useTheme } from './useTheme';
 
 export interface Settings {
   theme: 'system' | 'light' | 'dark';
@@ -23,8 +24,21 @@ function load(): Settings {
   }
 }
 
-export function useSettings() {
+interface SettingsContextValue {
+  settings: Settings;
+  update: (patch: Partial<Settings>) => void;
+}
+
+const SettingsContext = createContext<SettingsContextValue | null>(null);
+
+/**
+ * One copy of the settings for the whole app. (A hook with its own state would give
+ * every component that used it a separate copy, and a theme toggle in the header and one in
+ * the settings dialog would disagree.) The provider also applies the theme to the page.
+ */
+export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(load);
+  useTheme(settings.theme);
 
   const update = useCallback((patch: Partial<Settings>) => {
     setSettings((prev) => {
@@ -38,5 +52,12 @@ export function useSettings() {
     });
   }, []);
 
-  return { settings, update };
+  const value = useMemo(() => ({ settings, update }), [settings, update]);
+  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
+}
+
+export function useSettings(): SettingsContextValue {
+  const ctx = useContext(SettingsContext);
+  if (!ctx) throw new Error('useSettings must be used inside <SettingsProvider>');
+  return ctx;
 }
