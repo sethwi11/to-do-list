@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { addDays, expandOccurrences } from '@todo/shared';
+import { calendarUrl, isCalendarView } from '../features/calendar/calendarModel';
 import { cx } from '../lib/cx';
 import { monthGrid, shiftMonth } from '../lib/monthGrid';
-import { tasksUrl } from '../lib/taskParams';
 import { IconButton } from '../ui/Button';
 import { useApp } from './AppContext';
 
@@ -11,18 +12,36 @@ const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 /**
- * A small month for jumping to a date. A dot marks days that have open tasks. For now a click
- * opens that day's tasks; once the calendar page exists, it will jump the calendar there.
+ * A small month for jumping to a date. A dot marks days that have an event or an open task. A click
+ * takes the calendar there: on the calendar page it keeps the view you're in; from anywhere else it
+ * opens that day.
  */
 export function MiniMonth({ onNavigate }: { onNavigate?: () => void }) {
-  const { tasks, today } = useApp();
+  const { tasks, events, today } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const selected = location.pathname === '/tasks' ? new URLSearchParams(location.search).get('date') : null;
+  const onCalendar = location.pathname === '/calendar';
+  const search = new URLSearchParams(location.search);
+  const selected = onCalendar ? search.get('date') : null;
 
   const [shown, setShown] = useState(() => ({ year: Number(today.slice(0, 4)), month: Number(today.slice(5, 7)) }));
   const cells = useMemo(() => monthGrid(shown.year, shown.month), [shown]);
-  const busy = useMemo(() => new Set(tasks.filter((t) => t.status === 'todo' && t.dueDate).map((t) => t.dueDate)), [tasks]);
+
+  // When the calendar page is on another month, follow it.
+  useEffect(() => {
+    if (selected) setShown({ year: Number(selected.slice(0, 4)), month: Number(selected.slice(5, 7)) });
+  }, [selected]);
+
+  const busy = useMemo(() => {
+    const days = new Set<string | null>(tasks.filter((t) => t.status === 'todo' && t.dueDate).map((t) => t.dueDate));
+    const first = cells[0]!.date;
+    const last = cells[cells.length - 1]!.date;
+    for (const o of expandOccurrences(events, first, addDays(last, 1))) {
+      // An event covers every day from its start to its end (the end of an all-day event is exclusive).
+      for (let d = o.start.slice(0, 10); d < o.end.slice(0, 10) || d === o.start.slice(0, 10); d = addDays(d, 1)) days.add(d);
+    }
+    return days;
+  }, [tasks, events, cells]);
 
   const go = (delta: number) => setShown((s) => shiftMonth(s.year, s.month, delta));
 
@@ -46,16 +65,17 @@ export function MiniMonth({ onNavigate }: { onNavigate?: () => void }) {
         {cells.map((c) => {
           const isToday = c.date === today;
           const isSelected = c.date === selected;
-          const hasTasks = busy.has(c.date);
+          const hasItems = busy.has(c.date);
           return (
             <button
               key={c.date}
               type="button"
-              aria-label={`${new Date(`${c.date}T12:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${hasTasks ? ', has open tasks' : ''}`}
+              aria-label={`${new Date(`${c.date}T12:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${hasItems ? ', has events or open tasks' : ''}`}
               aria-current={isToday ? 'date' : undefined}
               aria-pressed={isSelected}
               onClick={() => {
-                navigate(tasksUrl({ date: c.date }));
+                const view = search.get('view');
+                navigate(calendarUrl({ view: onCalendar && isCalendarView(view) ? view : onCalendar ? null : 'day', date: c.date }));
                 onNavigate?.();
               }}
               className={cx(
@@ -66,7 +86,7 @@ export function MiniMonth({ onNavigate }: { onNavigate?: () => void }) {
               )}
             >
               {c.day}
-              {hasTasks && !isToday && <span aria-hidden className="absolute bottom-0.5 size-1 rounded-full bg-ink-muted" />}
+              {hasItems && !isToday && <span aria-hidden className="absolute bottom-0.5 size-1 rounded-full bg-ink-muted" />}
             </button>
           );
         })}

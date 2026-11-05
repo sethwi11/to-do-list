@@ -12,6 +12,7 @@ import {
   type CreateTimeBlockInput,
   type CreateWeeklyReviewInput,
   type Event,
+  type EventBatchInput,
   type EventType,
   type FocusSession,
   type Semester,
@@ -62,8 +63,25 @@ export const createEventTypeRepository = (db: Db) =>
 const TIME_COLUMNS = { start: 'start_at', end: 'end_at' } as const;
 const endAfterStart = (v: { start: string; end: string }) => (v.end > v.start ? null : 'The end must be after the start');
 
+class SqliteEventRepository extends SqliteEntityRepository<Event, CreateEventInput, UpdateEventInput> {
+  /**
+   * Write several rows and delete others as one unit: if any row is rejected, nothing changes.
+   * A row that was soft-deleted comes back to life when it is written again (that is how undo works).
+   */
+  async applyBatch({ put, remove }: EventBatchInput): Promise<{ put: Event[]; removed: string[] }> {
+    return this.db.transaction(() => {
+      for (const row of put) {
+        const problem = this.config.check?.(row);
+        if (problem) throw new HttpError(400, problem);
+        this.upsertSync(row);
+      }
+      return { put, removed: remove.filter((id) => this.removeSync(id)) };
+    })();
+  }
+}
+
 export const createEventRepository = (db: Db) =>
-  new SqliteEntityRepository<Event, CreateEventInput, UpdateEventInput>(db, {
+  new SqliteEventRepository(db, {
     table: 'events',
     orderBy: 'start_at, created_at',
     json: ['recurrence'],

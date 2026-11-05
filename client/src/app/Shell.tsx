@@ -8,6 +8,7 @@ import { useShortcuts } from '../hooks/useShortcuts';
 import { IconButton } from '../ui/Button';
 import { Drawer } from '../ui/Drawer';
 import { useApp } from './AppContext';
+import { ErrorBoundary } from './ErrorBoundary';
 import { NewMenu } from './NewMenu';
 import { SidebarContent } from './Sidebar';
 
@@ -25,6 +26,7 @@ export function Shell() {
   const location = useLocation();
   const [collapsed, setCollapsed] = usePersistedState('voice-todo.sidebarCollapsed', false, isBoolean);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const fullHeight = location.pathname === '/calendar';
 
   useDueNotifications(app.tasks, settings.notifications);
 
@@ -57,8 +59,18 @@ export function Shell() {
           <IconButton icon={MenuIcon} label="Open menu" onClick={() => setDrawerOpen(true)} />
           <span className="font-display text-section italic">Planner</span>
         </div>
-        <main className="px-5 pt-6 pb-28 sm:px-8 md:px-10 md:pt-10">
-          <Outlet />
+        {/* The calendar fills the screen instead of scrolling the page: its grid scrolls inside it. */}
+        <main
+          className={
+            fullHeight
+              ? 'flex h-[calc(100dvh-3rem)] flex-col px-3 pt-3 pb-24 sm:px-5 md:h-dvh md:px-8 md:pt-6 md:pb-4'
+              : 'px-5 pt-6 pb-28 sm:px-8 md:px-10 md:pt-10'
+          }
+        >
+          {/* Keyed by address, so leaving a page that crashed clears the message. */}
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

@@ -119,6 +119,18 @@ export type CreateEventInput = z.infer<typeof CreateEventInputSchema>;
 export type UpdateEventInput = z.infer<typeof UpdateEventInputSchema>;
 
 /**
+ * Several event rows changed at once: `put` rows are inserted (or replace the row with the same
+ * id, un-deleting it if needed) and `remove` ids are deleted, all in one transaction. Editing
+ * "this and following events" touches two or three rows, and undoing any change is the same
+ * request with the old rows, so one all-or-nothing endpoint covers both.
+ */
+export const EventBatchInputSchema = z.object({
+  put: z.array(EventSchema.refine(endAfterStart, END_AFTER_START)).max(500),
+  remove: z.array(z.uuid()).max(500),
+});
+export type EventBatchInput = z.infer<typeof EventBatchInputSchema>;
+
+/**
  * A time block: a slot on the calendar reserved for working on a task,
  * separate from the task's due date. Deleting a block never deletes the task.
  */

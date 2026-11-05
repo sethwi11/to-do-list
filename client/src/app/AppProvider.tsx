@@ -1,15 +1,19 @@
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { nextOccurrence, type Calendar, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
+import { nextOccurrence, type Calendar, type EventType, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
+import { ScopeDialog } from '../features/calendar/ScopeDialog';
 import { CalendarDialog } from '../features/calendars/CalendarDialog';
+import { EventDialog } from '../features/events/EventDialog';
 import { SettingsDialog } from '../features/settings/SettingsDialog';
 import { ShortcutsDialog } from '../features/settings/ShortcutsDialog';
 import { TaskDialog } from '../features/tasks/TaskDialog';
+import { usePersistedState } from '../hooks/usePersistedState';
 import { useTodoData } from '../hooks/useTodoData';
 import { useToday } from '../hooks/useToday';
 import { formatDueDate } from '../lib/dates';
 import { computeMove } from '../lib/ordering';
 import { ToastHost, useToast } from '../ui/Toast';
 import { AppContext, type AppApi, type DialogState } from './AppContext';
+import { useEventActions } from './useEventActions';
 
 /**
  * Holds everything the screens share: the data, the actions that change it, the open dialog,
@@ -22,6 +26,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const today = useToday();
   const { toast, show: showToast, dismiss: dismissToast } = useToast();
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const { events, eventTypes, eventsLoading, scopeDialog, actions: eventActions } = useEventActions(showToast);
+
+  // Which calendars show on the calendar page. Remembered per device, so hiding "Work" on the laptop doesn't hide it on the phone.
+  const [hiddenIds, setHiddenIds] = usePersistedState<string[]>('voice-todo.calendar.hidden', [], isStringArray);
+  const hiddenCalendarIds = useMemo(() => new Set(hiddenIds), [hiddenIds]);
+  const toggleCalendarHidden = useCallback(
+    (id: string) => setHiddenIds(hiddenIds.includes(id) ? hiddenIds.filter((x) => x !== id) : [...hiddenIds, id]),
+    [hiddenIds, setHiddenIds],
+  );
 
   const calendarsById = useMemo(() => new Map<string, Calendar>(calendars.map((c) => [c.id, c])), [calendars]);
 
@@ -71,6 +84,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [tasks, updateTask, reorderAll],
   );
 
+  const rescheduleTask = useCallback(
+    async (task: Task, when: { dueDate: string; dueTime: string | null }) => {
+      const previous = { dueDate: task.dueDate, dueTime: task.dueTime };
+      if (!(await updateTask(task.id, when))) return false;
+      showToast(`Moved “${task.title}” to ${formatDueDate(when.dueDate, today)}`, () => void updateTask(task.id, previous));
+      return true;
+    },
+    [updateTask, showToast, today],
+  );
+
   const createCalendar = useCallback((name: string, color: CalendarColor) => data.createCalendar({ name, color }), [data]);
   const updateCalendar = useCallback((id: string, changes: UpdateCalendarInput) => data.updateCalendar(id, changes), [data]);
 
@@ -84,7 +107,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return true;
   }, [toast, dismissToast]);
 
+  const eventTypesById = useMemo(() => new Map<string, EventType>(eventTypes.map((t) => [t.id, t])), [eventTypes]);
+
   const value: AppApi = {
+    ...eventActions,
+    events,
+    eventTypes,
+    eventTypesById,
+    eventsLoading,
+    hiddenCalendarIds,
+    toggleCalendarHidden,
+    rescheduleTask,
     tasks,
     calendars,
     calendarsById,
@@ -114,6 +147,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       <div className="paper-page">
         {children}
         <TaskDialog />
+        <EventDialog />
+        <ScopeDialog {...scopeDialog} />
         <CalendarDialog />
         <SettingsDialog />
         <ShortcutsDialog />
@@ -122,3 +157,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
     </AppContext.Provider>
   );
 }
+
+const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');

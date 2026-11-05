@@ -23,4 +23,6 @@ export const queryClient = new QueryClient({
 export const keys = {
   tasks: ['tasks'] as const,
   calendars: ['calendars'] as const,
+  events: ['events'] as const,
+  eventTypes: ['event-types'] as const,
 };

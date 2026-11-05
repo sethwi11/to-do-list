@@ -14,6 +14,7 @@ import type {
   CreateTimeBlockInput,
   CreateWeeklyReviewInput,
   Event,
+  EventBatchInput,
   EventType,
   FocusSession,
   Semester,
@@ -37,7 +38,11 @@ import { createCrudApi } from './crud';
 // One line per kind of data. Screens added in later phases use these.
 export const calendarsApi = createCrudApi<Calendar, CreateCalendarInput, UpdateCalendarInput>('/calendars');
 export const eventTypesApi = createCrudApi<EventType, CreateEventTypeInput, UpdateEventTypeInput>('/event-types');
-export const eventsApi = createCrudApi<Event, CreateEventInput, UpdateEventInput>('/events');
+export const eventsApi = {
+  ...createCrudApi<Event, CreateEventInput, UpdateEventInput>('/events'),
+  /** Write several events and delete others in one all-or-nothing request. */
+  batch: (plan: EventBatchInput) => apiFetch<{ put: Event[]; removed: string[] }>('/events/batch', { method: 'POST', body: JSON.stringify(plan) }),
+};
 export const timeBlocksApi = createCrudApi<TimeBlock, CreateTimeBlockInput, UpdateTimeBlockInput>('/time-blocks');
 export const semestersApi = createCrudApi<Semester, CreateSemesterInput, UpdateSemesterInput>('/semesters');
 export const coursesApi = createCrudApi<Course, CreateCourseInput, UpdateCourseInput>('/courses');

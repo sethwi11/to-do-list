@@ -1,17 +1,22 @@
 import { CalendarPlus, ChevronDown, Briefcase, FileUp, ListPlus, Plus } from 'lucide-react';
+import { useLocation } from 'react-router';
+import { newEventSpan, parseCalendarQuery } from '../features/calendar/calendarModel';
 import { cx } from '../lib/cx';
 import { Menu, type MenuItem } from '../ui/Menu';
 import { useApp } from './AppContext';
 
 /**
- * The "New" button and its menu. Only Task exists so far; the others are listed so you can see
+ * The "New" button and its menu. Task and Event work; the others are listed so you can see
  * what's coming, but can't be chosen yet. Each is enabled when its feature is built.
  */
 export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
-  const { openDialog } = useApp();
+  const { openDialog, today } = useApp();
+  const location = useLocation();
+  // Looking at a day on the calendar? A new event starts on that day.
+  const lookingAt = location.pathname === '/calendar' ? parseCalendarQuery(new URLSearchParams(location.search), today).date : null;
   const items: MenuItem[] = [
     { label: 'Task', icon: ListPlus, onSelect: () => openDialog({ kind: 'task', mode: 'new', defaults: {} }) },
-    { label: 'Event', icon: CalendarPlus, disabled: true, hint: 'Soon' },
+    { label: 'Event', icon: CalendarPlus, onSelect: () => openDialog({ kind: 'event', mode: 'new', defaults: newEventSpan(lookingAt, new Date()) }) },
     { label: 'Import file', icon: FileUp, disabled: true, hint: 'Soon' },
     { label: 'Application', icon: Briefcase, disabled: true, hint: 'Soon' },
   ];

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { CalendarCheck, ListTodo, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
+import { CalendarCheck, CalendarDays, ListTodo, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
 import { tasksUrl } from '../lib/taskParams';
@@ -31,7 +31,7 @@ const navClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =
  * phone's slide-out drawer.
  */
 export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigate }: SidebarProps) {
-  const { calendars, tasks, today, openDialog } = useApp();
+  const { calendars, tasks, today, openDialog, hiddenCalendarIds, toggleCalendarHidden } = useApp();
   const location = useLocation();
   const activeCalendar = location.pathname === '/tasks' ? new URLSearchParams(location.search).get('calendar') : null;
 
@@ -44,6 +44,7 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
 
   const nav = [
     { to: '/', label: 'Today', icon: CalendarCheck, end: true, count: dueToday },
+    { to: '/calendar', label: 'Calendar', icon: CalendarDays, end: false, count: 0 },
     { to: '/tasks', label: 'Tasks', icon: ListTodo, end: false, count: 0 },
   ];
 
@@ -91,8 +92,22 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
             {calendars.map((c) => {
               const active = activeCalendar === c.id;
               const count = openCounts.get(c.id) ?? 0;
+              const visible = !hiddenCalendarIds.has(c.id);
               return (
                 <li key={c.id} style={calendarVars(c.color)} className="group relative flex items-center">
+                  {!collapsed && (
+                    // The color square is also the switch for showing this calendar on the calendar page: filled = shown, outline = hidden.
+                    <button
+                      type="button"
+                      aria-pressed={visible}
+                      aria-label={`Show “${c.name}” on the calendar`}
+                      title={visible ? 'Shown on the calendar. Click to hide.' : 'Hidden from the calendar. Click to show.'}
+                      onClick={() => toggleCalendarHidden(c.id)}
+                      className="grid size-8 shrink-0 place-items-center rounded-control transition-colors duration-150 ease-out hover:bg-accent-soft"
+                    >
+                      <span aria-hidden className={cx('size-2.5 border-[1.5px] border-(color:--c)', visible ? 'bg-(color:--c)' : 'bg-transparent')} />
+                    </button>
+                  )}
                   <Link
                     to={tasksUrl({ calendarId: c.id })}
                     onClick={onNavigate}
@@ -101,12 +116,13 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
                     aria-label={collapsed ? c.name : undefined}
                     className={cx(
                       'flex h-8 min-w-0 flex-1 items-center gap-3 rounded-control text-body transition-colors duration-150 ease-out hover:bg-accent-soft',
-                      collapsed ? 'w-9 flex-none justify-center' : 'px-3 max-md:pr-10', // on a phone the ⋯ button is always visible, so leave room for it beside the count
+                      collapsed ? 'w-9 flex-none justify-center' : 'pr-3 pl-1 max-md:pr-10', // on a phone the ⋯ button is always visible, so leave room for it beside the count
                       active && 'bg-accent-soft font-medium',
+                      !collapsed && !visible && 'text-ink-muted',
                     )}
                   >
-                    {/* A square, not a circle: calendar colors are squares everywhere. */}
-                    <span aria-hidden className="size-2.5 shrink-0 bg-(color:--c)" />
+                    {/* In the narrow rail there's no room for a switch, so the square is just the link, dimmed if hidden. */}
+                    {collapsed && <span aria-hidden className={cx('size-2.5 shrink-0 bg-(color:--c)', !visible && 'opacity-30')} />}
                     {!collapsed && <span className="min-w-0 flex-1 truncate">{c.name}</span>}
                     {!collapsed && count > 0 && <span className="font-mono text-meta text-ink-muted tabular-nums group-hover:invisible group-focus-within:invisible max-md:visible!">{count}</span>}
                   </Link>

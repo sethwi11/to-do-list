@@ -13,6 +13,7 @@ import type {
   CreateTimeBlockInput,
   CreateWeeklyReviewInput,
   Event,
+  EventBatchInput,
   EventType,
   FocusSession,
   Semester,
@@ -53,7 +54,9 @@ export interface Repositories {
   tasks: TaskRepository;
   calendars: CrudRepository<Calendar, CreateCalendarInput, UpdateCalendarInput>;
   eventTypes: CrudRepository<EventType, CreateEventTypeInput, UpdateEventTypeInput>;
-  events: RestorableRepository<Event, CreateEventInput, UpdateEventInput>;
+  events: RestorableRepository<Event, CreateEventInput, UpdateEventInput> & {
+    applyBatch(batch: EventBatchInput): Promise<{ put: Event[]; removed: string[] }>;
+  };
   timeBlocks: RestorableRepository<TimeBlock, CreateTimeBlockInput, UpdateTimeBlockInput>;
   semesters: CrudRepository<Semester, CreateSemesterInput, UpdateSemesterInput>;
   courses: CrudRepository<Course, CreateCourseInput, UpdateCourseInput>;

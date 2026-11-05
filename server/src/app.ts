@@ -24,6 +24,7 @@ import { errorHandler, notFound } from './middleware/errorHandler';
 import type { Repositories } from './repositories';
 import { backupRouter } from './routes/backup';
 import { crudRouter } from './routes/crudRouter';
+import { eventsBatchRouter } from './routes/events';
 import { settingsRouter } from './routes/settings';
 import { tasksRouter } from './routes/tasks';
 
@@ -46,6 +47,7 @@ export function createApp(repos: Repositories) {
   app.use('/api/tasks', tasksRouter(repos.tasks));
   app.use('/api/calendars', crudRouter(repos.calendars, { label: 'Calendar', create: CreateCalendarInputSchema, update: UpdateCalendarInputSchema }));
   app.use('/api/event-types', crudRouter(repos.eventTypes, { label: 'Event type', create: CreateEventTypeInputSchema, update: UpdateEventTypeInputSchema }));
+  app.use('/api/events', eventsBatchRouter(repos.events));
   app.use('/api/events', crudRouter(repos.events, { label: 'Event', create: CreateEventInputSchema, update: UpdateEventInputSchema }));
   app.use('/api/time-blocks', crudRouter(repos.timeBlocks, { label: 'Time block', create: CreateTimeBlockInputSchema, update: UpdateTimeBlockInputSchema }));
   app.use('/api/semesters', crudRouter(repos.semesters, { label: 'Semester', create: CreateSemesterInputSchema, update: UpdateSemesterInputSchema }));
