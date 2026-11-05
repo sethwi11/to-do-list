@@ -2,10 +2,10 @@ import { CheckCircle2, SearchX } from 'lucide-react';
 import type { View } from '../lib/views';
 
 const smartCopy = {
-  today: ['Nothing due today', 'Add a task above, or hold the mic and say what you need to do.'],
+  today: ['Nothing due today', 'Add a task above and it will be due today.'],
   upcoming: ['Nothing in the next 7 days', 'Tasks due tomorrow through next week show up here.'],
   overdue: ['Nothing overdue', "You're all caught up."],
-  all: ['No tasks yet', 'Add your first task above, or try a brain dump.'],
+  all: ['No tasks yet', 'Add your first task in the box above.'],
   completed: ['Nothing completed yet', 'Tasks you check off land here.'],
 } as const;
 
@@ -19,8 +19,8 @@ interface Props {
 export function EmptyState({ view, filtered, onClearFilters }: Props) {
   const [title, hint] = filtered
     ? ['No matching tasks', 'Try a different search, or clear the filters.']
-    : view.type === 'category'
-      ? ['This list is empty', 'Add a task above and it goes into this list.']
+    : view.type === 'calendar'
+      ? ['This calendar is empty', 'Add a task above and it goes into this calendar.']
       : smartCopy[view.id];
   const Icon = filtered ? SearchX : CheckCircle2;
 

@@ -14,7 +14,10 @@ function task(overrides: Partial<Task>): Task {
     dueDate: null,
     dueTime: null,
     priority: 'medium',
-    categoryId: null,
+    calendarId: null,
+    courseId: null,
+    applicationId: null,
+    reminders: [],
     status: 'todo',
     subtasks: [],
     recurrence: 'none',
@@ -48,10 +51,10 @@ describe('inView', () => {
     expect(inView(task({ dueDate: null }), view, today)).toBe(false);
   });
 
-  it('category views match by id', () => {
-    const t = task({ categoryId: 'abc' });
-    expect(inView(t, { type: 'category', id: 'abc' }, today)).toBe(true);
-    expect(inView(t, { type: 'category', id: 'xyz' }, today)).toBe(false);
+  it('calendar views match by id', () => {
+    const t = task({ calendarId: 'abc' });
+    expect(inView(t, { type: 'calendar', id: 'abc' }, today)).toBe(true);
+    expect(inView(t, { type: 'calendar', id: 'xyz' }, today)).toBe(false);
   });
 });
 

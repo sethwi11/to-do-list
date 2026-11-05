@@ -1,27 +1,38 @@
 import express from 'express';
-import type { AiService } from './ai/AiService';
-import type { BackupRepository } from './repositories/BackupRepository';
-import { aiRouter } from './routes/ai';
-import { backupRouter } from './routes/backup';
+import {
+  CreateApplicationInputSchema,
+  CreateCalendarInputSchema,
+  CreateCourseInputSchema,
+  CreateEventInputSchema,
+  CreateEventTypeInputSchema,
+  CreateFocusSessionInputSchema,
+  CreateSemesterInputSchema,
+  CreateTemplateInputSchema,
+  CreateTimeBlockInputSchema,
+  CreateWeeklyReviewInputSchema,
+  UpdateApplicationInputSchema,
+  UpdateCalendarInputSchema,
+  UpdateCourseInputSchema,
+  UpdateEventInputSchema,
+  UpdateEventTypeInputSchema,
+  UpdateSemesterInputSchema,
+  UpdateTemplateInputSchema,
+  UpdateTimeBlockInputSchema,
+  UpdateWeeklyReviewInputSchema,
+} from '@todo/shared';
 import { errorHandler, notFound } from './middleware/errorHandler';
-import type { CategoryRepository, TaskRepository } from './repositories/TaskRepository';
-import { categoriesRouter } from './routes/categories';
+import type { Repositories } from './repositories';
+import { backupRouter } from './routes/backup';
+import { crudRouter } from './routes/crudRouter';
+import { settingsRouter } from './routes/settings';
 import { tasksRouter } from './routes/tasks';
-
-export interface AppDeps {
-  tasks: TaskRepository;
-  categories: CategoryRepository;
-  backup: BackupRepository;
-  /** null when no API key is configured; AI routes then answer 503 with setup instructions. */
-  ai: AiService | null;
-}
 
 /**
  * Builds the Express app without starting it. Keeping "build" separate from
  * "listen" lets tests drive the app in-process with supertest (no real port,
  * no real database file).
  */
-export function createApp(deps: AppDeps) {
+export function createApp(repos: Repositories) {
   const app = express();
 
   // 5 MB, so a JSON backup import fits; normal requests are tiny.
@@ -30,10 +41,21 @@ export function createApp(deps: AppDeps) {
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true });
   });
-  app.use('/api/tasks', tasksRouter(deps.tasks));
-  app.use('/api/categories', categoriesRouter(deps.categories));
-  app.use('/api/ai', aiRouter(deps.ai));
-  app.use('/api/backup', backupRouter(deps.backup));
+
+  // Tasks have their own router (recurrence and reordering); everything else is the generic one.
+  app.use('/api/tasks', tasksRouter(repos.tasks));
+  app.use('/api/calendars', crudRouter(repos.calendars, { label: 'Calendar', create: CreateCalendarInputSchema, update: UpdateCalendarInputSchema }));
+  app.use('/api/event-types', crudRouter(repos.eventTypes, { label: 'Event type', create: CreateEventTypeInputSchema, update: UpdateEventTypeInputSchema }));
+  app.use('/api/events', crudRouter(repos.events, { label: 'Event', create: CreateEventInputSchema, update: UpdateEventInputSchema }));
+  app.use('/api/time-blocks', crudRouter(repos.timeBlocks, { label: 'Time block', create: CreateTimeBlockInputSchema, update: UpdateTimeBlockInputSchema }));
+  app.use('/api/semesters', crudRouter(repos.semesters, { label: 'Semester', create: CreateSemesterInputSchema, update: UpdateSemesterInputSchema }));
+  app.use('/api/courses', crudRouter(repos.courses, { label: 'Course', create: CreateCourseInputSchema, update: UpdateCourseInputSchema }));
+  app.use('/api/applications', crudRouter(repos.applications, { label: 'Application', create: CreateApplicationInputSchema, update: UpdateApplicationInputSchema }));
+  app.use('/api/templates', crudRouter(repos.templates, { label: 'Template', create: CreateTemplateInputSchema, update: UpdateTemplateInputSchema }));
+  app.use('/api/focus-sessions', crudRouter(repos.focusSessions, { label: 'Focus session', create: CreateFocusSessionInputSchema, update: null }));
+  app.use('/api/weekly-reviews', crudRouter(repos.weeklyReviews, { label: 'Weekly review', create: CreateWeeklyReviewInputSchema, update: UpdateWeeklyReviewInputSchema }));
+  app.use('/api/settings', settingsRouter(repos.settings));
+  app.use('/api/backup', backupRouter(repos.backup));
 
   app.use('/api', notFound);
   app.use(errorHandler);

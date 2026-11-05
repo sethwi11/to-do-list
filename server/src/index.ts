@@ -1,27 +1,17 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { ClaudeAiService } from './ai/ClaudeAiService';
 import { createApp } from './app';
-import { BackupRepository } from './repositories/BackupRepository';
 import { openDatabase } from './db/connection';
 import { env } from './env';
-import { SqliteCategoryRepository } from './repositories/SqliteCategoryRepository';
-import { SqliteTaskRepository } from './repositories/SqliteTaskRepository';
+import { createRepositories } from './repositories';
 
+// Opening the database also upgrades its schema (after backing it up first).
 const db = openDatabase(env.DB_PATH);
-
-const tasks = new SqliteTaskRepository(db);
-const categories = new SqliteCategoryRepository(db);
-
-// The API key is read here, on the server, and never sent to the browser.
-const ai = env.ANTHROPIC_API_KEY ? new ClaudeAiService(new Anthropic({ apiKey: env.ANTHROPIC_API_KEY })) : null;
-if (!ai) console.warn('ANTHROPIC_API_KEY is not set: AI extraction is disabled (see README).');
-
-const app = createApp({ tasks, categories, backup: new BackupRepository(db, tasks, categories), ai });
+const repos = createRepositories(db);
+const app = createApp(repos);
 
 // Soft-deleted tasks only need to live long enough to be undone. Clear out
 // anything deleted more than 30 days ago on each startup.
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const purged = await tasks.purgeDeleted(new Date(Date.now() - THIRTY_DAYS_MS).toISOString());
+const purged = await repos.tasks.purgeDeleted(new Date(Date.now() - THIRTY_DAYS_MS).toISOString());
 if (purged > 0) console.log(`Purged ${purged} task(s) deleted more than 30 days ago`);
 
 // Bind to localhost only: there's no auth, so nothing else on the network should reach this.

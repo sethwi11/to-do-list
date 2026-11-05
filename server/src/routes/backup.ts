@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { BackupSchema } from '@todo/shared';
+import { z } from 'zod';
+import { BackupSchema, upgradeBackup } from '@todo/shared';
 import { validateBody } from '../middleware/validate';
 import type { BackupRepository } from '../repositories/BackupRepository';
 
@@ -13,7 +14,8 @@ export function backupRouter(backup: BackupRepository): Router {
     res.json(data);
   });
 
-  router.post('/import', validateBody(BackupSchema), async (req, res) => {
+  // Files exported by the original to-do app (version 1) are upgraded to the current format first.
+  router.post('/import', validateBody(z.preprocess(upgradeBackup, BackupSchema)), async (req, res) => {
     res.json(await backup.import(req.body));
   });
 

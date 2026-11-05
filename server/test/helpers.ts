@@ -1,14 +1,13 @@
-import type { AiService } from '../src/ai/AiService';
 import { createApp } from '../src/app';
-import { openDatabase } from '../src/db/connection';
-import { BackupRepository } from '../src/repositories/BackupRepository';
-import { SqliteCategoryRepository } from '../src/repositories/SqliteCategoryRepository';
-import { SqliteTaskRepository } from '../src/repositories/SqliteTaskRepository';
+import { openDatabase, type Db } from '../src/db/connection';
+import { createRepositories } from '../src/repositories';
 
-/** A fully wired app on a fresh in-memory database. */
-export function makeTestApp(ai: AiService | null = null) {
+/** A fully wired app on a fresh in-memory database, with the seeded defaults. */
+export function makeTestApp() {
+  return makeTestAppWithDb().app;
+}
+
+export function makeTestAppWithDb(): { app: ReturnType<typeof createApp>; db: Db } {
   const db = openDatabase(':memory:');
-  const tasks = new SqliteTaskRepository(db);
-  const categories = new SqliteCategoryRepository(db);
-  return createApp({ tasks, categories, backup: new BackupRepository(db, tasks, categories), ai });
+  return { app: createApp(createRepositories(db)), db };
 }

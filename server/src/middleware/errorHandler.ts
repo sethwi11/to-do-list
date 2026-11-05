@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
+import { HttpError } from '../errors';
 
 export const notFound: RequestHandler = (req, res) => {
   res.status(404).json({ error: 'NotFound', message: `No route for ${req.method} ${req.originalUrl}` });
@@ -15,13 +16,17 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(400).json({ error: 'BadJson', message: 'Request body is not valid JSON' });
     return;
   }
-  if (err?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
-    res.status(400).json({ error: 'ValidationError', message: 'Unknown categoryId' });
+  if (err instanceof HttpError) {
+    res.status(err.status).json({ error: err.status === 403 ? 'Forbidden' : 'ValidationError', message: err.message });
     return;
   }
-
-  if (err?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-    res.status(409).json({ error: 'Conflict', message: 'A list with that name already exists' });
+  // A foreign-key failure means the request pointed at something that doesn't exist (a calendar, course...).
+  if (err?.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') {
+    res.status(400).json({ error: 'ValidationError', message: 'That refers to something that does not exist (a calendar, course, task...)' });
+    return;
+  }
+  if (err?.code === 'SQLITE_CONSTRAINT_UNIQUE' || err?.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+    res.status(409).json({ error: 'Conflict', message: 'That already exists (a name or date must be unique)' });
     return;
   }
 

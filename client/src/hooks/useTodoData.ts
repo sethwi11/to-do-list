@@ -1,219 +1,98 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type {
-  Category,
-  CreateCategoryInput,
-  CreateTaskInput,
-  Task,
-  UpdateCategoryInput,
-  UpdateTaskInput,
-} from '@todo/shared';
+import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import type { Calendar, CreateCalendarInput, CreateTaskInput, Task, UpdateCalendarInput, UpdateTaskInput } from '@todo/shared';
 import { ApiError } from '../api/client';
-import { categoriesApi, tasksApi } from '../api/tasks';
+import { calendarHooks } from '../data/useCalendars';
+import { keys } from '../data/queryClient';
+import { useTaskMutations, useTasksQuery } from '../data/useTasks';
 
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Unexpected error');
+const NONE: never[] = [];
 
 /**
- * Owns all task and list state and every mutation of it.
+ * The current screen's view of the data: tasks and calendars plus the actions on
+ * them, with the same shape it had before TanStack Query arrived. The caching,
+ * optimistic updates, and rollback now live in src/data/; this file only adapts
+ * them (each action resolves to the saved row, or null/false if it failed and
+ * has been rolled back, with the reason shown in the error banner).
  *
- * Updates and deletes are *optimistic*: the UI changes immediately, then the
- * request runs in the background. If the request fails, we roll back to the
- * previous value and show an error. Checking a box should feel instant, and
- * the server almost always says yes.
- *
- * Creates are NOT optimistic, because the server assigns the id.
+ * The planner screens being built next will use the hooks in src/data/ directly,
+ * and this adapter goes away once the task screens move over.
  */
 export function useTodoData() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const qc = useQueryClient();
+  const tasksQuery = useTasksQuery();
+  const calendarsQuery = calendarHooks.useList();
+  const task = useTaskMutations();
+  const createCal = calendarHooks.useCreate();
+  const updateCal = calendarHooks.useUpdate();
+  const deleteCal = calendarHooks.useDelete();
 
-  // Always point at the latest state, so the callbacks below can read current
-  // values (for rollback) without being re-created on every render.
-  const tasksRef = useRef(tasks);
-  tasksRef.current = tasks;
-  const categoriesRef = useRef(categories);
-  categoriesRef.current = categories;
+  // A failed action shows in the banner until dismissed. A failed *load* does too, but is
+  // dismissed by remembering that specific error object, so a new failure shows again.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [dismissedLoadError, setDismissedLoadError] = useState<unknown>(null);
+  const loadError = tasksQuery.error ?? calendarsQuery.error;
+  const error = actionError ?? (loadError && loadError !== dismissedLoadError ? messageOf(loadError) : null);
 
-  const fail = useCallback((err: unknown) => setError(messageOf(err)), []);
-  const replaceTask = (task: Task) => setTasks((prev) => prev.map((t) => (t.id === task.id ? task : t)));
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  /** Runs an action; on failure, shows the reason and resolves to null instead of throwing. */
+  const attempt = useCallback(async <R,>(action: () => Promise<R>): Promise<R | null> => {
     try {
-      const [t, c] = await Promise.all([tasksApi.list(), categoriesApi.list()]);
-      setTasks(t);
-      setCategories(c);
+      return await action();
     } catch (err) {
-      fail(err);
-    } finally {
-      setLoading(false);
+      setActionError(messageOf(err));
+      return null;
     }
-  }, [fail]);
+  }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  // ---- tasks -------------------------------------------------------------
-
-  /** Returns the created task, or null on failure (the error banner shows why). */
-  const createTask = useCallback(
-    async (input: CreateTaskInput): Promise<Task | null> => {
-      try {
-        const task = await tasksApi.create(input);
-        setTasks((prev) => [...prev, task]);
-        return task;
-      } catch (err) {
-        fail(err);
-        return null;
-      }
-    },
-    [fail],
-  );
-
-  /** Returns the saved task, or null if the update failed (and was rolled back). */
-  const updateTask = useCallback(
-    async (id: string, changes: UpdateTaskInput): Promise<Task | null> => {
-      const previous = tasksRef.current.find((t) => t.id === id);
-      if (!previous) return null;
-      replaceTask({ ...previous, ...changes } as Task);
-
-      try {
-        const saved = await tasksApi.update(id, changes);
-        replaceTask(saved);
-
-        // Completing a recurring task makes the server create the next occurrence...
-        if (saved.nextOccurrenceId && saved.nextOccurrenceId !== previous.nextOccurrenceId) {
-          const next = await tasksApi.get(saved.nextOccurrenceId);
-          setTasks((prev) => [...prev, next]);
-        }
-        // ...and reopening it makes the server remove that occurrence (if still open).
-        if (previous.nextOccurrenceId && !saved.nextOccurrenceId) {
-          const spawnedId = previous.nextOccurrenceId;
-          setTasks((prev) => prev.filter((t) => !(t.id === spawnedId && t.status === 'todo')));
-        }
-        return saved;
-      } catch (err) {
-        replaceTask(previous);
-        fail(err);
-        return null;
-      }
-    },
-    [fail],
-  );
-
-  const deleteTask = useCallback(
-    async (id: string): Promise<boolean> => {
-      const index = tasksRef.current.findIndex((t) => t.id === id);
-      const removed = tasksRef.current[index];
-      if (!removed) return false;
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-      try {
-        await tasksApi.remove(id);
-        return true;
-      } catch (err) {
-        setTasks((prev) => [...prev.slice(0, index), removed, ...prev.slice(index)]);
-        fail(err);
-        return false;
-      }
-    },
-    [fail],
-  );
-
-  const restoreTask = useCallback(
-    async (id: string) => {
-      try {
-        const task = await tasksApi.restore(id);
-        setTasks((prev) => (prev.some((t) => t.id === id) ? prev : [...prev, task]));
-      } catch (err) {
-        fail(err);
-      }
-    },
-    [fail],
-  );
-
-  /** Rewrites every task's sortOrder to match `orderedIds` (used when gaps run out). */
-  const reorderAll = useCallback(
-    async (orderedIds: string[]) => {
-      const previous = tasksRef.current;
-      const rank = new Map(orderedIds.map((id, i) => [id, (i + 1) * 1024]));
-      setTasks((prev) => prev.map((t) => ({ ...t, sortOrder: rank.get(t.id) ?? t.sortOrder })));
-      try {
-        await tasksApi.reorder(orderedIds);
-      } catch (err) {
-        setTasks(previous);
-        fail(err);
-      }
-    },
-    [fail],
-  );
-
-  // ---- categories --------------------------------------------------------
-
-  const createCategory = useCallback(
-    async (input: CreateCategoryInput): Promise<Category | null> => {
-      try {
-        const category = await categoriesApi.create(input);
-        setCategories((prev) => [...prev, category]);
-        return category;
-      } catch (err) {
-        fail(err);
-        return null;
-      }
-    },
-    [fail],
-  );
-
-  const updateCategory = useCallback(
-    async (id: string, changes: UpdateCategoryInput): Promise<boolean> => {
-      const previous = categoriesRef.current.find((c) => c.id === id);
-      if (!previous) return false;
-      setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...changes } as Category : c)));
-      try {
-        const saved = await categoriesApi.update(id, changes);
-        setCategories((prev) => prev.map((c) => (c.id === id ? saved : c)));
-        return true;
-      } catch (err) {
-        setCategories((prev) => prev.map((c) => (c.id === id ? previous : c)));
-        fail(err);
-        return false;
-      }
-    },
-    [fail],
-  );
-
-  const deleteCategory = useCallback(
-    async (id: string): Promise<boolean> => {
-      try {
-        await categoriesApi.remove(id);
-        setCategories((prev) => prev.filter((c) => c.id !== id));
-        // Mirror the database's ON DELETE SET NULL locally.
-        setTasks((prev) => prev.map((t) => (t.categoryId === id ? { ...t, categoryId: null } : t)));
-        return true;
-      } catch (err) {
-        fail(err);
-        return false;
-      }
-    },
-    [fail],
-  );
+  const { mutateAsync: createTaskAsync } = task.create;
+  const { mutateAsync: updateTaskAsync } = task.update;
+  const { mutateAsync: removeTaskAsync } = task.remove;
+  const { mutateAsync: restoreTaskAsync } = task.restore;
+  const { mutateAsync: reorderAsync } = task.reorder;
+  const { mutateAsync: createCalAsync } = createCal;
+  const { mutateAsync: updateCalAsync } = updateCal;
+  const { mutateAsync: deleteCalAsync } = deleteCal;
 
   return {
-    tasks,
-    categories,
-    loading,
+    tasks: tasksQuery.data ?? NONE,
+    calendars: calendarsQuery.data ?? NONE,
+    loading: tasksQuery.isPending || calendarsQuery.isPending,
     error,
-    dismissError: () => setError(null),
-    reload: load,
-    createTask,
-    updateTask,
-    deleteTask,
-    restoreTask,
-    reorderAll,
-    createCategory,
-    updateCategory,
-    deleteCategory,
+    dismissError: () => {
+      setActionError(null);
+      setDismissedLoadError(loadError);
+    },
+    reload: async () => {
+      setActionError(null);
+      await Promise.all([tasksQuery.refetch(), calendarsQuery.refetch()]);
+    },
+
+    createTask: useCallback((input: CreateTaskInput) => attempt<Task>(() => createTaskAsync(input)), [attempt, createTaskAsync]),
+    updateTask: useCallback(
+      (id: string, changes: UpdateTaskInput) => attempt<Task>(() => updateTaskAsync({ id, changes })),
+      [attempt, updateTaskAsync],
+    ),
+    deleteTask: useCallback(async (id: string) => (await attempt(() => removeTaskAsync(id))) !== null, [attempt, removeTaskAsync]),
+    restoreTask: useCallback(async (id: string) => void (await attempt(() => restoreTaskAsync(id))), [attempt, restoreTaskAsync]),
+    reorderAll: useCallback(async (ids: string[]) => void (await attempt(() => reorderAsync(ids))), [attempt, reorderAsync]),
+
+    createCalendar: useCallback(
+      (input: CreateCalendarInput) => attempt<Calendar>(() => createCalAsync(input)),
+      [attempt, createCalAsync],
+    ),
+    updateCalendar: useCallback(
+      async (id: string, changes: UpdateCalendarInput) => (await attempt(() => updateCalAsync({ id, changes }))) !== null,
+      [attempt, updateCalAsync],
+    ),
+    deleteCalendar: useCallback(
+      async (id: string) => {
+        const ok = (await attempt(() => deleteCalAsync(id))) !== null;
+        // The server un-assigns the calendar's tasks; refetch so the screen matches.
+        if (ok) void qc.invalidateQueries({ queryKey: keys.tasks });
+        return ok;
+      },
+      [attempt, deleteCalAsync, qc],
+    ),
   };
 }

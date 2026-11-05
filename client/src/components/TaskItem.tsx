@@ -1,15 +1,15 @@
 import { useState, type HTMLAttributes } from 'react';
 import { ChevronRight, Clock, GripVertical, ListChecks, Pencil, Repeat, StickyNote, Trash2 } from 'lucide-react';
-import type { Category, Task, UpdateTaskInput } from '@todo/shared';
-import { categoryDotClass } from '../lib/categoryColors';
+import type { Calendar, Task, UpdateTaskInput } from '@todo/shared';
+import { calendarDotClass } from '../lib/calendarColors';
 import { formatDueDate, formatTime } from '../lib/dates';
 import { SubtaskList } from './SubtaskList';
 import { TaskEditor } from './TaskEditor';
 
 export interface TaskItemProps {
   task: Task;
-  category: Category | undefined;
-  categories: Category[];
+  calendar: Calendar | undefined;
+  calendars: Calendar[];
   today: string;
   onToggle: (task: Task) => void;
   onUpdate: (id: string, changes: UpdateTaskInput) => void;
@@ -27,7 +27,7 @@ const formatMinutes = (m: number) => (m < 60 ? `${m}m` : `${Math.floor(m / 60)}h
  * - Details sit on one quiet line and only appear when there's something to say.
  * - Edit/delete icons appear on hover (desktop) or inside the expanded row (touch).
  */
-export function TaskItem({ task, category, categories, today, onToggle, onUpdate, onDelete, dragHandleProps }: TaskItemProps) {
+export function TaskItem({ task, calendar, calendars, today, onToggle, onUpdate, onDelete, dragHandleProps }: TaskItemProps) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -42,7 +42,7 @@ export function TaskItem({ task, category, categories, today, onToggle, onUpdate
       <div className="px-4 py-3">
         <TaskEditor
           task={task}
-          categories={categories}
+          calendars={calendars}
           onCancel={() => setEditing(false)}
           onSave={(changes) => {
             onUpdate(task.id, changes);
@@ -68,11 +68,11 @@ export function TaskItem({ task, category, categories, today, onToggle, onUpdate
       </span>,
     );
   }
-  if (category) {
+  if (calendar) {
     meta.push(
       <span key="list" className="inline-flex items-center gap-1">
-        <span className={`h-1.5 w-1.5 rounded-full ${categoryDotClass[category.color]}`} aria-hidden />
-        {category.name}
+        <span className={`h-1.5 w-1.5 rounded-full ${calendarDotClass[calendar.color]}`} aria-hidden />
+        {calendar.name}
       </span>,
     );
   }

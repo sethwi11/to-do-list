@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ChevronRight } from 'lucide-react';
-import type { Category, Task, UpdateTaskInput } from '@todo/shared';
+import type { Calendar, Task, UpdateTaskInput } from '@todo/shared';
 import { TaskItem, type TaskItemProps } from './TaskItem';
 
 interface Props {
@@ -27,8 +27,8 @@ interface Props {
   /** Show done tasks in a collapsible "Completed" section (vs. as the main list). */
   doneAsSection: boolean;
   draggable: boolean;
-  categoriesById: Map<string, Category>;
-  categories: Category[];
+  calendarsById: Map<string, Calendar>;
+  calendars: Calendar[];
   today: string;
   onToggle: (task: Task) => void;
   onUpdate: (id: string, changes: UpdateTaskInput) => void;
@@ -37,8 +37,8 @@ interface Props {
   onMove: (movedId: string, before: Task | undefined, after: Task | undefined) => void;
 }
 
-type ItemCallbacks = Pick<Props, 'categories' | 'today' | 'onToggle' | 'onUpdate' | 'onDelete'> & {
-  categoriesById: Map<string, Category>;
+type ItemCallbacks = Pick<Props, 'calendars' | 'today' | 'onToggle' | 'onUpdate' | 'onDelete'> & {
+  calendarsById: Map<string, Calendar>;
 };
 
 export function TaskList({ openTasks, doneTasks, doneAsSection, draggable, onMove, ...item }: Props) {
@@ -125,10 +125,10 @@ const LIST_CLASS = 'card divide-y divide-slate-100 overflow-hidden dark:divide-s
 
 function Item({
   task,
-  categoriesById,
+  calendarsById,
   ...rest
 }: ItemCallbacks & { task: Task; dragHandleProps?: TaskItemProps['dragHandleProps'] }) {
-  return <TaskItem task={task} category={task.categoryId ? categoriesById.get(task.categoryId) : undefined} {...rest} />;
+  return <TaskItem task={task} calendar={task.calendarId ? calendarsById.get(task.calendarId) : undefined} {...rest} />;
 }
 
 function SortableTaskItem({ task, ...rest }: ItemCallbacks & { task: Task }) {

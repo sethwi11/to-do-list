@@ -63,21 +63,22 @@ describe('tasks API', () => {
     expect((await request(app).get('/api/tasks')).body).toHaveLength(0);
   });
 
-  it('rejects an unknown categoryId', async () => {
+  it('rejects an unknown calendarId', async () => {
     await request(app)
       .post('/api/tasks')
-      .send({ title: 'x', categoryId: '00000000-0000-4000-8000-000000000000' })
+      .send({ title: 'x', calendarId: '00000000-0000-4000-8000-000000000000' })
       .expect(400);
   });
 
-  it('returns the seeded categories', async () => {
-    const res = await request(app).get('/api/categories').expect(200);
+  it('returns the seeded calendars', async () => {
+    const res = await request(app).get('/api/calendars').expect(200);
     expect(res.body.map((c: { name: string }) => c.name)).toEqual([
       'School',
       'Work',
-      'Personal',
-      'Fraternity',
+      'Applications',
       'ACM',
+      'Kappa Alpha Psi',
+      'Personal',
     ]);
   });
 });
@@ -137,30 +138,30 @@ describe('undo + ordering', () => {
   });
 });
 
-describe('categories API', () => {
-  it('creates, renames, recolors, and deletes a list', async () => {
-    const created = await request(app).post('/api/categories').send({ name: 'Gym' }).expect(201);
+describe('calendars API', () => {
+  it('creates, renames, recolors, and deletes a calendar', async () => {
+    const created = await request(app).post('/api/calendars').send({ name: 'Gym' }).expect(201);
     expect(created.body.color).toEqual(expect.any(String));
 
     const renamed = await request(app)
-      .patch(`/api/categories/${created.body.id}`)
-      .send({ name: 'Fitness', color: 'red' })
+      .patch(`/api/calendars/${created.body.id}`)
+      .send({ name: 'Fitness', color: 'tomato' })
       .expect(200);
-    expect(renamed.body).toMatchObject({ name: 'Fitness', color: 'red' });
+    expect(renamed.body).toMatchObject({ name: 'Fitness', color: 'tomato' });
 
-    await request(app).delete(`/api/categories/${created.body.id}`).expect(204);
-    await request(app).delete(`/api/categories/${created.body.id}`).expect(404);
+    await request(app).delete(`/api/calendars/${created.body.id}`).expect(204);
+    await request(app).delete(`/api/calendars/${created.body.id}`).expect(404);
   });
 
   it('rejects duplicate names (case-insensitive) with 409', async () => {
-    await request(app).post('/api/categories').send({ name: 'school' }).expect(409);
+    await request(app).post('/api/calendars').send({ name: 'school' }).expect(409);
   });
 
-  it('deleting a list keeps its tasks but uncategorizes them', async () => {
-    const { body: list } = await request(app).post('/api/categories').send({ name: 'Temp' });
-    const { body: task } = await request(app).post('/api/tasks').send({ title: 'x', categoryId: list.id });
-    await request(app).delete(`/api/categories/${list.id}`).expect(204);
+  it('deleting a list keeps its tasks but unassigns them', async () => {
+    const { body: list } = await request(app).post('/api/calendars').send({ name: 'Temp' });
+    const { body: task } = await request(app).post('/api/tasks').send({ title: 'x', calendarId: list.id });
+    await request(app).delete(`/api/calendars/${list.id}`).expect(204);
     const { body: after } = await request(app).get(`/api/tasks/${task.id}`).expect(200);
-    expect(after.categoryId).toBeNull();
+    expect(after.calendarId).toBeNull();
   });
 });

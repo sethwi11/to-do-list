@@ -11,7 +11,10 @@ interface TaskRow {
   due_date: string | null;
   due_time: string | null;
   priority: Task['priority'];
-  category_id: string | null;
+  calendar_id: string | null;
+  course_id: string | null;
+  application_id: string | null;
+  reminders: string;
   status: Task['status'];
   subtasks: string;
   recurrence: Task['recurrence'];
@@ -37,7 +40,10 @@ function rowToTask(row: TaskRow): Task {
     dueDate: row.due_date,
     dueTime: row.due_time,
     priority: row.priority,
-    categoryId: row.category_id,
+    calendarId: row.calendar_id,
+    courseId: row.course_id,
+    applicationId: row.application_id,
+    reminders: JSON.parse(row.reminders),
     status: row.status,
     subtasks: JSON.parse(row.subtasks),
     recurrence: row.recurrence,
@@ -60,7 +66,10 @@ function taskToRow(task: Task): TaskRow {
     due_date: task.dueDate,
     due_time: task.dueTime,
     priority: task.priority,
-    category_id: task.categoryId,
+    calendar_id: task.calendarId,
+    course_id: task.courseId,
+    application_id: task.applicationId,
+    reminders: JSON.stringify(task.reminders),
     status: task.status,
     subtasks: JSON.stringify(task.subtasks),
     recurrence: task.recurrence,
@@ -96,6 +105,12 @@ export class SqliteTaskRepository implements TaskRepository {
           .map((c) => `${c} = @${c}`)
           .join(', ')} WHERE id = @id`,
       ),
+      // Import: insert, or overwrite the task with the same id (and un-delete it).
+      upsert: db.prepare<TaskRow>(
+        `INSERT INTO tasks (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map((c) => '@' + c).join(', ')}) ` +
+          `ON CONFLICT(id) DO UPDATE SET ${COLUMNS.filter((c) => c !== 'id').map((c) => `${c} = excluded.${c}`).join(', ')}, deleted_at = NULL`,
+      ),
+      exists: db.prepare<[string], { n: number }>('SELECT COUNT(*) AS n FROM tasks WHERE id = ?'),
       softDelete: db.prepare<[string, string]>('UPDATE tasks SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL'),
       restore: db.prepare<[string]>('UPDATE tasks SET deleted_at = NULL WHERE id = ?'),
       setSort: db.prepare<[number, string]>('UPDATE tasks SET sort_order = ? WHERE id = ?'),
@@ -113,7 +128,20 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   async create(input: CreateTaskInput): Promise<Task> {
+    // A client may choose the id (so a create made offline can be replayed
+    // safely). If we've already seen it, return what we have instead of failing.
+    if (input.id) {
+      const existing = this.stmts.get.get(input.id);
+      if (existing) return rowToTask(existing);
+    }
     return this.insert(input);
+  }
+
+  /** Import: insert or overwrite the task with this id. Returns true if it already existed. */
+  upsertSync(task: Task): boolean {
+    const existed = (this.stmts.exists.get(task.id)?.n ?? 0) > 0;
+    this.stmts.upsert.run(taskToRow(task));
+    return existed;
   }
 
   async update(id: string, changes: UpdateTaskInput, ctx: RequestContext): Promise<Task | null> {
@@ -146,7 +174,10 @@ export class SqliteTaskRepository implements TaskRepository {
           dueDate: nextOccurrence(next.dueDate, next.recurrence, ctx.today),
           dueTime: next.dueTime,
           priority: next.priority,
-          categoryId: next.categoryId,
+          calendarId: next.calendarId,
+          courseId: next.courseId,
+          applicationId: next.applicationId,
+          reminders: next.reminders,
           subtasks: next.subtasks.map((s) => ({ ...s, done: false })),
           recurrence: next.recurrence,
           estimatedMinutes: next.estimatedMinutes,
@@ -195,13 +226,16 @@ export class SqliteTaskRepository implements TaskRepository {
     const maxSort = this.stmts.maxSort.get()?.max ?? 0;
 
     const task: Task = {
-      id: randomUUID(),
+      id: input.id ?? randomUUID(),
       title: input.title,
       notes: input.notes ?? null,
       dueDate: input.dueDate ?? null,
       dueTime: input.dueTime ?? null,
       priority: input.priority ?? 'medium',
-      categoryId: input.categoryId ?? null,
+      calendarId: input.calendarId ?? null,
+      courseId: input.courseId ?? null,
+      applicationId: input.applicationId ?? null,
+      reminders: input.reminders ?? [],
       status: 'todo',
       subtasks: input.subtasks ?? [],
       recurrence: input.recurrence ?? 'none',

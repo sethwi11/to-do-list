@@ -1,4 +1,4 @@
-import { addDays, addMonths, isWeekend } from './calendar';
+import { addDays, addMonths, isWeekend } from './dateMath';
 import type { Recurrence } from './task';
 
 /** One step of a recurrence rule: the next date strictly after `from`. */

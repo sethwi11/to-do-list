@@ -1,16 +1,16 @@
 import { useState, type FormEvent } from 'react';
 import { CornerDownLeft, Flag, Plus } from 'lucide-react';
-import { PRIORITIES, type Category, type CreateTaskInput, type Priority } from '@todo/shared';
-import { categoryDotClass } from '../lib/categoryColors';
+import { PRIORITIES, type Calendar, type CreateTaskInput, type Priority } from '@todo/shared';
+import { calendarDotClass } from '../lib/calendarColors';
 import { DueDatePicker } from './DueDatePicker';
 
 interface Props {
-  categories: Category[];
+  calendars: Calendar[];
   today: string;
   /** Pre-filled due date (today when you're in the Today view). */
   defaultDueDate: string | null;
   /** Pre-selected list (the current list when you're in a list view). */
-  defaultCategoryId: string | null;
+  defaultCalendarId: string | null;
   onCreate: (input: CreateTaskInput) => Promise<boolean>;
 }
 
@@ -24,21 +24,21 @@ const PRIORITY_COLOR: Record<Priority, string> = {
  * One-line quick add. The options row (date, priority, list) only appears
  * while you're using the form, so the resting state is a single calm input.
  */
-export function AddTaskForm({ categories, today, defaultDueDate, defaultCategoryId, onCreate }: Props) {
+export function AddTaskForm({ calendars, today, defaultDueDate, defaultCalendarId, onCreate }: Props) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState(defaultDueDate ?? '');
   const [priority, setPriority] = useState<Priority>('medium');
-  const [categoryId, setCategoryId] = useState(defaultCategoryId ?? '');
+  const [calendarId, setCalendarId] = useState(defaultCalendarId ?? '');
   const [submitting, setSubmitting] = useState(false);
 
   // Follow the view's defaults when the view changes (e.g. Today -> a list),
   // using React's "adjust state during render" pattern instead of an effect.
-  const defaultsKey = `${defaultDueDate}|${defaultCategoryId}`;
+  const defaultsKey = `${defaultDueDate}|${defaultCalendarId}`;
   const [prevDefaults, setPrevDefaults] = useState(defaultsKey);
   if (prevDefaults !== defaultsKey) {
     setPrevDefaults(defaultsKey);
     setDueDate(defaultDueDate ?? '');
-    setCategoryId(defaultCategoryId ?? '');
+    setCalendarId(defaultCalendarId ?? '');
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -49,14 +49,14 @@ export function AddTaskForm({ categories, today, defaultDueDate, defaultCategory
       title: title.trim(),
       dueDate: dueDate || null,
       priority,
-      categoryId: categoryId || null,
+      calendarId: calendarId || null,
     });
     setSubmitting(false);
     // Keep date/priority/list so adding several similar tasks in a row is quick.
     if (ok) setTitle('');
   }
 
-  const category = categories.find((c) => c.id === categoryId);
+  const calendar = calendars.find((c) => c.id === calendarId);
 
   return (
     <form onSubmit={handleSubmit} aria-label="Add a task" className="group card px-3 py-2 focus-within:border-indigo-300 dark:focus-within:border-indigo-800">
@@ -101,10 +101,10 @@ export function AddTaskForm({ categories, today, defaultDueDate, defaultCategory
         </span>
 
         <span className="inline-flex items-center">
-          <span className={`h-2 w-2 rounded-full ${category ? categoryDotClass[category.color] : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden />
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} aria-label="List" className="select-quiet">
-            <option value="">No list</option>
-            {categories.map((c) => (
+          <span className={`h-2 w-2 rounded-full ${calendar ? calendarDotClass[calendar.color] : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden />
+          <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)} aria-label="Calendar" className="select-quiet">
+            <option value="">No calendar</option>
+            {calendars.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>

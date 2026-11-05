@@ -1,115 +1,60 @@
-# Voice To-Do
+# Planner
 
-A to-do app you can talk to. Hold a button and list what you need to do, or switch on conversation mode and just talk about your day. Claude picks out the actionable tasks, resolves dates ("Friday", "tomorrow morning"), infers priority and list, and puts everything in a **Review** panel so nothing is added until you accept it. It also understands commands like "mark the grocery one done", "move my lab to Thursday" and "what's left today?".
+A personal planner built from a to-do app: tasks today, with a calendar, courses, an internship tracker, time blocking, and a weekly review being added phase by phase. **It runs entirely on your computer. No accounts, no API keys, no paid services.**
 
-## Features
+> Work in progress. The full README (every feature, supported file types, shortcuts, installing on your phone) arrives in the last phase.
 
-- **Voice capture.** Push-to-talk (hold the mic button or Space), or continuous conversation mode with automatic chunking, context carried between chunks, deduplication, spoken replies, and clarifying questions.
-- **Brain dump.** Type instead of talk. Same extraction pipeline.
-- **Review queue.** Editable cards with Accept / Edit / Reject and Accept all. Low-confidence items are flagged and unchecked. Deletes always need confirmation. Optionally auto-adds high-confidence new tasks.
-- **Lists, subtasks, recurrence.** Daily, weekdays, weekly, monthly. Completing a recurring task creates the next one.
-- **Views.** Today, Upcoming (next 7 days), Overdue, All, Completed, and one per list. Search, filters, and sorting by due date, priority, or drag-and-drop (mouse or keyboard).
-- **Undo** for delete and complete (toast, or Ctrl/⌘+Z).
-- **Plan my day.** Claude builds a time-blocked schedule for today's tasks.
-- **Morning brief, browser notifications, stats and streak, dark mode, JSON export/import, keyboard shortcuts** (press `?`).
+## What works today
+
+- Tasks with subtasks, priorities, due dates and times, recurrence, estimates, notes, and drag-and-drop ordering
+- Calendars (color-coded areas of life such as School, ACM, Personal) with views per calendar
+- Views: Today, Upcoming, Overdue, All, Completed; search, filters, sorting
+- Undo for delete and complete
+- Dark mode, JSON export and import
+- Data foundation for everything coming next: events, event types, time blocks, courses and semesters, internship applications, templates, focus sessions, weekly reviews, settings, attachments
 
 ## Setup
 
-**Requirements:** Node 20.19+ (Node 22 recommended) and Chrome or Edge on desktop for voice. Typing works in any browser.
+Requires Node 20.19+ (Node 22 recommended).
 
-> ⚠️ Keep the project **out of iCloud-synced folders** (Desktop, Documents). iCloud evicts `node_modules` files to the cloud, and the dev servers then hang.
+> Keep the project **out of iCloud-synced folders** (Desktop, Documents). iCloud evicts `node_modules` files to the cloud, and the dev servers then hang.
 
 ```bash
-git clone https://github.com/sethwi11/to-do-list.git
-cd to-do-list
 npm install
-cp .env.example .env
-```
-
-### Get an Anthropic API key
-
-1. Sign in at <https://console.anthropic.com/> and add a payment method or credits under **Billing**.
-2. Go to **Settings → API Keys → Create Key** and copy the key (it starts with `sk-ant-`).
-3. Paste it into `.env` in the project root:
-
-   ```
-   ANTHROPIC_API_KEY=sk-ant-...
-   ```
-
-`.env` is gitignored, and the key is only read by the server, never sent to the browser. Without a key, everything except AI extraction and Plan my day still works, and the app tells you what's missing.
-
-**Cost:** extraction uses `claude-sonnet-5-5` at low effort, with the system prompt cached. A typical request costs a fraction of a cent. The server allows at most 30 AI requests per minute, so a bug can't run up your bill.
-
-### Run
-
-```bash
 npm run dev
 ```
 
-Open <http://localhost:5173>. The API runs on port 3001, and Vite proxies `/api` to it. Your data lives in `server/data/todo.db` (SQLite) and survives restarts.
+Open <http://localhost:5173>. The API runs on port 3001 and Vite proxies `/api` to it. A `.env` file is optional; see `.env.example` for the two settings it can change.
 
 | Command | What it does |
 | --- | --- |
 | `npm run dev` | API server + web app with hot reload |
 | `npm test` | All unit and API tests (Vitest) |
 | `npm run typecheck` | Type-checks every package |
-| `npm run samples` | Runs `server/samples/*.txt` through the real extraction endpoint (needs `npm run dev` running and an API key) |
-| `npm run samples -- 02` | Only samples whose filename contains `02` |
+
+## Your data
+
+Everything lives in one SQLite file, `server/data/todo.db`. It is not in git and is never touched by code changes.
+
+- **Automatic backups.** Before the server changes the database's structure (an upgrade), it saves a full copy to `server/data/backups/todo-v{version}-{timestamp}.db`. The newest 10 are kept.
+- **Manual backup.** Settings → Export JSON saves everything to a file; Import JSON merges one back in. Import only adds and updates, never deletes, and importing the same file twice changes nothing. Files from the original to-do app (version 1) can still be imported.
+- **Restoring a database backup.** Stop the server, copy the backup file over `server/data/todo.db`, and delete `todo.db-wal` and `todo.db-shm` next to it.
 
 ## Architecture
 
 ```
-Browser (React + Vite + Tailwind)                     Server (Express + TypeScript)
-┌───────────────────────────────────────┐            ┌──────────────────────────────────────────┐
-│ speech/SpeechCapture   (Web Speech)   │            │ routes/tasks, categories, backup         │
-│ speech/transcriptChunker (4s / 60s)   │   /api/*   │ routes/ai ── rate limit ── AiService     │
-│ speech/tts             (SpeechSynth.) │ ─────────► │        ClaudeAiService ──► Claude API    │
-│ hooks/useVoice  ─► hooks/useAssistant │  (proxied) │        prompts + zod validation          │
-│                    └─► Review panel   │            │ repositories/ (interface) ──► SQLite     │
-│ hooks/useTodoData (optimistic CRUD)   │            │ db/migrations (PRAGMA user_version)      │
-└───────────────────────────────────────┘            └──────────────────────────────────────────┘
-                     shared/  ←  zod schemas + types used by both sides (single source of truth)
+shared/   zod schemas + TypeScript types used by both sides; date and recurrence math
+server/   Express API; data-access layer (repository interfaces + SQLite); versioned migrations
+client/   React + Vite + Tailwind UI; TanStack Query for server data
 ```
 
-**How one utterance flows through the system:**
-1. The browser transcribes your speech. In conversation mode, the chunker waits for 4 seconds of silence or 60 seconds of talking.
-2. `useAssistant` sends `POST /api/ai/extract` with the text, your local date, time and timezone, your open tasks (with ids), your list names, titles already proposed this session, any pending clarifying question, and the last two chunks as context.
-3. The server builds a prompt from [`server/src/ai/extractionPrompt.ts`](server/src/ai/extractionPrompt.ts). It includes a precomputed **date table** ("Friday = 2026-11-06"), so the model looks dates up instead of doing calendar math.
-4. Claude replies through **structured outputs**: the response is constrained to a JSON schema generated from the zod schema in [`shared/src/extraction.ts`](shared/src/extraction.ts).
-5. The server validates the reply with zod and then sanitizes it: it drops actions on unknown task ids, drops duplicates, and maps list names to real lists. It validates again before responding.
-6. The client runs queries right away (they're read-only), sends everything else to the Review panel, and speaks the reply. While the app talks, the mic pauses so it doesn't transcribe itself.
-
-**Design decisions worth knowing:**
-- **Repository pattern.** Routes depend on `TaskRepository` and `CategoryRepository` interfaces. To swap SQLite for Postgres, write one class.
-- **Dates are local `YYYY-MM-DD` strings**, not timestamps. "Due Friday" is a day on the calendar and must not shift between timezones.
-- **Soft delete makes undo trivial.** Rows deleted more than 30 days ago are purged when the server starts.
-- **Recurrence happens server-side, in one transaction.** Completing a task creates the next occurrence. Reopening or undoing removes it, which is tracked by `nextOccurrenceId`.
-- **The AI service is injected.** Tests use a mocked Claude client, so `npm test` never calls the API.
-
-### Project layout
-
-```
-shared/   zod schemas & types (task, category, extraction, backup), calendar + recurrence math
-server/   src/ai/            prompts, Claude client, schema conversion, sanitizing
-          src/repositories/  data-access interfaces + SQLite implementations
-          src/routes/        tasks, categories, ai, backup
-          samples/           sample transcripts (incl. rambling + small-talk-only)
-          scripts/           run-samples.ts
-          test/              API tests (in-memory SQLite, mocked Claude)
-client/   src/speech/        speech capture, transcript chunker, text-to-speech
-          src/hooks/         data, assistant pipeline, voice, settings, shortcuts, …
-          src/components/    UI
-          src/lib/           pure logic (views, filters, ordering, stats, dates) + tests
-```
-
-## Tuning extraction
-
-Edit the system prompt in [`server/src/ai/extractionPrompt.ts`](server/src/ai/extractionPrompt.ts), then run `npm run samples` to see how the sample transcripts are handled. Add your own `.txt` files to `server/samples/`. If quality isn't good enough, try raising `effort` from `low` to `medium` in `ClaudeAiService.ts`. It's slower, but the model reasons more carefully.
+- **One source of truth for the data model.** Every model is a zod schema in `shared/`. The server validates every request with it, and the client gets its TypeScript types from it, so the two can't drift apart.
+- **Repository pattern.** Routes depend on interfaces, not SQLite. `SqliteCrud` is a small generic class holding the row-to-object plumbing shared by every table; most tables are configuration on top of it. Swapping the database later means writing one function (`createRepositories`).
+- **Dates are local.** A due date is a plain `YYYY-MM-DD` string and an event time is a local `YYYY-MM-DDTHH:mm` with no timezone, so "class at 10:00" stays at 10:00 through daylight saving changes.
+- **Versioned migrations** (`PRAGMA user_version`): new schema changes are appended, never edited, so an existing database upgrades in place.
+- **TanStack Query** caches server data in the browser and does optimistic updates: the screen changes immediately and rolls back if the server refuses.
 
 ## Troubleshooting
 
-- **"Microphone access is blocked".** Click the mic/camera icon in Chrome's address bar and allow the microphone.
-- **Voice doesn't work at all.** Use desktop Chrome or Edge. Firefox has no speech recognition. Chrome's recognition also needs internet, because it runs on Google's servers.
-- **Testing voice from your phone over Wi-Fi.** Browsers only allow the mic on `https://` or `localhost`, so a LAN address won't work without HTTPS.
-- **"AI is not set up".** Add `ANTHROPIC_API_KEY` to `.env` and restart `npm run dev`.
-- **Notifications don't appear.** They only fire while the app is open in a tab, and you need to allow them in Settings.
+- **Dev servers hang with no output.** Check whether the project is inside an iCloud-synced folder (see above).
+- **Port already in use.** Change `API_PORT` in `.env`.

@@ -1,88 +1,149 @@
-import { BACKUP_VERSION, type Backup, type Category, type Task } from '@todo/shared';
+import { BACKUP_VERSION, type Backup } from '@todo/shared';
 import type { Db } from '../db/connection';
-import type { CategoryRepository, TaskRepository } from './TaskRepository';
+import type {
+  CalendarRepo,
+  CourseRepo,
+  EventRepo,
+  EventTypeRepo,
+  FocusSessionRepo,
+  SemesterRepo,
+  TemplateRepo,
+  TimeBlockRepo,
+  WeeklyReviewRepo,
+} from './entities';
+import type { SqliteApplicationRepository } from './SqliteApplicationRepository';
+import type { SqliteSettingsRepository } from './SqliteSettingsRepository';
+import type { SqliteTaskRepository } from './SqliteTaskRepository';
 
-export interface ImportSummary {
-  categoriesAdded: number;
-  tasksAdded: number;
-  tasksUpdated: number;
+/** The concrete repositories a backup reads from and writes to. */
+export interface BackupSources {
+  calendars: CalendarRepo;
+  eventTypes: EventTypeRepo;
+  tasks: SqliteTaskRepository;
+  events: EventRepo;
+  timeBlocks: TimeBlockRepo;
+  semesters: SemesterRepo;
+  courses: CourseRepo;
+  applications: SqliteApplicationRepository;
+  templates: TemplateRepo;
+  focusSessions: FocusSessionRepo;
+  weeklyReviews: WeeklyReviewRepo;
+  settings: SqliteSettingsRepository;
 }
+
+/** Per-table counts of what an import did. */
+export type ImportSummary = Record<string, { added: number; updated: number }>;
 
 /**
  * Export/import of everything as one JSON document.
  *
- * Import MERGES rather than replacing: tasks are upserted by id (so
- * re-importing the same file is harmless), and lists are matched by id or,
- * failing that, by name. Nothing you have now is deleted. That makes
- * import safe to experiment with.
+ * Import MERGES rather than replacing: rows are upserted by id (so importing
+ * the same file twice is harmless) and nothing you have now is deleted. That
+ * makes import safe to experiment with.
+ *
+ * A few kinds of rows exist on every install with *different ids* (a calendar
+ * called "School", the built-in templates), so those are matched by name
+ * instead. Otherwise importing into a fresh install would duplicate them.
+ *
+ * It uses the repositories' synchronous methods because a better-sqlite3
+ * transaction must finish synchronously: the whole import either happens or
+ * it doesn't.
  */
 export class BackupRepository {
   constructor(
     private readonly db: Db,
-    private readonly tasks: TaskRepository,
-    private readonly categories: CategoryRepository,
+    private readonly r: BackupSources,
   ) {}
 
   async export(): Promise<Backup> {
+    const r = this.r;
     return {
       app: 'voice-todo',
       version: BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
-      categories: await this.categories.list(),
-      tasks: await this.tasks.list(),
+      calendars: r.calendars.listSync(),
+      eventTypes: r.eventTypes.listSync(),
+      tasks: await r.tasks.list(),
+      events: r.events.listSync(),
+      timeBlocks: r.timeBlocks.listSync(),
+      semesters: r.semesters.listSync(),
+      courses: r.courses.listSync(),
+      applications: await r.applications.list(),
+      templates: r.templates.listSync(),
+      focusSessions: r.focusSessions.listSync(),
+      weeklyReviews: r.weeklyReviews.listSync(),
+      settings: r.settings.getSync(),
     };
   }
 
   async import(backup: Backup): Promise<ImportSummary> {
-    const existingCats = await this.categories.list();
-    const summary: ImportSummary = { categoriesAdded: 0, tasksAdded: 0, tasksUpdated: 0 };
-
-    const insertCat = this.db.prepare(
-      'INSERT INTO categories (id, name, color, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
-    );
-    const taskExists = this.db.prepare<[string], { n: number }>('SELECT COUNT(*) AS n FROM tasks WHERE id = ?');
-    const upsertTask = this.db.prepare(`
-      INSERT INTO tasks (id, title, notes, due_date, due_time, priority, category_id, status, subtasks,
-        recurrence, estimated_minutes, source, source_snippet, sort_order, created_at, updated_at,
-        completed_at, next_occurrence_id, deleted_at)
-      VALUES (@id, @title, @notes, @dueDate, @dueTime, @priority, @categoryId, @status, @subtasks,
-        @recurrence, @estimatedMinutes, @source, @sourceSnippet, @sortOrder, @createdAt, @updatedAt,
-        @completedAt, @nextOccurrenceId, NULL)
-      ON CONFLICT(id) DO UPDATE SET title = excluded.title, notes = excluded.notes,
-        due_date = excluded.due_date, due_time = excluded.due_time, priority = excluded.priority,
-        category_id = excluded.category_id, status = excluded.status, subtasks = excluded.subtasks,
-        recurrence = excluded.recurrence, estimated_minutes = excluded.estimated_minutes,
-        source = excluded.source, source_snippet = excluded.source_snippet, sort_order = excluded.sort_order,
-        updated_at = excluded.updated_at, completed_at = excluded.completed_at,
-        next_occurrence_id = excluded.next_occurrence_id, deleted_at = NULL
-    `);
+    const r = this.r;
+    const summary: ImportSummary = {};
+    const count = (table: string, existed: boolean) => {
+      const entry = (summary[table] ??= { added: 0, updated: 0 });
+      if (existed) entry.updated++;
+      else entry.added++;
+    };
 
     this.db.transaction(() => {
-      // Map each imported list id to a list id that exists here.
-      const idMap = new Map<string, string>();
-      for (const c of backup.categories) {
+      // Imported id -> the id used here, for rows matched by name.
+      const calendarIds = new Map<string, string>();
+      const typeIds = new Map<string, string>();
+      const mapCalendar = (id: string | null) => (id ? (calendarIds.get(id) ?? id) : null);
+
+      const existingCalendars = r.calendars.listSync();
+      for (const c of backup.calendars) {
         const match =
-          existingCats.find((e) => e.id === c.id) ??
-          existingCats.find((e) => e.name.toLowerCase() === c.name.toLowerCase());
-        if (match) {
-          idMap.set(c.id, match.id);
-        } else {
-          insertCat.run(c.id, c.name, c.color, c.sortOrder, c.createdAt);
-          existingCats.push(c as Category);
-          idMap.set(c.id, c.id);
-          summary.categoriesAdded++;
-        }
+          existingCalendars.find((e) => e.id === c.id) ??
+          existingCalendars.find((e) => e.name.toLowerCase() === c.name.toLowerCase());
+        const id = match?.id ?? c.id;
+        calendarIds.set(c.id, id);
+        count('calendars', r.calendars.upsertSync({ ...c, id }));
+        if (!match) existingCalendars.push({ ...c, id });
       }
 
-      for (const t of backup.tasks as Task[]) {
-        const exists = (taskExists.get(t.id)?.n ?? 0) > 0;
-        upsertTask.run({
-          ...t,
-          categoryId: t.categoryId ? (idMap.get(t.categoryId) ?? null) : null,
-          subtasks: JSON.stringify(t.subtasks),
-        });
-        if (exists) summary.tasksUpdated++;
-        else summary.tasksAdded++;
+      const existingTypes = r.eventTypes.listSync();
+      for (const t of backup.eventTypes) {
+        const match =
+          existingTypes.find((e) => e.id === t.id) ?? existingTypes.find((e) => e.name.toLowerCase() === t.name.toLowerCase());
+        const id = match?.id ?? t.id;
+        typeIds.set(t.id, id);
+        count('eventTypes', r.eventTypes.upsertSync({ ...t, id }));
+        if (!match) existingTypes.push({ ...t, id });
+      }
+
+      for (const s of backup.semesters) count('semesters', r.semesters.upsertSync(s));
+      for (const a of backup.applications) count('applications', r.applications.upsertApplicationSync(a));
+      for (const c of backup.courses) count('courses', r.courses.upsertSync({ ...c, calendarId: mapCalendar(c.calendarId) }));
+      for (const t of backup.tasks) count('tasks', r.tasks.upsertSync({ ...t, calendarId: mapCalendar(t.calendarId) }));
+
+      // A series must exist before the one-off overrides that point at it.
+      const events = [...backup.events].sort((a, b) => Number(a.recurringEventId !== null) - Number(b.recurringEventId !== null));
+      for (const e of events) {
+        const typeId = e.typeId ? (typeIds.get(e.typeId) ?? e.typeId) : null;
+        count('events', r.events.upsertSync({ ...e, calendarId: mapCalendar(e.calendarId), typeId }));
+      }
+      for (const b of backup.timeBlocks) count('timeBlocks', r.timeBlocks.upsertSync(b));
+
+      const existingTemplates = r.templates.listSync();
+      for (const t of backup.templates) {
+        // The three built-ins already exist here (with their own ids); keep one copy.
+        const twin = t.builtIn && existingTemplates.find((e) => e.builtIn && e.name === t.name);
+        count('templates', r.templates.upsertSync(twin ? { ...t, id: twin.id } : t));
+      }
+
+      for (const f of backup.focusSessions) count('focusSessions', r.focusSessions.upsertSync(f));
+
+      // One review per week: if this week already has one, the imported notes replace it.
+      const existingReviews = r.weeklyReviews.listSync();
+      for (const w of backup.weeklyReviews) {
+        const same = existingReviews.find((e) => e.weekStart === w.weekStart);
+        count('weeklyReviews', r.weeklyReviews.upsertSync(same ? { ...w, id: same.id } : w));
+      }
+
+      if (backup.settings) {
+        r.settings.setSync(backup.settings);
+        count('settings', true);
       }
     })();
 

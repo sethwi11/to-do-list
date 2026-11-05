@@ -1,21 +1,21 @@
 import { useState } from 'react';
 import { CalendarDays, CircleAlert, CircleCheck, Inbox, MoreHorizontal, Plus, Settings, Sun, type LucideIcon } from 'lucide-react';
-import type { Category, CategoryColor } from '@todo/shared';
-import { categoryDotClass } from '../lib/categoryColors';
+import type { Calendar, CalendarColor } from '@todo/shared';
+import { calendarDotClass } from '../lib/calendarColors';
 import type { Stats } from '../lib/stats';
 import { SMART_VIEWS, sameView, type SmartViewId, type View } from '../lib/views';
-import { CategoryForm } from './CategoryForm';
+import { CalendarForm } from './CalendarForm';
 import { StatsCard } from './StatsCard';
 
 interface Props {
   view: View;
   onSelect: (view: View) => void;
   countFor: (view: View) => number;
-  categories: Category[];
+  calendars: Calendar[];
   stats: Stats;
-  onCreateCategory: (name: string, color: CategoryColor) => Promise<boolean>;
-  onUpdateCategory: (id: string, name: string, color: CategoryColor) => Promise<boolean>;
-  onDeleteCategory: (category: Category) => void;
+  onCreateCalendar: (name: string, color: CalendarColor) => Promise<boolean>;
+  onUpdateCalendar: (id: string, name: string, color: CalendarColor) => Promise<boolean>;
+  onDeleteCalendar: (calendar: Calendar) => void;
   onOpenSettings: () => void;
 }
 
@@ -34,12 +34,12 @@ const itemClass = (active: boolean) =>
       : 'text-slate-600 hover:bg-slate-200/50 dark:text-slate-400 dark:hover:bg-slate-800/60'
   }`;
 
-export function Sidebar({ view, onSelect, countFor, categories, stats, onCreateCategory, onUpdateCategory, onDeleteCategory, onOpenSettings }: Props) {
+export function Sidebar({ view, onSelect, countFor, calendars, stats, onCreateCalendar, onUpdateCalendar, onDeleteCalendar, onOpenSettings }: Props) {
   // Which list is being edited ('new' = the create form).
   const [editing, setEditing] = useState<string | null>(null);
 
   return (
-    <nav aria-label="Views and lists" className="flex flex-col gap-5 md:gap-6">
+    <nav aria-label="Views and calendars" className="flex flex-col gap-5 md:gap-6">
       <div className="flex items-center gap-2 px-2">
         <img src="/favicon.svg" alt="" className="h-6 w-6" />
         <span className="flex-1 font-semibold">Voice To-Do</span>
@@ -72,38 +72,38 @@ export function Sidebar({ view, onSelect, countFor, categories, stats, onCreateC
         })}
       </ul>
 
-      <section aria-labelledby="lists-heading" className="flex flex-col gap-1">
+      <section aria-labelledby="calendars-heading" className="flex flex-col gap-1">
         <div className="flex items-center justify-between pr-1 pl-3">
-          <h2 id="lists-heading" className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
-            Lists
+          <h2 id="calendars-heading" className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
+            Calendars
           </h2>
-          <button type="button" onClick={() => setEditing('new')} aria-label="New list" className="icon-btn h-6 w-6">
+          <button type="button" onClick={() => setEditing('new')} aria-label="New calendar" className="icon-btn h-6 w-6">
             <Plus className="h-4 w-4" aria-hidden />
           </button>
         </div>
 
         {editing === 'new' && (
-          <CategoryForm submitLabel="Create" initialColor="indigo" onSubmit={onCreateCategory} onCancel={() => setEditing(null)} />
+          <CalendarForm submitLabel="Create" initialColor="ochre" onSubmit={onCreateCalendar} onCancel={() => setEditing(null)} />
         )}
 
         <ul className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:flex-col md:gap-0.5 md:px-0">
-          {categories.map((c) => {
-            const target: View = { type: 'category', id: c.id };
+          {calendars.map((c) => {
+            const target: View = { type: 'calendar', id: c.id };
             const active = sameView(view, target);
             const count = countFor(target);
 
             if (editing === c.id) {
               return (
                 <li key={c.id} className="min-w-64 md:min-w-0">
-                  <CategoryForm
+                  <CalendarForm
                     initialName={c.name}
                     initialColor={c.color}
                     submitLabel="Save"
-                    onSubmit={(name, color) => onUpdateCategory(c.id, name, color)}
+                    onSubmit={(name, color) => onUpdateCalendar(c.id, name, color)}
                     onCancel={() => setEditing(null)}
                     onDelete={() => {
                       setEditing(null);
-                      onDeleteCategory(c);
+                      onDeleteCalendar(c);
                     }}
                   />
                 </li>
@@ -113,7 +113,7 @@ export function Sidebar({ view, onSelect, countFor, categories, stats, onCreateC
             return (
               <li key={c.id} className="group relative flex items-center">
                 <button type="button" onClick={() => onSelect(target)} aria-current={active ? 'page' : undefined} className={`${itemClass(active)} md:pr-8`}>
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${categoryDotClass[c.color]}`} aria-hidden />
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${calendarDotClass[c.color]}`} aria-hidden />
                   <span className="flex-1 truncate text-left">{c.name}</span>
                   {count > 0 && <span className="text-xs text-slate-400 tabular-nums md:group-hover:opacity-0">{count}</span>}
                 </button>
@@ -121,7 +121,7 @@ export function Sidebar({ view, onSelect, countFor, categories, stats, onCreateC
                 <button
                   type="button"
                   onClick={() => setEditing(c.id)}
-                  aria-label={`Edit list ${c.name}`}
+                  aria-label={`Edit calendar ${c.name}`}
                   className={`icon-btn h-7 w-7 shrink-0 focus:opacity-100 md:absolute md:right-0.5 md:flex md:opacity-0 md:group-hover:opacity-100 ${active ? 'flex' : 'hidden'}`}
                 >
                   <MoreHorizontal className="h-4 w-4" aria-hidden />

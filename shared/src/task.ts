@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { hasFields, LocalDateSchema, LocalTimeSchema, NO_FIELDS_MESSAGE } from './localTime';
 
 /*
  * Single source of truth for the data model.
@@ -22,20 +23,8 @@ export const StatusSchema = z.enum(STATUSES);
 export const RECURRENCES = ['none', 'daily', 'weekdays', 'weekly', 'monthly'] as const;
 export const RecurrenceSchema = z.enum(RECURRENCES);
 
-export const TASK_SOURCES = ['manual', 'voice', 'brain-dump'] as const;
+export const TASK_SOURCES = ['manual', 'voice', 'file-import', 'ics-import'] as const;
 export const TaskSourceSchema = z.enum(TASK_SOURCES);
-
-/**
- * A calendar date in the user's local timezone, e.g. "2026-10-24".
- * Deliberately NOT a timestamp: "due Friday" is a day on the calendar,
- * not an instant, so it must not shift when converted between timezones.
- */
-export const LocalDateSchema = z.iso.date();
-
-/** 24-hour local wall-clock time, "HH:mm". */
-export const LocalTimeSchema = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected a time in HH:mm format');
 
 export const SubtaskSchema = z.object({
   id: z.string().min(1),
@@ -50,7 +39,13 @@ export const TaskSchema = z.object({
   dueDate: LocalDateSchema.nullable(),
   dueTime: LocalTimeSchema.nullable(),
   priority: PrioritySchema,
-  categoryId: z.uuid().nullable(),
+  calendarId: z.uuid().nullable(),
+  /** Set for tasks that belong to a class (e.g. an assignment from the syllabus). */
+  courseId: z.uuid().nullable(),
+  /** Set for follow-ups and prep tasks tied to an internship application. */
+  applicationId: z.uuid().nullable(),
+  /** Minutes before the due date/time to remind, e.g. [4320, 1440] = 3 days and 1 day before. */
+  reminders: z.array(z.number().int().positive().max(60 * 24 * 60)).max(10),
   status: StatusSchema,
   subtasks: z.array(SubtaskSchema),
   recurrence: RecurrenceSchema,
@@ -76,12 +71,17 @@ export const TaskSchema = z.object({
  * the title has a sensible default.
  */
 export const CreateTaskInputSchema = z.object({
+  /** Clients may generate the id themselves, so a create made offline can be replayed safely. */
+  id: z.uuid().optional(),
   title: TaskSchema.shape.title,
   notes: TaskSchema.shape.notes.optional(),
   dueDate: TaskSchema.shape.dueDate.optional(),
   dueTime: TaskSchema.shape.dueTime.optional(),
   priority: PrioritySchema.optional(),
-  categoryId: TaskSchema.shape.categoryId.optional(),
+  calendarId: TaskSchema.shape.calendarId.optional(),
+  courseId: TaskSchema.shape.courseId.optional(),
+  applicationId: TaskSchema.shape.applicationId.optional(),
+  reminders: TaskSchema.shape.reminders.optional(),
   subtasks: z.array(SubtaskSchema).optional(),
   recurrence: RecurrenceSchema.optional(),
   estimatedMinutes: TaskSchema.shape.estimatedMinutes.optional(),
@@ -95,7 +95,7 @@ export const UpdateTaskInputSchema = CreateTaskInputSchema.partial()
     status: StatusSchema.optional(),
     sortOrder: z.number().optional(),
   })
-  .refine((v) => Object.keys(v).length > 0, { message: 'No fields to update' });
+  .refine(hasFields, NO_FIELDS_MESSAGE);
 
 export type Priority = z.infer<typeof PrioritySchema>;
 export type TaskStatus = z.infer<typeof StatusSchema>;

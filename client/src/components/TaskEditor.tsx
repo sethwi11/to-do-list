@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import {
   PRIORITIES,
   RECURRENCES,
-  type Category,
+  type Calendar,
   type Priority,
   type Recurrence,
   type Task,
@@ -11,7 +11,7 @@ import {
 
 interface Props {
   task: Task;
-  categories: Category[];
+  calendars: Calendar[];
   onSave: (changes: UpdateTaskInput) => void;
   onCancel: () => void;
 }
@@ -27,13 +27,13 @@ const RECURRENCE_LABELS: Record<Recurrence, string> = {
 const field =
   'rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950';
 
-export function TaskEditor({ task, categories, onSave, onCancel }: Props) {
+export function TaskEditor({ task, calendars, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(task.title);
   const [notes, setNotes] = useState(task.notes ?? '');
   const [dueDate, setDueDate] = useState(task.dueDate ?? '');
   const [dueTime, setDueTime] = useState(task.dueTime ?? '');
   const [priority, setPriority] = useState<Priority>(task.priority);
-  const [categoryId, setCategoryId] = useState(task.categoryId ?? '');
+  const [calendarId, setCalendarId] = useState(task.calendarId ?? '');
   const [recurrence, setRecurrence] = useState<Recurrence>(task.recurrence);
   const [estimate, setEstimate] = useState(task.estimatedMinutes?.toString() ?? '');
 
@@ -47,7 +47,7 @@ export function TaskEditor({ task, categories, onSave, onCancel }: Props) {
       dueDate: dueDate || null,
       dueTime: dueTime || null,
       priority,
-      categoryId: categoryId || null,
+      calendarId: calendarId || null,
       recurrence,
       estimatedMinutes: Number.isFinite(minutes) && minutes > 0 ? minutes : null,
     });
@@ -80,9 +80,9 @@ export function TaskEditor({ task, categories, onSave, onCancel }: Props) {
             </option>
           ))}
         </select>
-        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} aria-label="List" className={field}>
-          <option value="">No list</option>
-          {categories.map((c) => (
+        <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)} aria-label="Calendar" className={field}>
+          <option value="">No calendar</option>
+          {calendars.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>

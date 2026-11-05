@@ -61,7 +61,7 @@ export function describeSpeechError(code: string): { kind: SpeechErrorKind; mess
     case 'audio-capture':
       return { kind: 'no-microphone', message: 'No microphone was found. Plug one in or check your system sound settings.' };
     case 'network':
-      return { kind: 'network', message: "Speech recognition needs an internet connection (Chrome sends audio to Google). Check your connection, or use the brain dump box." };
+      return { kind: 'network', message: "Speech recognition needs an internet connection (Chrome sends audio to Google). Check your connection, or type instead." };
     case 'no-speech':
       return { kind: 'no-speech', message: "I didn't hear anything. Try again a little closer to the mic." };
     case 'aborted':

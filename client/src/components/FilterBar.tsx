@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowUpDown, Search, SlidersHorizontal, X } from 'lucide-react';
-import { PRIORITIES, type Category } from '@todo/shared';
+import { PRIORITIES, type Calendar } from '@todo/shared';
 import { DEFAULT_FILTERS, SORT_MODES, type Filters, type SortMode } from '../lib/filters';
 
 interface Props {
@@ -8,9 +8,9 @@ interface Props {
   onChange: (filters: Filters) => void;
   sortMode: SortMode;
   onSortChange: (mode: SortMode) => void;
-  categories: Category[];
+  calendars: Calendar[];
   /** Hide filters the current view already decides (e.g. list filter inside a list view). */
-  hideCategory: boolean;
+  hideCalendar: boolean;
   hideStatus: boolean;
 }
 
@@ -19,11 +19,11 @@ interface Props {
  * "Filters" button (with a count of active ones), since they're used rarely
  * and five always-visible dropdowns are mostly noise.
  */
-export function FilterBar({ filters, onChange, sortMode, onSortChange, categories, hideCategory, hideStatus }: Props) {
+export function FilterBar({ filters, onChange, sortMode, onSortChange, calendars, hideCalendar, hideStatus }: Props) {
   const [open, setOpen] = useState(false);
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => onChange({ ...filters, [key]: value });
 
-  const activeCount = (['priority', 'categoryId', 'status', 'due'] as const).filter((k) => filters[k] !== DEFAULT_FILTERS[k]).length;
+  const activeCount = (['priority', 'calendarId', 'status', 'due'] as const).filter((k) => filters[k] !== DEFAULT_FILTERS[k]).length;
   const showPanel = open || activeCount > 0;
 
   return (
@@ -83,11 +83,11 @@ export function FilterBar({ filters, onChange, sortMode, onSortChange, categorie
             ))}
           </select>
 
-          {!hideCategory && (
-            <select aria-label="Filter by list" value={filters.categoryId} onChange={(e) => set('categoryId', e.target.value)} className="select-quiet">
-              <option value="any">Any list</option>
-              <option value="none">No list</option>
-              {categories.map((c) => (
+          {!hideCalendar && (
+            <select aria-label="Filter by calendar" value={filters.calendarId} onChange={(e) => set('calendarId', e.target.value)} className="select-quiet">
+              <option value="any">Any calendar</option>
+              <option value="none">No calendar</option>
+              {calendars.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>

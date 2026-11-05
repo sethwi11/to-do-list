@@ -3,9 +3,7 @@ import { Modal } from './Modal';
 const SHORTCUTS = [
   ['N', 'New task'],
   ['/', 'Search'],
-  ['Space (hold)', 'Push to talk (in push-to-talk mode)'],
   ['Ctrl/⌘ + Z', 'Undo the last delete or complete'],
-  ['Ctrl/⌘ + Enter', 'Submit the brain dump'],
   ['Esc', 'Cancel editing / close dialogs'],
   ['?', 'Show this help'],
 ];

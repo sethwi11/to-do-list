@@ -1,4 +1,4 @@
-import { addDays, type Category, type Task } from '@todo/shared';
+import { addDays, type Calendar, type Task } from '@todo/shared';
 
 /*
  * Views are computed on the client from the full task list. For a single
@@ -10,7 +10,7 @@ import { addDays, type Category, type Task } from '@todo/shared';
 export type SmartViewId = 'today' | 'upcoming' | 'overdue' | 'all' | 'completed';
 
 /** A discriminated union: TypeScript narrows `id` based on `type`. */
-export type View = { type: 'smart'; id: SmartViewId } | { type: 'category'; id: string };
+export type View = { type: 'smart'; id: SmartViewId } | { type: 'calendar'; id: string };
 
 export const SMART_VIEWS: { id: SmartViewId; label: string }[] = [
   { id: 'today', label: 'Today' },
@@ -24,7 +24,7 @@ export const sameView = (a: View, b: View) => a.type === b.type && a.id === b.id
 
 /** Whether a task belongs in a view (before search/filters are applied). */
 export function inView(task: Task, view: View, today: string): boolean {
-  if (view.type === 'category') return task.categoryId === view.id;
+  if (view.type === 'calendar') return task.calendarId === view.id;
 
   switch (view.id) {
     case 'today':
@@ -40,9 +40,9 @@ export function inView(task: Task, view: View, today: string): boolean {
   }
 }
 
-export function viewTitle(view: View, categories: Category[]): string {
+export function viewTitle(view: View, calendars: Calendar[]): string {
   if (view.type === 'smart') return SMART_VIEWS.find((v) => v.id === view.id)!.label;
-  return categories.find((c) => c.id === view.id)?.name ?? 'List';
+  return calendars.find((c) => c.id === view.id)?.name ?? 'List';
 }
 
 /** Default due date for the "add task" form in each view. */

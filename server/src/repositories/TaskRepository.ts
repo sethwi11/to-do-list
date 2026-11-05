@@ -1,11 +1,4 @@
-import type {
-  Category,
-  CreateCategoryInput,
-  CreateTaskInput,
-  Task,
-  UpdateCategoryInput,
-  UpdateTaskInput,
-} from '@todo/shared';
+import type { CreateTaskInput, Task, UpdateTaskInput } from '@todo/shared';
 
 /*
  * The data-access contract. Routes depend only on these interfaces, never on
@@ -42,12 +35,4 @@ export interface TaskRepository {
   reorder(ids: string[]): Promise<void>;
   /** Permanently removes tasks soft-deleted before the given ISO timestamp. */
   purgeDeleted(before: string): Promise<number>;
-}
-
-export interface CategoryRepository {
-  list(): Promise<Category[]>;
-  create(input: CreateCategoryInput): Promise<Category>;
-  update(id: string, changes: UpdateCategoryInput): Promise<Category | null>;
-  /** Tasks in a deleted list are kept and become uncategorized. */
-  delete(id: string): Promise<boolean>;
 }

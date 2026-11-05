@@ -1,29 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CircleAlert, RotateCw, Sparkles, X } from 'lucide-react';
-import { nextOccurrence, type Category, type CategoryColor, type QueryRange, type Task, type UpdateTaskInput } from '@todo/shared';
-import { aiApi } from './api/ai';
+import { useCallback, useMemo, useState } from 'react';
+import { CircleAlert, RotateCw, X } from 'lucide-react';
+import { nextOccurrence, type Calendar, type CalendarColor, type Task, type UpdateTaskInput } from '@todo/shared';
 import { AddTaskForm } from './components/AddTaskForm';
 import { AppShell } from './components/AppShell';
 import { EmptyState } from './components/EmptyState';
 import { FilterBar } from './components/FilterBar';
 import { MorningBrief } from './components/MorningBrief';
-import { PlanDialog } from './components/PlanDialog';
-import { ReviewPanel } from './components/ReviewPanel';
 import { SettingsDialog } from './components/SettingsDialog';
 import { ShortcutsDialog } from './components/ShortcutsDialog';
 import { Sidebar } from './components/Sidebar';
 import { StatsCard } from './components/StatsCard';
 import { TaskList } from './components/TaskList';
 import { UndoToast, useToast } from './components/UndoToast';
-import { FloatingMic, MicLiveBadge, VoicePanel } from './components/VoicePanel';
-import { useAssistant } from './hooks/useAssistant';
 import { useDueNotifications } from './hooks/useDueNotifications';
-import { usePlanMyDay } from './hooks/usePlanMyDay';
 import { useSettings } from './hooks/useSettings';
 import { useShortcuts } from './hooks/useShortcuts';
 import { useTheme } from './hooks/useTheme';
 import { useTodoData } from './hooks/useTodoData';
-import { useVoice } from './hooks/useVoice';
 import { formatDueDate, todayLocalISO } from './lib/dates';
 import { applyFilters, DEFAULT_FILTERS, isFiltering, sortByCompletedDesc, sortTasks, type Filters, type SortMode } from './lib/filters';
 import { computeMove } from './lib/ordering';
@@ -55,7 +48,7 @@ function briefSeenToday(today: string): boolean {
 
 export default function App() {
   const data = useTodoData();
-  const { tasks, categories, updateTask, deleteTask, restoreTask, reorderAll } = data;
+  const { tasks, calendars, updateTask, deleteTask, restoreTask, reorderAll } = data;
   const [view, setView] = useState<View>({ type: 'smart', id: 'today' });
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [sortMode, setSortMode] = useState<SortMode>(loadSortMode);
@@ -63,13 +56,12 @@ export default function App() {
   const { settings, update: updateSettings } = useSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
-  const [aiConfigured, setAiConfigured] = useState<boolean | null>(null);
   useTheme(settings.theme);
 
   // Recomputed each render, so the app rolls over to the new day if left open past midnight.
   const today = todayLocalISO();
 
-  const categoriesById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const calendarsById = useMemo(() => new Map(calendars.map((c) => [c.id, c])), [calendars]);
 
   const isCompletedView = view.type === 'smart' && view.id === 'completed';
   const isOverdueView = view.type === 'smart' && view.id === 'overdue';
@@ -90,15 +82,7 @@ export default function App() {
 
   const countFor = useCallback((v: View) => openCount(tasks, v, today), [tasks, today]);
   const stats = useMemo(() => computeStats(tasks, today), [tasks, today]);
-  const tasksById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
   const [showBrief, setShowBrief] = useState(() => !briefSeenToday(today));
-
-  useEffect(() => {
-    aiApi.status().then(
-      (s) => setAiConfigured(s.configured),
-      () => setAiConfigured(null),
-    );
-  }, []);
 
   useDueNotifications(tasks, settings.notifications);
 
@@ -146,24 +130,24 @@ export default function App() {
     [tasks, updateTask, reorderAll],
   );
 
-  // ---- list (category) actions -------------------------------------------
+  // ---- calendar actions -------------------------------------------
 
-  const handleCreateCategory = async (name: string, color: CategoryColor) => {
-    const created = await data.createCategory({ name, color });
-    if (created) setView({ type: 'category', id: created.id });
+  const handleCreateCalendar = async (name: string, color: CalendarColor) => {
+    const created = await data.createCalendar({ name, color });
+    if (created) setView({ type: 'calendar', id: created.id });
     return created !== null;
   };
 
-  const handleUpdateCategory = (id: string, name: string, color: CategoryColor) =>
-    data.updateCategory(id, { name, color });
+  const handleUpdateCalendar = (id: string, name: string, color: CalendarColor) =>
+    data.updateCalendar(id, { name, color });
 
-  const handleDeleteCategory = async (category: Category) => {
-    const count = tasks.filter((t) => t.categoryId === category.id).length;
-    const detail = count > 0 ? ` Its ${count} task${count === 1 ? '' : 's'} will be kept, without a list.` : '';
-    // A native confirm dialog is accessible and adequate here; deleting a list is rare.
-    if (!window.confirm(`Delete the list "${category.name}"?${detail}`)) return;
-    if (await data.deleteCategory(category.id)) {
-      if (view.type === 'category' && view.id === category.id) setView({ type: 'smart', id: 'all' });
+  const handleDeleteCalendar = async (calendar: Calendar) => {
+    const count = tasks.filter((t) => t.calendarId === calendar.id).length;
+    const detail = count > 0 ? ` Its ${count} task${count === 1 ? '' : 's'} will be kept, without a calendar.` : '';
+    // A native confirm dialog is accessible and adequate here; deleting a calendar is rare.
+    if (!window.confirm(`Delete the calendar "${calendar.name}"?${detail}`)) return;
+    if (await data.deleteCalendar(calendar.id)) {
+      if (view.type === 'calendar' && view.id === calendar.id) setView({ type: 'smart', id: 'all' });
     }
   };
 
@@ -181,44 +165,6 @@ export default function App() {
     setFilters(DEFAULT_FILTERS); // filters are per-visit; carrying them over is confusing
   }
 
-  // ---- voice + AI ------------------------------------------------------------
-
-  /** A voice query ("what do I have tomorrow?") switches the list to show the answer. */
-  function showQuery(range: QueryRange) {
-    if (range === 'tomorrow') {
-      setView({ type: 'smart', id: 'upcoming' });
-      setFilters({ ...DEFAULT_FILTERS, due: 'tomorrow' });
-    } else {
-      selectView({ type: 'smart', id: range === 'upcoming' ? 'upcoming' : range === 'overdue' ? 'overdue' : range === 'all' ? 'all' : 'today' });
-    }
-  }
-
-  // The assistant speaks through the voice layer (which pauses the mic while
-  // talking), and the voice layer sends transcripts to the assistant. A ref
-  // breaks that circular dependency between the two hooks.
-  const sayRef = useRef<(text: string) => Promise<void>>(async () => {});
-  const assistant = useAssistant({
-    tasks,
-    categories,
-    settings,
-    createTask: data.createTask,
-    updateTask,
-    deleteTask,
-    onQuery: showQuery,
-    speak: (text) => sayRef.current(text),
-    showToast,
-  });
-  const voice = useVoice(assistant.process);
-  sayRef.current = voice.say;
-
-  const planner = usePlanMyDay({
-    tasks,
-    today,
-    updateTask,
-    speak: settings.tts ? voice.say : null,
-    showToast,
-  });
-
   function dismissBrief() {
     setShowBrief(false);
     try {
@@ -228,7 +174,6 @@ export default function App() {
     }
   }
 
-  const pttEnabled = voice.supported && settings.voiceMode === 'push-to-talk';
   useShortcuts({
     newTask: () => {
       if (isCompletedView) selectView({ type: 'smart', id: 'today' });
@@ -243,8 +188,6 @@ export default function App() {
       }
     },
     showHelp: () => setShortcutsOpen(true),
-    pttDown: pttEnabled ? voice.startHold : undefined,
-    pttUp: pttEnabled ? voice.endHold : undefined,
   });
 
   return (
@@ -255,10 +198,10 @@ export default function App() {
             view={view}
             onSelect={selectView}
             countFor={countFor}
-            categories={categories}
-            onCreateCategory={handleCreateCategory}
-            onUpdateCategory={handleUpdateCategory}
-            onDeleteCategory={handleDeleteCategory}
+            calendars={calendars}
+            onCreateCalendar={handleCreateCalendar}
+            onUpdateCalendar={handleUpdateCalendar}
+            onDeleteCalendar={handleDeleteCalendar}
             onOpenSettings={() => setSettingsOpen(true)}
             stats={stats}
           />
@@ -267,16 +210,11 @@ export default function App() {
           <div className="flex flex-col gap-4">
             <header className="flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="truncate text-2xl font-semibold tracking-tight">{viewTitle(view, categories)}</h1>
+                <h1 className="truncate text-2xl font-semibold tracking-tight">{viewTitle(view, calendars)}</h1>
                 <p className="text-sm text-slate-500">
                   {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
               </div>
-              {view.type === 'smart' && view.id === 'today' && (
-                <button type="button" onClick={() => void planner.start()} className="pill shrink-0 text-indigo-600 dark:text-indigo-400">
-                  <Sparkles className="h-3.5 w-3.5" aria-hidden /> Plan my day
-                </button>
-              )}
             </header>
 
             {showBrief && !data.loading && (
@@ -298,10 +236,10 @@ export default function App() {
 
             {!isCompletedView && (
               <AddTaskForm
-                categories={categories}
+                calendars={calendars}
                 today={today}
                 defaultDueDate={defaultDueDateFor(view, today)}
-                defaultCategoryId={view.type === 'category' ? view.id : null}
+                defaultCalendarId={view.type === 'calendar' ? view.id : null}
                 onCreate={async (input) => (await data.createTask(input)) !== null}
               />
             )}
@@ -311,8 +249,8 @@ export default function App() {
               onChange={setFilters}
               sortMode={sortMode}
               onSortChange={handleSortChange}
-              categories={categories}
-              hideCategory={view.type === 'category'}
+              calendars={calendars}
+              hideCalendar={view.type === 'calendar'}
               hideStatus={isCompletedView || isOverdueView}
             />
 
@@ -332,8 +270,8 @@ export default function App() {
                 doneTasks={doneTasks}
                 doneAsSection={doneAsSection}
                 draggable={draggable}
-                categoriesById={categoriesById}
-                categories={categories}
+                calendarsById={calendarsById}
+                calendars={calendars}
                 today={today}
                 onToggle={(t) => void handleToggle(t)}
                 onUpdate={handleUpdate}
@@ -341,39 +279,7 @@ export default function App() {
                 onMove={handleMove}
               />
             )}
-          </div>
-        }
-        panel={
-          <div className="flex flex-col gap-4">
-            {aiConfigured === false && (
-              <p role="note" className="rounded-2xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-                AI isn't set up yet. Add your <code>ANTHROPIC_API_KEY</code> to the <code>.env</code> file in the project root and restart{' '}
-                <code>npm run dev</code>. The rest of the app works without it.
-              </p>
-            )}
-            <VoicePanel
-              settings={settings}
-              onSettingsChange={updateSettings}
-              voice={voice}
-              busy={assistant.busy}
-              aiError={assistant.error}
-              onDismissAiError={assistant.dismissError}
-              reply={assistant.reply}
-              onBrainDump={(text) => assistant.process(text, 'brain-dump')}
-            />
-            {assistant.items.length > 0 && (
-              <ReviewPanel
-                items={assistant.items}
-                categories={categories}
-                today={today}
-                onAccept={(id) => void assistant.accept(id)}
-                onReject={assistant.reject}
-                onAcceptAll={() => void assistant.acceptAll()}
-                onClear={assistant.clearAll}
-                onToggle={assistant.toggleChecked}
-                onEdit={assistant.updateTaskDraft}
-              />
-            )}
+
             {/* On phones the sidebar is a compact row, so stats live down here instead. */}
             <div className="card py-4 md:hidden">
               <StatsCard stats={stats} />
@@ -381,18 +287,7 @@ export default function App() {
           </div>
         }
       />
-      <MicLiveBadge live={voice.listening || voice.conversationOn} />
-      <FloatingMic voice={voice} ptt={settings.voiceMode === 'push-to-talk'} busy={assistant.busy} reply={assistant.reply} />
       <UndoToast toast={toast} onDismiss={dismissToast} />
-      <PlanDialog
-        open={planner.open}
-        onClose={planner.close}
-        loading={planner.loading}
-        error={planner.error}
-        plan={planner.plan}
-        tasksById={tasksById}
-        onAccept={() => void planner.accept()}
-      />
       <SettingsDialog
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}

@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react';
 import { ApiError } from '../api/client';
-import { backupApi } from '../api/backup';
+import { backupApi, type ImportSummary } from '../api/backup';
 import { notificationsSupported } from '../hooks/useDueNotifications';
 import type { Settings } from '../hooks/useSettings';
-import { isTtsSupported } from '../speech/tts';
 import { Modal } from './Modal';
 
 interface Props {
@@ -14,6 +13,12 @@ interface Props {
   /** Called after an import so the app reloads its data. */
   onImported: () => void;
   onShowShortcuts: () => void;
+}
+
+/** "Imported 12 new items and updated 3." */
+function describeImport(summary: ImportSummary): string {
+  const totals = Object.values(summary).reduce((a, c) => ({ added: a.added + c.added, updated: a.updated + c.updated }), { added: 0, updated: 0 });
+  return `Imported ${totals.added} new item${totals.added === 1 ? '' : 's'} and updated ${totals.updated}.`;
 }
 
 export function SettingsDialog({ open, onClose, settings, onChange, onImported, onShowShortcuts }: Props) {
@@ -30,7 +35,7 @@ export function SettingsDialog({ open, onClose, settings, onChange, onImported, 
       a.download = `voice-todo-${data.exportedAt.slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      setMessage(`Exported ${data.tasks.length} tasks and ${data.categories.length} lists.`);
+      setMessage(`Exported ${data.tasks.length} tasks, ${data.events.length} events, and ${data.calendars.length} calendars.`);
     } catch (err) {
       setMessage(err instanceof ApiError ? err.message : 'Export failed.');
     }
@@ -40,7 +45,7 @@ export function SettingsDialog({ open, onClose, settings, onChange, onImported, 
     try {
       const data: unknown = JSON.parse(await file.text());
       const result = await backupApi.import(data);
-      setMessage(`Imported: ${result.tasksAdded} new tasks, ${result.tasksUpdated} updated, ${result.categoriesAdded} new lists.`);
+      setMessage(describeImport(result));
       onImported();
     } catch (err) {
       setMessage(
@@ -83,22 +88,6 @@ export function SettingsDialog({ open, onClose, settings, onChange, onImported, 
 
         <label className={`${row} cursor-pointer`}>
           <span>
-            Speak replies aloud
-            {!isTtsSupported() && <span className="block text-xs text-slate-500">Not supported in this browser</span>}
-          </span>
-          <input type="checkbox" checked={settings.tts} onChange={(e) => onChange({ tts: e.target.checked })} className="h-4 w-4 accent-indigo-600" />
-        </label>
-
-        <label className={`${row} cursor-pointer`}>
-          <span>
-            Auto-add confident new tasks
-            <span className="block text-xs text-slate-500">Skips review for new tasks at 85%+ confidence. Changes and deletes always need review.</span>
-          </span>
-          <input type="checkbox" checked={settings.autoAccept} onChange={(e) => onChange({ autoAccept: e.target.checked })} className="h-4 w-4 accent-indigo-600" />
-        </label>
-
-        <label className={`${row} cursor-pointer`}>
-          <span>
             Notify me when a task is due
             <span className="block text-xs text-slate-500">
               {notificationsSupported() ? 'Works while the app is open in a tab.' : 'Not supported in this browser.'}
@@ -133,11 +122,6 @@ export function SettingsDialog({ open, onClose, settings, onChange, onImported, 
           />
           <p className="w-full text-xs text-slate-500">Import merges: it adds and updates tasks but never deletes anything.</p>
         </div>
-
-        <p className="py-3 text-xs text-slate-500">
-          Privacy: voice is transcribed by your browser. In Chrome, audio is sent to Google for recognition. Transcripts and your open tasks are sent to
-          the Anthropic API for extraction.
-        </p>
 
         <div className="py-3">
           <button type="button" onClick={onShowShortcuts} className="text-indigo-600 hover:underline dark:text-indigo-400">

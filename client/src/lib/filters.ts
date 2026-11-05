@@ -3,13 +3,13 @@ import { addDays, type Priority, type Task } from '@todo/shared';
 export interface Filters {
   query: string;
   priority: Priority | 'any';
-  /** A category id, 'none' for uncategorized, or 'any'. */
-  categoryId: string;
+  /** A calendar id, 'none' for unassigned, or 'any'. */
+  calendarId: string;
   status: 'any' | 'todo' | 'done';
   due: 'any' | 'overdue' | 'today' | 'tomorrow' | 'week' | 'none';
 }
 
-export const DEFAULT_FILTERS: Filters = { query: '', priority: 'any', categoryId: 'any', status: 'any', due: 'any' };
+export const DEFAULT_FILTERS: Filters = { query: '', priority: 'any', calendarId: 'any', status: 'any', due: 'any' };
 
 export const isFiltering = (f: Filters) =>
   (Object.keys(DEFAULT_FILTERS) as (keyof Filters)[]).some((k) => f[k] !== DEFAULT_FILTERS[k]);
@@ -24,8 +24,8 @@ export function applyFilters(tasks: Task[], f: Filters, today: string): Task[] {
       if (!haystack.includes(q)) return false;
     }
     if (f.priority !== 'any' && t.priority !== f.priority) return false;
-    if (f.categoryId === 'none' && t.categoryId !== null) return false;
-    if (f.categoryId !== 'any' && f.categoryId !== 'none' && t.categoryId !== f.categoryId) return false;
+    if (f.calendarId === 'none' && t.calendarId !== null) return false;
+    if (f.calendarId !== 'any' && f.calendarId !== 'none' && t.calendarId !== f.calendarId) return false;
     if (f.status !== 'any' && t.status !== f.status) return false;
 
     switch (f.due) {
