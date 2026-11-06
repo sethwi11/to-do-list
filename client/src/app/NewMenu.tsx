@@ -6,18 +6,18 @@ import { Menu, type MenuItem } from '../ui/Menu';
 import { useApp } from './AppContext';
 
 /**
- * The "New" button and its menu. Task and Event work; the others are listed so you can see
+ * The "New" button and its menu. Task, Event and Import file work; the others are listed so you can see
  * what's coming, but can't be chosen yet. Each is enabled when its feature is built.
  */
 export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
-  const { openDialog, today } = useApp();
+  const { openDialog, today, chooseFilesToImport } = useApp();
   const location = useLocation();
   // Looking at a day on the calendar? A new event starts on that day.
   const lookingAt = location.pathname === '/calendar' ? parseCalendarQuery(new URLSearchParams(location.search), today).date : null;
   const items: MenuItem[] = [
     { label: 'Task', icon: ListPlus, onSelect: () => openDialog({ kind: 'task', mode: 'new', defaults: {} }) },
     { label: 'Event', icon: CalendarPlus, onSelect: () => openDialog({ kind: 'event', mode: 'new', defaults: newEventSpan(lookingAt, new Date()) }) },
-    { label: 'Import file', icon: FileUp, disabled: true, hint: 'Soon' },
+    { label: 'Import file', icon: FileUp, onSelect: chooseFilesToImport },
     { label: 'Application', icon: Briefcase, disabled: true, hint: 'Soon' },
   ];
 

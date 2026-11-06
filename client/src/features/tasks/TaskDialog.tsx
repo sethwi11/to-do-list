@@ -5,8 +5,10 @@ import { useApp, type TaskDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { Button, IconButton } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
-import { Field, Input, Select, Textarea } from '../../ui/fields';
+import { Field, Input, Label, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
+import { uploadAndLink } from '../attachments/useAttachments';
+import { AttachmentList } from '../files/AttachmentList';
 
 const RECURRENCE_LABEL: Record<Recurrence, string> = {
   none: 'Never',
@@ -61,7 +63,7 @@ export function TaskDialog() {
 }
 
 function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefaults }) {
-  const { calendars, addTask, saveTask, closeDialog } = useApp();
+  const { calendars, addTask, saveTask, closeDialog, showToast } = useApp();
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [notes, setNotes] = useState(task?.notes ?? '');
@@ -74,6 +76,7 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? []);
   const [draft, setDraft] = useState('');
   const [titleError, setTitleError] = useState<string | undefined>();
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]); // for a new task: uploaded once it's saved
 
   function addSubtask() {
     const text = draft.trim();
@@ -102,6 +105,10 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
       subtasks,
     };
     const saved = task ? await saveTask(task.id, fields) : await addTask(fields);
+    if (saved && !task && pendingFiles.length > 0) {
+      const problems = await uploadAndLink(pendingFiles, { ownerType: 'task', ownerId: saved.id });
+      if (problems.length > 0) showToast(problems[0]!);
+    }
     if (saved) closeDialog('task'); // on failure the banner explains, and the dialog stays so nothing typed is lost
   }
 
@@ -212,6 +219,11 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
             Add
           </Button>
         </div>
+      </div>
+
+      <div>
+        <Label>Files</Label>
+        <AttachmentList owner={task ? { ownerType: 'task', ownerId: task.id } : null} editable pending={pendingFiles} onPendingChange={setPendingFiles} />
       </div>
     </form>
   );

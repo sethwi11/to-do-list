@@ -15,6 +15,9 @@ const EnvSchema = z.object({
   // for their own purposes, and the API would silently start on their port.
   API_PORT: z.coerce.number().int().positive().default(3001),
   DB_PATH: z.string().default('data/todo.db'),
+  // Where uploaded files are kept. Default: an `uploads` folder beside the database, so a copy of the database
+  // used for testing keeps its files separate from your real ones.
+  UPLOADS_DIR: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -23,8 +26,11 @@ if (!parsed.success) {
   process.exit(1);
 }
 
+const dbPath = path.resolve(import.meta.dirname, '..', parsed.data.DB_PATH);
+
 export const env = {
   ...parsed.data,
   // Resolve relative to /server so it doesn't depend on the current working directory.
-  DB_PATH: path.resolve(import.meta.dirname, '..', parsed.data.DB_PATH),
+  DB_PATH: dbPath,
+  UPLOADS_DIR: parsed.data.UPLOADS_DIR ? path.resolve(import.meta.dirname, '..', parsed.data.UPLOADS_DIR) : path.join(path.dirname(dbPath), 'uploads'),
 };

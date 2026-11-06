@@ -25,7 +25,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     res = await fetch(`/api${path}`, {
       ...init,
       // X-Client-Date tells the server what "today" is for *you* (used for recurrences).
-      headers: { 'Content-Type': 'application/json', 'X-Client-Date': todayLocalISO(), ...init?.headers },
+      // A file upload (FormData) must NOT be labelled JSON: the browser adds its own content type with the multipart boundary.
+      headers: { ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-Client-Date': todayLocalISO(), ...init?.headers },
     });
   } catch {
     throw new ApiError(0, "Can't reach the server. Is it running? (npm run dev)");

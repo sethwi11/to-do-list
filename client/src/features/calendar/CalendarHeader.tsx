@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronLeft, ChevronRight, ListChecks } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, FileUp, ListChecks } from 'lucide-react';
 import { cx } from '../../lib/cx';
 import { Button, IconButton } from '../../ui/Button';
 import { Segmented } from '../../ui/Segmented';
@@ -18,12 +18,13 @@ interface CalendarHeaderProps {
   onPrev: () => void;
   onNext: () => void;
   onLayers: (layers: Layers) => void;
+  onImport: () => void;
 }
 
 const UNIT: Record<CalendarViewId, string> = { month: 'month', week: 'week', day: 'day', agenda: 'week' };
 
 /** The calendar's controls: the title, previous / next / today, the view switcher, and which layers show. */
-export function CalendarHeader({ title, view, layers, onView, onToday, onPrev, onNext, onLayers }: CalendarHeaderProps) {
+export function CalendarHeader({ title, view, layers, onView, onToday, onPrev, onNext, onLayers, onImport }: CalendarHeaderProps) {
   return (
     <header className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
       <h1 className="mr-auto min-w-0 font-display text-section">
@@ -45,6 +46,10 @@ export function CalendarHeader({ title, view, layers, onView, onToday, onPrev, o
         <LayerToggle icon={CalendarDays} label="Events" on={layers.events} onChange={(events) => onLayers({ ...layers, events })} />
         <LayerToggle icon={ListChecks} label="To-dos" on={layers.tasks} onChange={(tasks) => onLayers({ ...layers, tasks })} />
       </div>
+
+      <Button variant="secondary" icon={FileUp} onClick={onImport} title="Find events in a picture, PDF, Word document, text or calendar file">
+        <span className="max-sm:sr-only">Import from file</span>
+      </Button>
     </header>
   );
 }

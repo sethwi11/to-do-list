@@ -8,11 +8,38 @@ export interface ToastMessage {
   onUndo?: () => void;
 }
 
-/** One toast at a time: a new one replaces the last (and the last one's chance to Undo). */
+/**
+ * One toast at a time: a new one replaces the last (and the last one's chance to Undo).
+ *
+ * `onCommit` is for things that can't be taken back once done, like deleting a file: it runs when the
+ * undo window closes WITHOUT Undo being used (the toast times out, is dismissed, or is replaced by a newer one).
+ */
 export function useToast() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
-  const show = useCallback((message: string, onUndo?: () => void) => setToast({ id: Date.now(), message, onUndo }), []);
-  const dismiss = useCallback(() => setToast(null), []);
+  const pendingCommit = useRef<(() => void) | null>(null);
+
+  const settle = useCallback(() => {
+    const commit = pendingCommit.current;
+    pendingCommit.current = null;
+    commit?.();
+  }, []);
+
+  const show = useCallback(
+    (message: string, onUndo?: () => void, onCommit?: () => void) => {
+      settle(); // the previous toast can no longer be undone
+      pendingCommit.current = onCommit ?? null;
+      const undo = onUndo && (() => {
+        pendingCommit.current = null; // undone: the permanent part must not happen
+        onUndo();
+      });
+      setToast({ id: Date.now(), message, onUndo: undo });
+    },
+    [settle],
+  );
+  const dismiss = useCallback(() => {
+    settle();
+    setToast(null);
+  }, [settle]);
   return { toast, show, dismiss };
 }
 

@@ -69,6 +69,7 @@ export default function CalendarPage() {
         onPrev={() => go({ date: shiftDate(view, date, -1) })}
         onNext={() => go({ date: shiftDate(view, date, 1) })}
         onLayers={setLayers}
+        onImport={app.chooseFilesToImport}
       />
 
       {app.error && <ErrorBanner message={app.error} onRetry={() => void app.reload()} onDismiss={app.dismissError} />}

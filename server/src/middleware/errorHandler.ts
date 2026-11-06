@@ -17,7 +17,16 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     return;
   }
   if (err instanceof HttpError) {
-    res.status(err.status).json({ error: err.status === 403 ? 'Forbidden' : 'ValidationError', message: err.message });
+    const names: Record<number, string> = { 403: 'Forbidden', 404: 'NotFound', 413: 'FileTooLarge', 415: 'UnsupportedType' };
+    res.status(err.status).json({ error: names[err.status] ?? 'ValidationError', message: err.message });
+    return;
+  }
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    res.status(413).json({ error: 'FileTooLarge', message: 'That file is larger than 15 MB, the most that can be attached.' });
+    return;
+  }
+  if (err?.name === 'MulterError') {
+    res.status(400).json({ error: 'ValidationError', message: 'The upload could not be read' });
     return;
   }
   // A foreign-key failure means the request pointed at something that doesn't exist (a calendar, course...).

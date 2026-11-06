@@ -22,6 +22,7 @@ import {
 } from '@todo/shared';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import type { Repositories } from './repositories';
+import { attachmentsRouter } from './routes/attachments';
 import { backupRouter } from './routes/backup';
 import { crudRouter } from './routes/crudRouter';
 import { eventsBatchRouter } from './routes/events';
@@ -33,7 +34,7 @@ import { tasksRouter } from './routes/tasks';
  * "listen" lets tests drive the app in-process with supertest (no real port,
  * no real database file).
  */
-export function createApp(repos: Repositories) {
+export function createApp(repos: Repositories, options: { uploadsDir: string }) {
   const app = express();
 
   // 5 MB, so a JSON backup import fits; normal requests are tiny.
@@ -56,6 +57,7 @@ export function createApp(repos: Repositories) {
   app.use('/api/templates', crudRouter(repos.templates, { label: 'Template', create: CreateTemplateInputSchema, update: UpdateTemplateInputSchema }));
   app.use('/api/focus-sessions', crudRouter(repos.focusSessions, { label: 'Focus session', create: CreateFocusSessionInputSchema, update: null }));
   app.use('/api/weekly-reviews', crudRouter(repos.weeklyReviews, { label: 'Weekly review', create: CreateWeeklyReviewInputSchema, update: UpdateWeeklyReviewInputSchema }));
+  app.use('/api/attachments', attachmentsRouter(repos.attachments, options.uploadsDir));
   app.use('/api/settings', settingsRouter(repos.settings));
   app.use('/api/backup', backupRouter(repos.backup));
 

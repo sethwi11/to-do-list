@@ -8,6 +8,7 @@ import { IconButton } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Popover, type PopoverAnchor } from '../../ui/Popover';
 import type { CalendarItem } from './calendarModel';
+import { AttachmentList } from '../files/AttachmentList';
 import { describeConflicts, describeRepeat, formatWhen } from './format';
 
 const REPEAT_WORDS = { daily: 'every day', weekdays: 'every weekday', weekly: 'every week', monthly: 'every month' } as const;
@@ -88,6 +89,7 @@ function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'e
         {type && <Row icon={Tag}>{type.name}</Row>}
         <CalendarLine item={item} />
         <Notes text={event.notes} />
+        <AttachmentList owner={{ ownerType: 'event', ownerId: event.id }} className="pt-1" />
       </div>
       <div className="mt-4 flex items-center justify-between border-t border-hairline pt-3">
         <IconButton
@@ -149,6 +151,7 @@ function TaskDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'ta
         {task.recurrence !== 'none' && <Row icon={Repeat}>Repeats {REPEAT_WORDS[task.recurrence]}</Row>}
         <CalendarLine item={item} />
         <Notes text={task.notes} />
+        <AttachmentList owner={{ ownerType: 'task', ownerId: task.id }} className="pt-1" />
       </div>
       <div className="mt-4 flex items-center justify-between border-t border-hairline pt-3">
         <IconButton

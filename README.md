@@ -8,6 +8,8 @@ A personal planner built from a to-do app: tasks today, with a calendar, courses
 
 - **Calendar** with Month, Week, Day, and Agenda views: drag across empty time to add an event, drag an event to move it, drag its edge to resize it, click one for its details. Events can repeat (every day, weekday, week on chosen days, or month) and you choose whether a change applies to *this event*, *this and following*, or *all events*
 - **To-dos on the calendar**: dashed, checkable, and draggable to a new day or time. Calendars can be hidden from the sidebar, and events and to-dos can be switched off separately
+- **Add events from files**: drop in (or paste, or pick) a screenshot, PDF, Word document, text file or calendar (.ics) file, review what was found, and add it. Pictures and scanned PDFs are read on your computer with OCR; nothing is uploaded until you press Add
+- **Attachments**: the original file is kept and attached to everything made from it; you can attach files to any event or to-do yourself, and open them in a preview
 - **Today** page: the day's schedule as a timeline (with a line for the current moment), an "Up next" card with a live countdown and join link, to-dos and overdue beside it, and a summary line ("5 events · 3 tasks · 2 overdue")
 - **Conflict warnings**: if an event overlaps another, you're told when you pick the time, on the Today timeline, in an event's details, and after a drag. You are warned, never blocked
 - **Tasks** page with tabs (All, Upcoming, Overdue, Completed), search, filters, sorting, and drag-to-reorder
@@ -36,6 +38,32 @@ Open <http://localhost:5173>. The API runs on port 3001 and Vite proxies `/api` 
 | `npm run dev` | API server + web app with hot reload |
 | `npm test` | All unit and API tests (Vitest) |
 | `npm run typecheck` | Type-checks every package |
+
+## Adding events from files
+
+Drag a file onto any page, paste a screenshot (Ctrl/Cmd+V), use **New > Import file**, or the **Import from file** button on the calendar. Several files at once are fine, up to 15 MB each.
+
+| File | How it's read |
+| --- | --- |
+| PNG, JPG, WEBP pictures, pasted screenshots | OCR (text recognition) with tesseract.js, in your browser |
+| PDF | the text is read directly; a page with almost no text is treated as a scan, drawn, and OCR'd |
+| .docx | mammoth |
+| .txt | read as is |
+| .ics (Google Calendar, Outlook, Canvas...) | read with ical.js: exact, no guessing; a repeat the planner can store becomes one repeating event, one it can't ("every 2 weeks") is written out as separate events and you're told |
+| HEIC | works in browsers that can open them (Safari); otherwise you're asked to convert to JPG or PNG |
+| .doc, .pages, anything else | refused, with a message to save as PDF or .docx |
+
+**Nothing is added until you say so.** The Review shows the file beside everything found in it. Each card has every field editable, a checkbox, an Event / To-do choice, and the words it came from. Doubtful cards are flagged and start unchecked: low confidence, already past, or like something already on your calendar (or already found in this import). "This is a syllabus" turns deadlines into to-dos with reminders 3 days and 1 day before, and a course can be chosen once courses exist.
+
+- **No outside services.** The OCR worker, engine and English data are served from the app itself (`/ocr/`, set up in `client/vite.config.ts`), so nothing about a picture leaves the computer. The first picture takes a few seconds longer while the 3 MB of language data loads; it is remembered afterwards. Small pictures are enlarged before reading, since OCR struggles with small text.
+- **Tuning the guessing.** `shared/src/eventExtractor.ts` starts with the word lists (event types, title words, detail labels, meeting links) and the confidence threshold. Add a word, run `npm test`, and the sample documents in `shared/test/samples/` show what changed.
+- **The guesses are heuristics.** Titles come from nearby lines, preferring ones with words like *interview*, *exam* or *due*; dates come from chrono-node. A date with no year is read as the next one coming, except in a document with several dates (a schedule), where it means this year's.
+
+### Where files live
+
+Uploaded originals are stored in `server/data/uploads/`, next to the database (change with `UPLOADS_DIR`). They are renamed to a generated id; the type is decided from the extension and the file's first bytes (never from what the browser says), and files are served with headers that stop a browser from running anything in them. **Export JSON does not include the files**, only their records: to back up everything, also copy `server/data/uploads/`.
+
+Deleting an event or to-do whose files nothing else uses asks whether to delete the files too. If you say yes, the files are removed only after the Undo window has passed, so Undo still brings everything back.
 
 ## Your data
 

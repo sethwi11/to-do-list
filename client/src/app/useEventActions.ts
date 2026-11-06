@@ -21,7 +21,17 @@ const NONE: never[] = [];
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Unexpected error');
 const withNote = (message: string, note?: string) => (note ? `${message}. ${note}` : message);
 
+/** A change that was saved and can be taken back. */
+export interface Applied {
+  undo: () => Promise<void>;
+}
+
+/** Asked before an event is deleted: any files only it uses can be deleted too. See useFileDeletionPrompt. */
+export type ConfirmFiles = (owners: { ownerType: 'event'; ownerId: string }[], title: string) => Promise<{ proceed: boolean; commit?: () => void }>;
+
 export interface EventActions {
+  /** Add several events in one go, with no toast of its own (the caller reports). Resolves to their ids and a way to undo, or null if refused. */
+  createEvents: (inputs: CreateEventInput[]) => Promise<(Applied & { ids: string[] }) | null>;
   /** `options.note` is added to the toast (e.g. "Overlaps with ..."). */
   createEvent: (input: CreateEventInput, options?: { note?: string }) => Promise<boolean>;
   /**
@@ -38,7 +48,7 @@ export interface EventActions {
  * from the shared tested code), sends it as one batch, and shows a toast whose Undo sends
  * the inverse batch.
  */
-export function useEventActions(showToast: (message: string, onUndo?: () => void) => void) {
+export function useEventActions(showToast: (message: string, onUndo?: () => void, onCommit?: () => void) => void, confirmFiles: ConfirmFiles) {
   const qc = useQueryClient();
   const eventsQuery = useEventsQuery();
   const typesQuery = useEventTypesQuery();
@@ -47,23 +57,33 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
 
   const currentEvents = useCallback(() => qc.getQueryData<Event[]>(keys.events) ?? [], [qc]);
 
-  /** Apply a plan and offer Undo. Resolves to whether it was saved. */
-  const run = useCallback(
-    async (plan: BatchPlan, message: string): Promise<boolean> => {
+  /** Apply a plan. Resolves to a way to undo it, or null (after saying why) if the server refused. */
+  const apply = useCallback(
+    async (plan: BatchPlan): Promise<Applied | null> => {
       const before = currentEvents();
       try {
         await applyBatch(plan);
       } catch (err) {
         showToast(`Couldn't save that: ${messageOf(err)}`);
-        return false;
+        return null;
       }
-      const undo = invertPlan(plan, before);
-      showToast(message, () => {
-        applyBatch(undo).catch((err: unknown) => showToast(`Couldn't undo that: ${messageOf(err)}`));
-      });
-      return true;
+      const inverse = invertPlan(plan, before);
+      return { undo: () => applyBatch(inverse).then(() => undefined) };
     },
     [applyBatch, currentEvents, showToast],
+  );
+
+  /** Apply a plan and offer Undo in a toast. Resolves to whether it was saved. `onCommit` runs when the undo window closes unused. */
+  const run = useCallback(
+    async (plan: BatchPlan, message: string, onCommit?: () => void): Promise<boolean> => {
+      const applied = await apply(plan);
+      if (!applied) return false;
+      showToast(message, () => {
+        applied.undo().catch((err: unknown) => showToast(`Couldn't undo that: ${messageOf(err)}`));
+      }, onCommit);
+      return true;
+    },
+    [apply, showToast],
   );
 
   const scopeFor = useCallback(
@@ -73,8 +93,17 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
   );
 
   const actions: EventActions = {
+    createEvents: useCallback(
+      async (inputs) => {
+        const now = new Date().toISOString();
+        const rows = inputs.map((input) => buildEvent(input, input.id ?? crypto.randomUUID(), now));
+        const applied = await apply({ put: rows, remove: [] });
+        return applied && { ...applied, ids: rows.map((r) => r.id) };
+      },
+      [apply],
+    ),
     createEvent: useCallback(
-      (input, options) => run({ put: [buildEvent(input, crypto.randomUUID(), new Date().toISOString())], remove: [] }, withNote(`Added “${input.title}”`, options?.note)),
+      (input, options) => run({ put: [buildEvent(input, input.id ?? crypto.randomUUID(), new Date().toISOString())], remove: [] }, withNote(`Added “${input.title}”`, options?.note)),
       [run],
     ),
     editEvent: useCallback(
@@ -92,9 +121,12 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
         const scope = await scopeFor(occurrence, 'Delete');
         if (!scope) return false;
         const plan = planEventDelete({ events: currentEvents(), occurrence, scope, now: new Date().toISOString(), newId: () => crypto.randomUUID() });
-        return run(plan, `Deleted “${occurrence.event.title}”`);
+        // Files only a deleted event used can go with it (if the person says so, once Undo is no longer possible).
+        const files = await confirmFiles(plan.remove.map((id) => ({ ownerType: 'event' as const, ownerId: id })), occurrence.event.title);
+        if (!files.proceed) return false;
+        return run(plan, `Deleted “${occurrence.event.title}”`, files.commit);
       },
-      [scopeFor, currentEvents, run],
+      [scopeFor, currentEvents, run, confirmFiles],
     ),
   };
 

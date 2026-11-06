@@ -6,7 +6,7 @@ import { createRepositories } from './repositories';
 // Opening the database also upgrades its schema (after backing it up first).
 const db = openDatabase(env.DB_PATH);
 const repos = createRepositories(db);
-const app = createApp(repos);
+const app = createApp(repos, { uploadsDir: env.UPLOADS_DIR });
 
 // Soft-deleted tasks only need to live long enough to be undone. Clear out
 // anything deleted more than 30 days ago on each startup.

@@ -27,6 +27,8 @@ interface DialogProps {
   children: ReactNode;
   /** Buttons along the bottom edge. */
   footer?: ReactNode;
+  /** "full" is a big, fixed-height window for things with their own scrolling parts (a file preview beside a list). */
+  size?: 'md' | 'full';
 }
 
 /**
@@ -35,7 +37,7 @@ interface DialogProps {
  * it, the page behind becomes inert, and focus returns to the opener on close. Clicking
  * the dimmed backdrop closes it too (a click there lands on the <dialog> itself).
  */
-export function Dialog({ open, onClose, title, children, footer }: DialogProps) {
+export function Dialog({ open, onClose, title, children, footer, size = 'md' }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -56,15 +58,18 @@ export function Dialog({ open, onClose, title, children, footer }: DialogProps) 
       onClose={onClose}
       onClick={(e) => e.target === ref.current && onClose()}
       aria-labelledby="dialog-title"
-      className="m-auto w-[min(32rem,calc(100vw-2rem))] animate-pop rounded-panel border border-hairline bg-surface p-0 text-ink shadow-popover backdrop:bg-(--backdrop)"
+      className={cx(
+        'm-auto animate-pop rounded-panel border border-hairline bg-surface p-0 text-ink shadow-popover backdrop:bg-(--backdrop)',
+        size === 'full' ? 'w-[min(80rem,calc(100vw-1.5rem))]' : 'w-[min(32rem,calc(100vw-2rem))]',
+      )}
     >
       {open && (
-        <div className="flex max-h-[85dvh] flex-col">
+        <div className={cx('flex flex-col', size === 'full' ? 'h-[min(52rem,calc(100dvh-1.5rem))]' : 'max-h-[85dvh]')}>
           <header className="flex items-start justify-between gap-4 px-6 pt-5">
             <PanelTitle id="dialog-title">{title}</PanelTitle>
             <IconButton icon={X} label="Close" onClick={onClose} className="-mt-1 -mr-2" />
           </header>
-          <div className="overflow-y-auto px-6 py-4">{children}</div>
+          <div className={cx('px-6 py-4', size === 'full' ? 'min-h-0 flex-1 overflow-hidden' : 'overflow-y-auto')}>{children}</div>
           {footer && <footer className="flex justify-end gap-2 border-t border-hairline px-6 py-3">{footer}</footer>}
         </div>
       )}

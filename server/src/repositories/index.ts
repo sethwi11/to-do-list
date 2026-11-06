@@ -44,6 +44,7 @@ import {
   createWeeklyReviewRepository,
 } from './entities';
 import { SqliteApplicationRepository } from './SqliteApplicationRepository';
+import { SqliteAttachmentRepository } from './SqliteAttachmentRepository';
 import { SqliteSettingsRepository, type SettingsRepository } from './SqliteSettingsRepository';
 import { SqliteTaskRepository } from './SqliteTaskRepository';
 import type { TaskRepository } from './TaskRepository';
@@ -65,6 +66,7 @@ export interface Repositories {
   focusSessions: CrudRepository<FocusSession, CreateFocusSessionInput, never>;
   weeklyReviews: CrudRepository<WeeklyReview, CreateWeeklyReviewInput, UpdateWeeklyReviewInput>;
   settings: SettingsRepository;
+  attachments: SqliteAttachmentRepository;
   backup: BackupRepository;
 }
 
@@ -84,5 +86,5 @@ export function createRepositories(db: Db): Repositories {
     weeklyReviews: createWeeklyReviewRepository(db),
     settings: new SqliteSettingsRepository(db),
   };
-  return { ...concrete, backup: new BackupRepository(db, concrete) };
+  return { ...concrete, attachments: new SqliteAttachmentRepository(db), backup: new BackupRepository(db, concrete) };
 }

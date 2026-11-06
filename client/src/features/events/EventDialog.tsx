@@ -4,9 +4,11 @@ import { useApp, type EventDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
-import { Field, Input, Select, Textarea } from '../../ui/fields';
+import { Field, Input, Label, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
+import { uploadAndLink } from '../attachments/useAttachments';
 import { describeConflicts } from '../calendar/format';
+import { AttachmentList } from '../files/AttachmentList';
 import { ConflictNotice } from './ConflictNotice';
 import {
   fromRepeatFields,
@@ -76,7 +78,7 @@ export function EventDialog() {
 }
 
 function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | null; defaults: EventDefaults | null }) {
-  const { calendars, eventTypes, events, createEvent, editEvent, closeDialog } = useApp();
+  const { calendars, eventTypes, events, createEvent, editEvent, closeDialog, showToast } = useApp();
 
   // The series' rule: an override ("this one moved") has none of its own, so look the series up.
   const series = occurrence?.seriesId ? events.find((e) => e.id === occurrence.seriesId) : undefined;
@@ -95,6 +97,9 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
   const [link, setLink] = useState(event?.link ?? '');
   const [notes, setNotes] = useState(event?.notes ?? '');
   const [errors, setErrors] = useState<{ title?: string; time?: string; link?: string }>({});
+  // A new event has no id until it's saved, so choose it now: files picked meanwhile wait here, and attach to it afterwards.
+  const [newId] = useState(() => crypto.randomUUID());
+  const [pendingFiles, setPendingFiles] = useState<File[]>(defaults?.files ?? []);
 
   const repeats = !!occurrence?.isRecurring;
 
@@ -146,7 +151,13 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
 
     if (!occurrence) {
       const rule = fromRepeatFields(repeat, time.startDate);
-      if (await createEvent({ ...fields, recurrence: rule }, { note: describeConflicts(conflicts) })) closeDialog('event');
+      if (await createEvent({ ...fields, id: newId, recurrence: rule }, { note: describeConflicts(conflicts) })) {
+        if (pendingFiles.length > 0) {
+          const problems = await uploadAndLink(pendingFiles, { ownerType: 'event', ownerId: newId });
+          if (problems.length > 0) showToast(problems[0]!);
+        }
+        closeDialog('event');
+      }
       return;
     }
     // Only send the repeat rule if it was changed, so an untouched one moves with the event instead of being rebuilt.
@@ -294,6 +305,10 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
         )}
       </Field>
       <Field label="Notes">{(p) => <Textarea {...p} value={notes} maxLength={20000} onChange={(e) => setNotes(e.target.value)} />}</Field>
+      <div>
+        <Label>Files</Label>
+        <AttachmentList owner={occurrence ? { ownerType: 'event', ownerId: occurrence.event.id } : null} editable pending={pendingFiles} onPendingChange={setPendingFiles} />
+      </div>
     </form>
   );
 }

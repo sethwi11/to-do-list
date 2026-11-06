@@ -1,0 +1,19 @@
+From: recruiting@acmecorp.com
+To: alex@school.edu
+Sent: Wednesday, November 4, 2026 9:12 AM
+Subject: Interview Confirmation – Acme Corp
+
+Hi Alex,
+
+Thank you for applying to the Software Engineering Intern role. We would like to invite you to a virtual interview with our engineering team.
+
+Your interview is scheduled for Tuesday, November 10 at 2:30 PM EST and will last about 45 minutes.
+
+Join Zoom Meeting: https://acmecorp.zoom.us/j/98765432100?pwd=abc123
+Meeting ID: 987 6543 2100
+
+Please reply to confirm. We look forward to speaking with you!
+
+Best,
+Jordan Lee
+Acme Corp Recruiting

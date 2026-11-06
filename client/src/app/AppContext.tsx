@@ -12,6 +12,8 @@ export interface EventDefaults {
   allDay?: boolean;
   calendarId?: string | null;
   title?: string;
+  /** Files to attach once the event is saved (e.g. the file an import found nothing in). */
+  files?: File[];
 }
 
 /** Which dialog is open. Only one at a time, so the whole app shares one slot. */
@@ -52,6 +54,12 @@ export interface AppApi extends EventActions {
   saveTask: (id: string, changes: UpdateTaskInput) => Promise<Task | null>;
   removeTask: (task: Task) => Promise<void>;
   moveTask: (movedId: string, before: Task | undefined, after: Task | undefined) => void;
+  /** Add several to-dos at once with no toast of their own. Resolves to their ids and a way to undo. */
+  addTasks: (inputs: CreateTaskInput[]) => Promise<{ ids: string[]; undo: () => Promise<void> }>;
+  /** Find events in these files (pictures, PDFs, Word, text, calendar files) and open the review. */
+  startImport: (files: File[]) => void;
+  /** Open the file picker for the same. */
+  chooseFilesToImport: () => void;
   /** Change a task's due date (and time), e.g. by dragging it on the calendar. Shows an Undo toast. */
   rescheduleTask: (task: Task, when: { dueDate: string; dueTime: string | null }) => Promise<boolean>;
 
@@ -65,7 +73,8 @@ export interface AppApi extends EventActions {
   openDialog: (dialog: DialogState) => void;
   /** Close the open dialog. Pass its kind so a dialog that is closing doesn't also close the next one that just opened. */
   closeDialog: (kind?: DialogState['kind']) => void;
-  showToast: (message: string, onUndo?: () => void) => void;
+  /** `onCommit` runs when the undo window closes without Undo (for permanent follow-ups, like deleting files). */
+  showToast: (message: string, onUndo?: () => void, onCommit?: () => void) => void;
   /** Run the current toast's Undo, if it has one. Returns whether it did. */
   undoLast: () => boolean;
 }

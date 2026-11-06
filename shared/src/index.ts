@@ -8,6 +8,9 @@ export * from './recurrence';
 export * from './models/events';
 export * from './eventSeries';
 export * from './conflicts';
+// Types only (they cost nothing). The extractor itself is at '@todo/shared/extract', loaded on demand.
+export type { ExtractedItem, ExtractOptions } from './eventExtractor';
+export type { IcsResult } from './icsImport';
 export * from './models/courses';
 export * from './models/applications';
 export * from './models/templates';

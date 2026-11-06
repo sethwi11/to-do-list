@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { createApp } from '../src/app';
 import { openDatabase, type Db } from '../src/db/connection';
 import { createRepositories } from '../src/repositories';
@@ -7,7 +10,9 @@ export function makeTestApp() {
   return makeTestAppWithDb().app;
 }
 
-export function makeTestAppWithDb(): { app: ReturnType<typeof createApp>; db: Db } {
+export function makeTestAppWithDb(): { app: ReturnType<typeof createApp>; db: Db; uploadsDir: string } {
   const db = openDatabase(':memory:');
-  return { app: createApp(createRepositories(db)), db };
+  // Each test app gets its own temporary uploads folder, so tests never touch real files.
+  const uploadsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'planner-uploads-'));
+  return { app: createApp(createRepositories(db), { uploadsDir }), db, uploadsDir };
 }
