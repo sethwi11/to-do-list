@@ -1,4 +1,4 @@
-import { addDays, datePart, timePart, type EventRecurrence } from '@todo/shared';
+import { addDays, datePart, timePart, type EventOccurrence, type EventRecurrence } from '@todo/shared';
 import { formatTime, parseLocalISODate } from '../../lib/dates';
 
 const day = (date: string, withYear = false) =>
@@ -40,4 +40,21 @@ export function formatClockShort(time: string): string {
   const suffix = h! >= 12 ? 'p' : 'a';
   const hour = h! % 12 === 0 ? 12 : h! % 12;
   return m ? `${hour}:${String(m).padStart(2, '0')}${suffix}` : `${hour}${suffix}`;
+}
+
+/** "Overlaps with “A”", "...“A” and “B”", "...“A” and 2 more": for a toast, where there's room for one short line. */
+export function describeConflicts(conflicts: EventOccurrence[]): string {
+  const names = conflicts.map((o) => `“${o.event.title}”`);
+  if (names.length === 0) return '';
+  if (names.length === 1) return `Overlaps with ${names[0]}`;
+  if (names.length === 2) return `Overlaps with ${names[0]} and ${names[1]}`;
+  return `Overlaps with ${names[0]} and ${names.length - 1} more`;
+}
+
+/** What to show in a time column for an event on a given day: its hours, "All day", or how it continues across midnight. */
+export function formatEventTimeOnDay(start: string, end: string, allDay: boolean, date: string): string {
+  if (allDay) return 'All day';
+  if (datePart(end) === datePart(start)) return formatTimeRange(timePart(start), timePart(end));
+  if (datePart(start) === date) return `${formatTime(timePart(start))} →`;
+  return datePart(end) === date ? `until ${formatTime(timePart(end))}` : 'All day';
 }

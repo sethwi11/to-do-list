@@ -19,15 +19,17 @@ import { useScopePrompt, type ScopeVerb } from '../features/calendar/ScopeDialog
 
 const NONE: never[] = [];
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Unexpected error');
+const withNote = (message: string, note?: string) => (note ? `${message}. ${note}` : message);
 
 export interface EventActions {
-  createEvent: (input: CreateEventInput) => Promise<boolean>;
+  /** `options.note` is added to the toast (e.g. "Overlaps with ..."). */
+  createEvent: (input: CreateEventInput, options?: { note?: string }) => Promise<boolean>;
   /**
    * Change one occurrence. If it belongs to a repeating event, asks which events the change
    * applies to first. Resolves to false if that was cancelled or the server refused (so a
    * drag can snap back).
    */
-  editEvent: (occurrence: EventOccurrence, changes: EventChanges, options?: { verb?: Exclude<ScopeVerb, 'Delete'>; message?: string }) => Promise<boolean>;
+  editEvent: (occurrence: EventOccurrence, changes: EventChanges, options?: { verb?: Exclude<ScopeVerb, 'Delete'>; message?: string; note?: string }) => Promise<boolean>;
   deleteEvent: (occurrence: EventOccurrence) => Promise<boolean>;
 }
 
@@ -72,7 +74,7 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
 
   const actions: EventActions = {
     createEvent: useCallback(
-      (input) => run({ put: [buildEvent(input, crypto.randomUUID(), new Date().toISOString())], remove: [] }, `Added “${input.title}”`),
+      (input, options) => run({ put: [buildEvent(input, crypto.randomUUID(), new Date().toISOString())], remove: [] }, withNote(`Added “${input.title}”`, options?.note)),
       [run],
     ),
     editEvent: useCallback(
@@ -81,7 +83,7 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
         if (!scope) return false;
         const plan = planEventEdit({ events: currentEvents(), occurrence, changes, scope, now: new Date().toISOString(), newId: () => crypto.randomUUID() });
         const title = changes.title ?? occurrence.event.title;
-        return run(plan, options.message ?? `Saved “${title}”`);
+        return run(plan, withNote(options.message ?? `Saved “${title}”`, options.note));
       },
       [scopeFor, currentEvents, run],
     ),

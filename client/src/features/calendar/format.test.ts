@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { describeRepeat, formatClockShort, formatTimeRange, formatWhen } from './format';
+import type { EventOccurrence } from '@todo/shared';
+import { describeConflicts, describeRepeat, formatClockShort, formatEventTimeOnDay, formatTimeRange, formatWhen } from './format';
 
 describe('formatTimeRange', () => {
   it('shares the AM/PM when both ends have it', () => {
@@ -32,5 +33,25 @@ describe('formatClockShort', () => {
     expect(formatClockShort('14:30')).toBe('2:30p');
     expect(formatClockShort('00:15')).toBe('12:15a');
     expect(formatClockShort('12:00')).toBe('12p');
+  });
+});
+
+const occ = (title: string) => ({ event: { title } }) as EventOccurrence;
+
+describe('describeConflicts', () => {
+  it('names one, two, or many', () => {
+    expect(describeConflicts([])).toBe('');
+    expect(describeConflicts([occ('A')])).toBe('Overlaps with “A”');
+    expect(describeConflicts([occ('A'), occ('B')])).toBe('Overlaps with “A” and “B”');
+    expect(describeConflicts([occ('A'), occ('B'), occ('C'), occ('D')])).toBe('Overlaps with “A” and 3 more');
+  });
+});
+
+describe('formatEventTimeOnDay', () => {
+  it('shows hours, all day, and how an overnight event continues', () => {
+    expect(formatEventTimeOnDay('2026-11-04T10:00', '2026-11-04T11:15', false, '2026-11-04')).toBe('10:00 – 11:15 AM');
+    expect(formatEventTimeOnDay('2026-11-04T00:00', '2026-11-05T00:00', true, '2026-11-04')).toBe('All day');
+    expect(formatEventTimeOnDay('2026-11-04T22:00', '2026-11-05T01:00', false, '2026-11-04')).toBe('10:00 PM →');
+    expect(formatEventTimeOnDay('2026-11-04T22:00', '2026-11-05T01:00', false, '2026-11-05')).toBe('until 1:00 AM');
   });
 });

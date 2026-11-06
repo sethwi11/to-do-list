@@ -110,6 +110,12 @@ export type CalendarItem =
 /** Things with no calendar of their own (and no color of their own) use the neutral slate. */
 const NEUTRAL: CalendarColor = 'slate';
 
+/** An event occurrence as a calendar item: with the color and calendar name it should be drawn with. */
+export function toEventItem(occurrence: EventOccurrence, calendarsById: ReadonlyMap<string, Calendar>): Extract<CalendarItem, { kind: 'event' }> {
+  const calendar = occurrence.event.calendarId ? calendarsById.get(occurrence.event.calendarId) : undefined;
+  return { kind: 'event', id: occurrence.key, occurrence, color: occurrence.event.color ?? calendar?.color ?? NEUTRAL, calendarName: calendar?.name };
+}
+
 export interface ItemSources {
   events: Event[];
   tasks: Task[];
@@ -126,9 +132,7 @@ export function buildItems(src: ItemSources, rangeStart: string, rangeEnd: strin
 
   if (src.showEvents) {
     for (const occurrence of expandOccurrences(src.events, rangeStart, rangeEnd)) {
-      const calendar = occurrence.event.calendarId ? src.calendarsById.get(occurrence.event.calendarId) : undefined;
-      if (!visible(occurrence.event.calendarId)) continue;
-      items.push({ kind: 'event', id: occurrence.key, occurrence, color: occurrence.event.color ?? calendar?.color ?? NEUTRAL, calendarName: calendar?.name });
+      if (visible(occurrence.event.calendarId)) items.push(toEventItem(occurrence, src.calendarsById));
     }
   }
 

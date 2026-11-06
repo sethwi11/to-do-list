@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
+import { findConflicts } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { Button } from '../../ui/Button';
 import { Input, Select } from '../../ui/fields';
 import { Popover, type PopoverAnchor } from '../../ui/Popover';
-import { formatWhen } from './format';
+import { ConflictNotice } from '../events/ConflictNotice';
+import { describeConflicts, formatWhen } from './format';
 import { withNewStart, fromTimeFields, timeProblem, toTimeFields } from '../events/eventForm';
 
 export interface Selection {
@@ -22,7 +24,7 @@ const isString = (v: unknown): v is string => typeof v === 'string';
  * Enter, done. "More options" opens the full form with the same values filled in.
  */
 export function QuickCreate({ selection, onClose }: { selection: Selection; onClose: () => void }) {
-  const { calendars, createEvent, openDialog } = useApp();
+  const { calendars, events, createEvent, openDialog } = useApp();
   const [lastCalendar, setLastCalendar] = usePersistedState('voice-todo.calendar.lastUsed', '', isString);
   const [title, setTitle] = useState('');
   const [calendarId, setCalendarId] = useState(calendars.some((c) => c.id === lastCalendar) ? lastCalendar : '');
@@ -30,6 +32,10 @@ export function QuickCreate({ selection, onClose }: { selection: Selection; onCl
   const [error, setError] = useState<string | undefined>();
 
   const span = fromTimeFields(time);
+  const conflicts = useMemo(
+    () => (timeProblem(time) === null ? findConflicts(events, { ...fromTimeFields(time), allDay: time.allDay }) : []),
+    [events, time],
+  );
 
   function more() {
     onClose();
@@ -43,7 +49,7 @@ export function QuickCreate({ selection, onClose }: { selection: Selection; onCl
     if (problem) return setError(problem);
     setLastCalendar(calendarId);
     onClose();
-    await createEvent({ title: title.trim(), ...span, allDay: time.allDay, calendarId: calendarId || null });
+    await createEvent({ title: title.trim(), ...span, allDay: time.allDay, calendarId: calendarId || null }, { note: describeConflicts(conflicts) });
   }
 
   return (
@@ -91,6 +97,8 @@ export function QuickCreate({ selection, onClose }: { selection: Selection; onCl
             </div>
           </div>
         )}
+
+        <ConflictNotice conflicts={conflicts} />
 
         <Select aria-label="Calendar" value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
           <option value="">No calendar</option>

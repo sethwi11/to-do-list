@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { ExternalLink, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, X } from 'lucide-react';
+import { ExternalLink, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, TriangleAlert, X } from 'lucide-react';
+import { findConflicts, selfIds } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { calendarVars } from '../../lib/calendarColors';
 import { formatDueDate, formatTime } from '../../lib/dates';
@@ -7,7 +8,7 @@ import { IconButton } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Popover, type PopoverAnchor } from '../../ui/Popover';
 import type { CalendarItem } from './calendarModel';
-import { describeRepeat, formatWhen } from './format';
+import { describeConflicts, describeRepeat, formatWhen } from './format';
 
 const REPEAT_WORDS = { daily: 'every day', weekdays: 'every weekday', weekly: 'every week', monthly: 'every month' } as const;
 
@@ -61,6 +62,7 @@ function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'e
   // An override ("this one moved") has no rule of its own; its series does.
   const rule = (occurrence.seriesId ? events.find((e) => e.id === occurrence.seriesId) : event)?.recurrence ?? null;
   const type = event.typeId ? eventTypesById.get(event.typeId) : undefined;
+  const conflicts = findConflicts(events, { start: occurrence.start, end: occurrence.end, allDay: occurrence.allDay }, selfIds(occurrence));
 
   return (
     <>
@@ -73,6 +75,7 @@ function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'e
             {occurrence.isOverride && <span className="text-ink-muted"> (this one was changed)</span>}
           </Row>
         )}
+        {conflicts.length > 0 && <Row icon={TriangleAlert}>{describeConflicts(conflicts)}</Row>}
         {event.location && <Row icon={MapPin}>{event.location}</Row>}
         {event.link && (
           <Row icon={ExternalLink}>

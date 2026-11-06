@@ -7,6 +7,7 @@ export * from './dateTime';
 export * from './recurrence';
 export * from './models/events';
 export * from './eventSeries';
+export * from './conflicts';
 export * from './models/courses';
 export * from './models/applications';
 export * from './models/templates';

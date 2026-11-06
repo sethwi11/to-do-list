@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { findConflicts, selfIds, type EventOccurrence } from '@todo/shared';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -9,6 +10,7 @@ import { useApp } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { anchorOf, type PopoverAnchor } from '../../ui/Popover';
 import '../../styles/calendar.css';
+import { describeConflicts } from './format';
 import { localDate, selectionToSpan, spanFromFullCalendar, taskSpan, type CalendarItem } from './calendarModel';
 import { ItemBlock } from './ItemBlock';
 import type { Selection } from './QuickCreate';
@@ -48,7 +50,7 @@ interface CalendarViewProps {
  * bar), and this component just follows them. Items are drawn by our own blocks.
  */
 export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay }: CalendarViewProps) {
-  const { editEvent, rescheduleTask, toggleTask } = useApp();
+  const { events: allEvents, editEvent, rescheduleTask, toggleTask } = useApp();
   const ref = useRef<FullCalendar>(null);
   const container = useRef<HTMLDivElement>(null);
 
@@ -86,6 +88,9 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
     onOpenItem(itemOf(info), anchorOf(info.el));
   }
 
+  /** A warning for the toast if the new time overlaps something. */
+  const clashNote = (occurrence: EventOccurrence, span: { start: string; end: string; allDay: boolean }) => describeConflicts(findConflicts(allEvents, span, selfIds(occurrence)));
+
   async function handleDrop(info: EventDropArg) {
     const item = itemOf(info);
     const span = spanFromFullCalendar(info.event.start!, info.event.end, info.event.allDay);
@@ -95,7 +100,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
       return;
     }
     const title = item.occurrence.event.title;
-    const saved = await editEvent(item.occurrence, span, { verb: 'Move', message: `Moved “${title}”` });
+    const saved = await editEvent(item.occurrence, span, { verb: 'Move', message: `Moved “${title}”`, note: clashNote(item.occurrence, span) });
     if (!saved) info.revert(); // cancelled, or the server said no: snap it back
   }
 
@@ -104,7 +109,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
     if (item.kind !== 'event') return info.revert();
     const span = spanFromFullCalendar(info.event.start!, info.event.end, info.event.allDay);
     const title = item.occurrence.event.title;
-    const saved = await editEvent(item.occurrence, span, { verb: 'Resize', message: `Resized “${title}”` });
+    const saved = await editEvent(item.occurrence, span, { verb: 'Resize', message: `Resized “${title}”`, note: clashNote(item.occurrence, span) });
     if (!saved) info.revert();
   }
 

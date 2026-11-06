@@ -1,4 +1,4 @@
-import { addDays, datePart, timePart } from '@todo/shared';
+import { addDays, timePart } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { calendarVars } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
@@ -8,7 +8,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { anchorOf, type PopoverAnchor } from '../../ui/Popover';
 import { EmptyState } from '../../ui/states';
 import { daysWithItems, itemsOnDay, taskSpan, weekStart, type CalendarItem } from './calendarModel';
-import { formatTimeRange } from './format';
+import { formatEventTimeOnDay } from './format';
 
 /** The label in the time column of a row: when this item happens on this day. */
 function timeLabel(item: CalendarItem, date: string): string {
@@ -17,12 +17,7 @@ function timeLabel(item: CalendarItem, date: string): string {
     return span.allDay ? 'To-do' : formatTime(timePart(span.start));
   }
   const { start, end, allDay } = item.occurrence;
-  if (allDay) return 'All day';
-  if (datePart(end) !== datePart(start)) {
-    if (datePart(start) === date) return `${formatTime(timePart(start))} →`;
-    return datePart(end) === date ? `until ${formatTime(timePart(end))}` : 'All day';
-  }
-  return formatTimeRange(timePart(start), timePart(end));
+  return formatEventTimeOnDay(start, end, allDay, date);
 }
 
 interface AgendaViewProps {
@@ -57,18 +52,23 @@ export function AgendaView({ date, items, onOpenItem, onCreate }: AgendaViewProp
         const isToday = d === today;
         const day = parseLocalISODate(d);
         return (
-          <section key={d} aria-label={day.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} className="mb-6">
-            <h2 className="mb-1 flex items-baseline gap-3 border-b border-rule pb-1">
-              <span className={cx('grid size-8 place-items-center rounded-full font-display text-section', isToday && 'bg-accent-ink text-on-accent')}>{day.getDate()}</span>
-              <span className="text-label text-ink-muted uppercase">{day.toLocaleDateString(undefined, { weekday: 'long' })}</span>
-              {isToday && <span className="font-mono text-meta text-accent-ink">Today</span>}
+          // A printed planner page: the date set large on the left, that day's items listed beside it.
+          <section
+            key={d}
+            aria-label={day.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            className="grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-3 border-t border-rule pt-3 pb-6 sm:grid-cols-[5rem_minmax(0,1fr)] sm:gap-x-5"
+          >
+            <h2 className="flex flex-col items-start leading-none">
+              <span className={cx('text-label uppercase', isToday ? 'text-accent-ink' : 'text-ink-muted')}>{day.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+              <span className={cx('mt-1 font-display text-page', isToday ? 'text-accent-ink' : 'text-ink')}>{day.getDate()}</span>
+              {isToday && <span className="mt-1 font-mono text-time text-accent-ink uppercase">Today</span>}
             </h2>
             {dayItems.length === 0 ? (
-              <p className="py-3 pl-1 font-display text-title text-ink-muted italic">Nothing scheduled.</p>
+              <p className="py-2 font-display text-title text-ink-muted italic">Nothing scheduled.</p>
             ) : (
               <ul>
                 {dayItems.map((item) => (
-                  <li key={`${d}:${item.id}`} style={calendarVars(item.color)} className="flex items-center gap-1 border-b border-hairline">
+                  <li key={`${d}:${item.id}`} style={calendarVars(item.color)} className="flex items-center gap-1 border-b border-hairline first:pt-0">
                     {item.kind === 'task' ? (
                       <Checkbox
                         checked={item.task.status === 'done'}

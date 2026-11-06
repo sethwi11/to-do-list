@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from 'react';
-import { dayOfWeek, type EventOccurrence } from '@todo/shared';
+import { useMemo, useState, type FormEvent } from 'react';
+import { dayOfWeek, findConflicts, selfIds, type EventOccurrence } from '@todo/shared';
 import { useApp, type EventDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Field, Input, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
+import { describeConflicts } from '../calendar/format';
+import { ConflictNotice } from './ConflictNotice';
 import {
   fromRepeatFields,
   fromTimeFields,
@@ -96,6 +98,13 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
 
   const repeats = !!occurrence?.isRecurring;
 
+  // Warn (never block) if these times overlap another event. The event being edited, and its series, don't count against themselves.
+  const conflicts = useMemo(() => {
+    if (timeProblem(time) !== null) return [];
+    const { start, end } = fromTimeFields(time);
+    return findConflicts(events, { start, end, allDay: time.allDay }, occurrence ? selfIds(occurrence) : undefined);
+  }, [events, time, occurrence]);
+
   function changeStart(startDate: string, startTime: string) {
     // A weekly repeat on just the old start's weekday follows the start to its new weekday.
     if (repeat.repeat === 'weekly' && repeat.weekdays.length === 1 && startDate && time.startDate && repeat.weekdays[0] === dayOfWeek(time.startDate)) {
@@ -137,13 +146,13 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
 
     if (!occurrence) {
       const rule = fromRepeatFields(repeat, time.startDate);
-      if (await createEvent({ ...fields, recurrence: rule })) closeDialog('event');
+      if (await createEvent({ ...fields, recurrence: rule }, { note: describeConflicts(conflicts) })) closeDialog('event');
       return;
     }
     // Only send the repeat rule if it was changed, so an untouched one moves with the event instead of being rebuilt.
     const repeatChanged = !sameRepeat(initialRepeat, repeat, time.startDate);
     const rule = repeatChanged ? fromRepeatFields(repeat, time.startDate, (series ?? event)?.recurrence?.exdates ?? []) : undefined;
-    const saved = await editEvent(occurrence, rule === undefined ? fields : { ...fields, recurrence: rule });
+    const saved = await editEvent(occurrence, rule === undefined ? fields : { ...fields, recurrence: rule }, { note: describeConflicts(conflicts) });
     if (saved) closeDialog('event'); // on failure (or if they cancelled the scope question) the dialog stays, so nothing typed is lost
   }
 
@@ -196,6 +205,7 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
           </p>
         )}
       </fieldset>
+      <ConflictNotice conflicts={conflicts} />
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Calendar">
