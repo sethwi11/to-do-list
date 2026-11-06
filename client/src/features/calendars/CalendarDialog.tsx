@@ -1,14 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { CALENDAR_COLORS, type Calendar, type CalendarColor } from '@todo/shared';
+import type { Calendar, CalendarColor } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
-import { calendarVars } from '../../lib/calendarColors';
 import { tasksUrl } from '../../lib/taskParams';
 import { Button } from '../../ui/Button';
 import { Field, Input } from '../../ui/fields';
+import { ColorPicker } from '../../ui/ColorPicker';
 import { Dialog } from '../../ui/Panel';
-
-const colorLabel = (c: CalendarColor) => c.charAt(0).toUpperCase() + c.slice(1).replace('-', ' ');
 
 /** Create a calendar, or rename, recolor, or delete one. */
 export function CalendarDialog() {
@@ -107,19 +105,7 @@ function CalendarForm({ calendar }: { calendar: Calendar | null }) {
         )}
       </Field>
 
-      {/* A radio group: arrow keys move between colors, and screen readers announce each color's name. */}
-      <fieldset>
-        <legend className="mb-1.5 text-label text-ink-muted uppercase">Color</legend>
-        <div className="flex flex-wrap gap-2">
-          {CALENDAR_COLORS.map((c) => (
-            <label key={c} title={colorLabel(c)} className="cursor-pointer" style={calendarVars(c)}>
-              <input type="radio" name="calendar-color" value={c} checked={color === c} onChange={() => setColor(c)} className="peer sr-only" />
-              <span className="sr-only">{colorLabel(c)}</span>
-              <span aria-hidden className="block size-7 bg-(color:--c) outline-offset-2 peer-checked:outline-2 peer-checked:outline-ink peer-focus-visible:outline-2 peer-focus-visible:outline-accent" />
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <ColorPicker name="calendar-color" value={color} onChange={setColor} />
     </form>
   );
 }

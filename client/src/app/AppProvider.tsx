@@ -1,9 +1,11 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { nextOccurrence, type Calendar, type EventType, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
+import { nextOccurrence, type Calendar, type Course, type EventType, type Semester, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
 import { DeleteFilesDialog, useFileDeletionPrompt } from '../features/attachments/DeleteFilesDialog';
 import { newEventSpan } from '../features/calendar/calendarModel';
 import { ScopeDialog } from '../features/calendar/ScopeDialog';
 import { CalendarDialog } from '../features/calendars/CalendarDialog';
+import { CourseDialog } from '../features/courses/CourseDialog';
+import { SemesterDialog } from '../features/courses/SemesterDialog';
 import { EventDialog } from '../features/events/EventDialog';
 import { SettingsDialog } from '../features/settings/SettingsDialog';
 import { ShortcutsDialog } from '../features/settings/ShortcutsDialog';
@@ -17,7 +19,9 @@ import { useToday } from '../hooks/useToday';
 import { formatDueDate } from '../lib/dates';
 import { computeMove } from '../lib/ordering';
 import { ToastHost, useToast } from '../ui/Toast';
-import { AppContext, type AppApi, type DialogState } from './AppContext';
+import { AppContext, type AppApi, type DialogState, type ImportOptions } from './AppContext';
+import { courseHooks, semesterHooks } from '../data/useCourses';
+import { useCourseActions } from './useCourseActions';
 import { useEventActions } from './useEventActions';
 
 /**
@@ -32,7 +36,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { toast, show: showToast, dismiss: dismissToast } = useToast();
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const { confirmFiles, dialog: fileDialog } = useFileDeletionPrompt();
-  const { events, eventTypes, eventsLoading, scopeDialog, actions: eventActions } = useEventActions(showToast, confirmFiles);
+  const { events: allEvents, eventTypes, eventsLoading, scopeDialog, actions: eventActions } = useEventActions(showToast, confirmFiles);
+  const coursesQuery = courseHooks.useList();
+  const semestersQuery = semesterHooks.useList();
+  const courses: Course[] = coursesQuery.data ?? NO_COURSES;
+  const semesters: Semester[] = semestersQuery.data ?? NO_SEMESTERS;
 
   // Which calendars show on the calendar page. Remembered per device, so hiding "Work" on the laptop doesn't hide it on the phone.
   const [hiddenIds, setHiddenIds] = usePersistedState<string[]>('voice-todo.calendar.hidden', [], isStringArray);
@@ -133,8 +141,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return true;
   }, [toast, dismissToast]);
 
+  // Archiving a semester hides its courses' class meetings everywhere (calendar, Today, conflicts), without deleting them.
+  const coursesById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
+  const events = useMemo(() => {
+    const archivedSemesters = new Set(semesters.filter((s) => s.archived).map((s) => s.id));
+    if (archivedSemesters.size === 0) return allEvents;
+    const archivedCourses = new Set(courses.filter((c) => archivedSemesters.has(c.semesterId)).map((c) => c.id));
+    return allEvents.filter((e) => !e.courseId || !archivedCourses.has(e.courseId));
+  }, [allEvents, courses, semesters]);
+  const courseActions = useCourseActions({ showToast, confirmFiles, applyEventPlan: eventActions.applyEventPlan, eventTypes, tasks, updateTask });
+
   // Finding events in files: the session, and the small pieces (drop, paste, picker) that start it.
-  const importer = useImportSession({ eventTypes, events, tasks, createEvents: eventActions.createEvents, addTasks, showToast });
+  const importer = useImportSession({ eventTypes, events, tasks, courses, createEvents: eventActions.createEvents, addTasks, showToast });
+  // What the next file pick should start out as (set by e.g. a course page's "Import syllabus"; drops and pastes never use it).
+  const nextPickOptions = useRef<ImportOptions | undefined>(undefined);
   const openPicker = useRef<() => void>(() => undefined);
   const registerPicker = useCallback((open: () => void) => {
     openPicker.current = open;
@@ -144,6 +164,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: AppApi = {
     ...eventActions,
+    ...courseActions,
+    courses,
+    semesters,
+    coursesById,
+    coursesLoading: coursesQuery.isPending || semestersQuery.isPending,
     events,
     eventTypes,
     eventTypesById,
@@ -153,7 +178,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     rescheduleTask,
     addTasks,
     startImport: importer.start,
-    chooseFilesToImport: () => openPicker.current(),
+    chooseFilesToImport: (options) => {
+      nextPickOptions.current = options;
+      openPicker.current();
+    },
     tasks,
     calendars,
     calendarsById,
@@ -184,9 +212,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         {children}
         <TaskDialog />
         <EventDialog />
+        <CourseDialog />
+        <SemesterDialog />
         <ScopeDialog {...scopeDialog} />
         <DeleteFilesDialog {...fileDialog} />
-        <ImportLayer onFiles={importer.start} registerPicker={registerPicker} busy={importer.session !== null} />
+        <ImportLayer
+          onFiles={(files, source) => importer.start(files, source === 'picker' ? nextPickOptions.current : undefined)}
+          registerPicker={registerPicker}
+          busy={importer.session !== null}
+        />
         <ImportReview
           importer={importer}
           onManual={(files) => {
@@ -205,3 +239,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 }
 
 const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === 'string');
+
+const NO_COURSES: Course[] = [];
+const NO_SEMESTERS: Semester[] = [];

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
-import { ExternalLink, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, TriangleAlert, X } from 'lucide-react';
+import { ExternalLink, GraduationCap, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, TriangleAlert, X } from 'lucide-react';
 import { findConflicts, selfIds } from '@todo/shared';
+import { Link } from 'react-router';
 import { useApp } from '../../app/AppContext';
 import { calendarVars } from '../../lib/calendarColors';
 import { formatDueDate, formatTime } from '../../lib/dates';
@@ -57,9 +58,10 @@ function Notes({ text }: { text: string | null }) {
 }
 
 function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'event' }>; onClose: () => void }) {
-  const { openDialog, deleteEvent, eventTypesById, events } = useApp();
+  const { openDialog, deleteEvent, eventTypesById, events, coursesById } = useApp();
   const { occurrence } = item;
   const event = occurrence.event;
+  const course = event.courseId ? coursesById.get(event.courseId) : undefined;
   // An override ("this one moved") has no rule of its own; its series does.
   const rule = (occurrence.seriesId ? events.find((e) => e.id === occurrence.seriesId) : event)?.recurrence ?? null;
   const type = event.typeId ? eventTypesById.get(event.typeId) : undefined;
@@ -78,6 +80,13 @@ function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'e
         )}
         {conflicts.length > 0 && <Row icon={TriangleAlert}>{describeConflicts(conflicts)}</Row>}
         {event.location && <Row icon={MapPin}>{event.location}</Row>}
+        {course && (
+          <Row icon={GraduationCap}>
+            <Link to={`/courses/${course.id}`} onClick={onClose} className="text-accent-ink underline underline-offset-2">
+              {course.name}
+            </Link>
+          </Row>
+        )}
         {event.link && (
           <Row icon={ExternalLink}>
             {/* noopener: the page we open must not get a handle back to this one. */}

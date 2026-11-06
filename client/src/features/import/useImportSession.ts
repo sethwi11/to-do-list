@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
-import type { CreateTaskInput, Event, EventType, IcsResult, Task } from '@todo/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import type { Course, CreateTaskInput, Event, EventType, IcsResult, Task } from '@todo/shared';
 import { attachmentsApi } from '../../api/attachments';
+import type { ImportOptions } from '../../app/AppContext';
 import type { EventActions } from '../../app/useEventActions';
 import { fileProblem, kindOf, type FileKind } from '../../lib/files/fileTypes';
 import { createOcr } from '../../lib/files/ocr';
@@ -40,6 +42,7 @@ export interface ImportDeps {
   eventTypes: EventType[];
   events: Event[];
   tasks: Task[];
+  courses: Course[];
   createEvents: EventActions['createEvents'];
   addTasks: (inputs: CreateTaskInput[]) => Promise<{ ids: string[]; undo: () => Promise<void> }>;
   showToast: (message: string, onUndo?: () => void) => void;
@@ -78,6 +81,7 @@ export function cardProblem(card: Card): string | null {
  * until "Add" is pressed.
  */
 export function useImportSession(deps: ImportDeps) {
+  const qc = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const run = useRef(0); // each import gets a number, so a cancelled one can tell it has been cancelled
   const depsRef = useRef(deps);
@@ -115,8 +119,17 @@ export function useImportSession(deps: ImportDeps) {
     return { cards: flagRepeats(cards), notes };
   }, []);
 
+  /** Cards with no calendar yet take the course's calendar, so a syllabus lands on the right one without picking it per card. */
+  const withCourseCalendar = useCallback(
+    (cards: Card[], courseId: string): Card[] => {
+      const calendarId = depsRef.current.courses.find((c) => c.id === courseId)?.calendarId;
+      return calendarId ? cards.map((c) => (c.calendarId ? c : { ...c, calendarId })) : cards;
+    },
+    [],
+  );
+
   const start = useCallback(
-    async (files: File[]) => {
+    async (files: File[], options?: ImportOptions) => {
       if (files.length === 0) return;
       const id = ++run.current;
       const alive = () => run.current === id;
@@ -131,7 +144,9 @@ export function useImportSession(deps: ImportDeps) {
         Object.assign(entries[index]!, change);
         if (alive()) setSession((s) => s && { ...s, entries: [...entries] });
       };
-      setSession({ entries: [...entries], phase: 'reading', stage: 'Reading file…', syllabus: false, courseId: '', cards: [], notes: [], errors: {} });
+      const syllabus = options?.syllabus ?? false;
+      const courseId = options?.courseId ?? '';
+      setSession({ entries: [...entries], phase: 'reading', stage: 'Reading file…', syllabus, courseId, cards: [], notes: [], errors: {} });
 
       const ocr = createOcr();
       try {
@@ -159,10 +174,10 @@ export function useImportSession(deps: ImportDeps) {
       setSession((s) => s && { ...s, stage: 'Finding dates…' });
       await new Promise((r) => setTimeout(r, 0)); // let "Finding dates…" paint before the (quick) work
       if (!alive()) return;
-      const { cards, notes } = buildCards(entries, false);
-      setSession((s) => s && { ...s, phase: 'review', cards, notes, entries: [...entries] });
+      const { cards, notes } = buildCards(entries, syllabus);
+      setSession((s) => s && { ...s, phase: 'review', cards: withCourseCalendar(cards, courseId), notes, entries: [...entries] });
     },
-    [buildCards],
+    [buildCards, withCourseCalendar],
   );
 
   const cancel = useCallback(() => {
@@ -180,7 +195,7 @@ export function useImportSession(deps: ImportDeps) {
     [buildCards],
   );
 
-  const setCourse = useCallback((courseId: string) => setSession((s) => s && { ...s, courseId }), []);
+  const setCourse = useCallback((courseId: string) => setSession((s) => s && { ...s, courseId, cards: withCourseCalendar(s.cards, courseId) }), [withCourseCalendar]);
 
   const updateCard = useCallback(
     (key: string, patch: Partial<Card>) =>
@@ -232,12 +247,14 @@ export function useImportSession(deps: ImportDeps) {
         if (!eventsDone) throw new Error('The events couldn’t be saved.');
         const tasksDone = taskCards.length ? await d.addTasks(taskCards.map(({ card, id }) => ({ ...toTaskInput(card, { courseId }), id }))) : { ids: [] as string[], undo: async () => undefined };
 
-        // 3. Attach each file to the things made from it.
+        // 3. Attach each file to the things made from it (and a syllabus to its course, so it's on the course's page).
         const links = [
+          ...(s.syllabus && courseId ? [...uploaded.entries()].filter(([index]) => s.entries[index]!.kind !== 'ics').map(([, attachmentId]) => attachmentsApi.link(attachmentId, { ownerType: 'course', ownerId: courseId })) : []),
           ...eventCards.map(({ card, id }) => attachmentsApi.link(uploaded.get(card.fileIndex)!, { ownerType: 'event', ownerId: id })),
           ...taskCards.map(({ card, id }) => attachmentsApi.link(uploaded.get(card.fileIndex)!, { ownerType: 'task', ownerId: id })),
         ];
         await Promise.allSettled(links);
+        void qc.invalidateQueries({ queryKey: ['attachments'] }); // pages showing an item's files should notice the new ones
 
         const parts = [eventCards.length && `${eventCards.length} ${eventCards.length === 1 ? 'event' : 'events'}`, taskCards.length && `${taskCards.length} ${taskCards.length === 1 ? 'to-do' : 'to-dos'}`].filter(Boolean);
         d.showToast(`Added ${parts.join(' and ')}`, () => {
@@ -253,7 +270,7 @@ export function useImportSession(deps: ImportDeps) {
         return false;
       }
     },
-    [session],
+    [session, qc],
   );
 
   return { session, start, cancel, setSyllabus, setCourse, updateCard, setAllIncluded, save };

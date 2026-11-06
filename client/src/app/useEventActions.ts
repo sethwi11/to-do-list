@@ -30,6 +30,8 @@ export interface Applied {
 export type ConfirmFiles = (owners: { ownerType: 'event'; ownerId: string }[], title: string) => Promise<{ proceed: boolean; commit?: () => void }>;
 
 export interface EventActions {
+  /** Apply a ready-made plan with no toast of its own. Resolves to a way to undo it, or null (after saying why) if refused. */
+  applyEventPlan: (plan: BatchPlan) => Promise<Applied | null>;
   /** Add several events in one go, with no toast of its own (the caller reports). Resolves to their ids and a way to undo, or null if refused. */
   createEvents: (inputs: CreateEventInput[]) => Promise<(Applied & { ids: string[] }) | null>;
   /** `options.note` is added to the toast (e.g. "Overlaps with ..."). */
@@ -39,8 +41,9 @@ export interface EventActions {
    * applies to first. Resolves to false if that was cancelled or the server refused (so a
    * drag can snap back).
    */
-  editEvent: (occurrence: EventOccurrence, changes: EventChanges, options?: { verb?: Exclude<ScopeVerb, 'Delete'>; message?: string; note?: string }) => Promise<boolean>;
-  deleteEvent: (occurrence: EventOccurrence) => Promise<boolean>;
+  editEvent: (occurrence: EventOccurrence, changes: EventChanges, options?: { verb?: Exclude<ScopeVerb, 'Delete'>; message?: string; note?: string; scope?: EditScope }) => Promise<boolean>;
+  /** `scope` skips the "which events?" question when the caller already knows (cancelling one class meeting). */
+  deleteEvent: (occurrence: EventOccurrence, options?: { scope?: EditScope; message?: string }) => Promise<boolean>;
 }
 
 /**
@@ -93,6 +96,7 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
   );
 
   const actions: EventActions = {
+    applyEventPlan: apply,
     createEvents: useCallback(
       async (inputs) => {
         const now = new Date().toISOString();
@@ -108,7 +112,7 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
     ),
     editEvent: useCallback(
       async (occurrence, changes, options = {}) => {
-        const scope = await scopeFor(occurrence, options.verb ?? 'Edit');
+        const scope = options.scope ?? (await scopeFor(occurrence, options.verb ?? 'Edit'));
         if (!scope) return false;
         const plan = planEventEdit({ events: currentEvents(), occurrence, changes, scope, now: new Date().toISOString(), newId: () => crypto.randomUUID() });
         const title = changes.title ?? occurrence.event.title;
@@ -117,14 +121,14 @@ export function useEventActions(showToast: (message: string, onUndo?: () => void
       [scopeFor, currentEvents, run],
     ),
     deleteEvent: useCallback(
-      async (occurrence) => {
-        const scope = await scopeFor(occurrence, 'Delete');
+      async (occurrence, options = {}) => {
+        const scope = options.scope ?? (await scopeFor(occurrence, 'Delete'));
         if (!scope) return false;
         const plan = planEventDelete({ events: currentEvents(), occurrence, scope, now: new Date().toISOString(), newId: () => crypto.randomUUID() });
         // Files only a deleted event used can go with it (if the person says so, once Undo is no longer possible).
         const files = await confirmFiles(plan.remove.map((id) => ({ ownerType: 'event' as const, ownerId: id })), occurrence.event.title);
         if (!files.proceed) return false;
-        return run(plan, `Deleted “${occurrence.event.title}”`, files.commit);
+        return run(plan, options.message ?? `Deleted “${occurrence.event.title}”`, files.commit);
       },
       [scopeFor, currentEvents, run, confirmFiles],
     ),

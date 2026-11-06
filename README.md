@@ -12,13 +12,14 @@ A personal planner built from a to-do app: tasks today, with a calendar, courses
 - **Attachments**: the original file is kept and attached to everything made from it; you can attach files to any event or to-do yourself, and open them in a preview
 - **Today** page: the day's schedule as a timeline (with a line for the current moment), an "Up next" card with a live countdown and join link, to-dos and overdue beside it, and a summary line ("5 events · 3 tasks · 2 overdue")
 - **Conflict warnings**: if an event overlaps another, you're told when you pick the time, on the Today timeline, in an event's details, and after a drag. You are warned, never blocked
+- **Courses**: set up a semester (dates and breaks such as Thanksgiving), add each class with its meeting days, times, room and instructor, and every meeting appears on the calendar. Cancel or move a single class, import a syllabus from the course's page, and archive a finished semester without deleting anything
 - **Tasks** page with tabs (All, Upcoming, Overdue, Completed), search, filters, sorting, and drag-to-reorder
 - Tasks with subtasks, priorities, due dates and times, recurrence, estimates, and notes
 - **Calendars** (color-coded areas of life such as School, ACM, Personal): create, rename, recolor, delete, and filter the task list by one
 - Quick-add on every page, a mini month in the sidebar (dots mark days with events or open tasks), and a New menu
 - Undo for delete, complete, and every calendar change; keyboard shortcuts (press `?`); dark mode; JSON export and import
 - Works on a phone-width screen: the sidebar becomes a drawer, the calendar opens on the Agenda, and a + button replaces the New menu
-- Data foundation for everything coming next: courses and semesters, internship applications, templates, focus sessions, weekly reviews, settings, attachments
+- Data foundation for everything coming next: internship applications, templates, focus sessions, weekly reviews, settings
 
 ## Setup
 
@@ -103,6 +104,18 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 - **The Today model** (`features/today/todayModel.ts`) is plain functions of "now" (next event, what's under way, the timeline, the summary), so it is unit-tested without a browser. Up next looks two weeks ahead and skips all-day events.
 - **The clock** (`hooks/useNow.ts`) wakes once a minute, exactly on the minute, so the countdown and the now-line stay right without ticking every second.
 - Today shows every event, including calendars you've hidden from the calendar page: hiding is about the calendar view, not about your day.
+
+## Courses
+
+**Courses** in the sidebar lists a semester at a time (the one you're in is chosen for you; the address bar remembers which you picked). Start with **New semester**: a name, the first and last day of classes, and any breaks. Then **New course**: name, code, color, meeting days, start and end time, room, instructor, notes. The form tells you how many classes it will make before you save.
+
+- **A course is one repeating event, not a few hundred.** Saving a course creates a single weekly event on its meeting days that runs until the last day of the semester, with the break dates taken out (`shared/src/classSchedule.ts`). It uses the same machinery as any repeating event, so editing the course edits one row, and cancelling or moving a single class works like it does for any other event. The events are marked `source: class-schedule` and linked to the course, so they're never confused with ones you made yourself.
+- **Edit a course and the whole series follows**, including a changed time, room, color, or calendar. Classes you cancelled by hand stay cancelled, and a class you moved keeps its own time and room (but follows renames and recolors).
+- **Breaks versus cancellations.** Both are "removed dates" on the series, so the app tells them apart by asking whether a removed date falls inside one of the semester's break ranges *as they were before the change*. Break dates are recomputed whenever the semester changes; the rest are your cancellations and are kept. The course page lists cancelled classes with a **Restore** button.
+- **The course page** shows the upcoming classes (each with *Move* and *Cancel class*), the course's to-dos and deadlines, its exams and other dates, and its files. **Import syllabus** opens the file importer already in syllabus mode, with the course and its calendar chosen; the syllabus is attached to the course, and its deadlines become to-dos with reminders.
+- **Archive semester** hides a finished semester's classes from the calendar, Today, and conflict warnings. Nothing is deleted: the courses, their to-dos, and their files are all still there (turn on *Show archived* on the Courses page), and Restore brings the classes back. Deleting a semester is separate, asks first, and removes its courses and classes.
+- **Deleting a course** removes its classes. To-dos, exams and deadlines that were tied to it stay (just no longer tied to a course), and Undo puts everything back.
+- No new database tables or packages: courses, semesters and the course links were part of the Phase 1 foundation.
 
 ## The app shell
 

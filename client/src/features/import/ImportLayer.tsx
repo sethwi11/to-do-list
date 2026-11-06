@@ -3,8 +3,8 @@ import { FileUp } from 'lucide-react';
 import { ACCEPT } from '../../lib/files/fileTypes';
 
 interface ImportLayerProps {
-  /** Called with the files the person dropped, pasted or picked. */
-  onFiles: (files: File[]) => void;
+  /** Called with the files the person dropped, pasted or picked (and which of those it was). */
+  onFiles: (files: File[], source: 'drop' | 'picker') => void;
   /** Hand back a function that opens the file picker. */
   registerPicker: (open: () => void) => void;
   /** An import is already open: don't start another underneath it. */
@@ -54,14 +54,14 @@ export function ImportLayer({ onFiles, registerPicker, busy }: ImportLayerProps)
       e.preventDefault();
       depth.current = 0;
       setDragging(false);
-      if (!latest.current.busy) latest.current.onFiles([...(e.dataTransfer?.files ?? [])]);
+      if (!latest.current.busy) latest.current.onFiles([...(e.dataTransfer?.files ?? [])], 'drop');
     };
     const paste = (e: ClipboardEvent) => {
       if (latest.current.busy || isTyping(e.target)) return;
       const files = [...(e.clipboardData?.files ?? [])];
       if (files.length === 0) return;
       e.preventDefault();
-      latest.current.onFiles(files);
+      latest.current.onFiles(files, 'drop');
     };
     window.addEventListener('dragenter', enter);
     window.addEventListener('dragover', over);
@@ -89,7 +89,7 @@ export function ImportLayer({ onFiles, registerPicker, busy }: ImportLayerProps)
         onChange={(e) => {
           const files = [...(e.target.files ?? [])];
           e.target.value = ''; // so choosing the same file again still counts
-          if (files.length) onFiles(files);
+          if (files.length) onFiles(files, 'picker');
         }}
       />
       {dragging && (

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { CalendarCheck, CalendarDays, ListTodo, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
+import { CalendarCheck, CalendarDays, GraduationCap, ListTodo, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
 import { tasksUrl } from '../lib/taskParams';
@@ -46,6 +46,7 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
     { to: '/', label: 'Today', icon: CalendarCheck, end: true, count: dueToday },
     { to: '/calendar', label: 'Calendar', icon: CalendarDays, end: false, count: 0 },
     { to: '/tasks', label: 'Tasks', icon: ListTodo, end: false, count: 0 },
+    { to: '/courses', label: 'Courses', icon: GraduationCap, end: false, count: 0 },
   ];
 
   return (
