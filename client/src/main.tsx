@@ -10,6 +10,8 @@ import { AppProvider } from './app/AppProvider';
 import { Shell } from './app/Shell';
 import { queryClient } from './data/queryClient';
 import { SettingsProvider } from './hooks/useSettings';
+import ApplicationPage from './pages/ApplicationPage';
+import ApplicationsPage from './pages/ApplicationsPage';
 import CoursePage from './pages/CoursePage';
 import CoursesPage from './pages/CoursesPage';
 import NotFoundPage from './pages/NotFoundPage';
@@ -55,6 +57,8 @@ createRoot(document.getElementById('root')!).render(
                 }
               />
               <Route path="tasks" element={<TasksPage />} />
+              <Route path="applications" element={<ApplicationsPage />} />
+              <Route path="applications/:id" element={<ApplicationPage />} />
               <Route path="courses" element={<CoursesPage />} />
               <Route path="courses/:id" element={<CoursePage />} />
               <Route path="*" element={<NotFoundPage />} />

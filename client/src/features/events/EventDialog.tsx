@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { dayOfWeek, findConflicts, selfIds, type EventOccurrence } from '@todo/shared';
+import { dayOfWeek, findConflicts, isOpen, selfIds, type EventOccurrence } from '@todo/shared';
 import { useApp, type EventDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { Button } from '../../ui/Button';
@@ -78,7 +78,7 @@ export function EventDialog() {
 }
 
 function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | null; defaults: EventDefaults | null }) {
-  const { calendars, eventTypes, events, createEvent, editEvent, closeDialog, showToast } = useApp();
+  const { calendars, eventTypes, events, applications, createEvent, editEvent, closeDialog, showToast } = useApp();
 
   // The series' rule: an override ("this one moved") has none of its own, so look the series up.
   const series = occurrence?.seriesId ? events.find((e) => e.id === occurrence.seriesId) : undefined;
@@ -92,7 +92,8 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
   const [initialRepeat] = useState<RepeatFields>(() => toRepeatFields((series ?? event)?.recurrence ?? null, toTimeFields(initialStart, initialEnd, initialAllDay).startDate));
   const [repeat, setRepeat] = useState<RepeatFields>(initialRepeat);
   const [calendarId, setCalendarId] = useState(event?.calendarId ?? defaults?.calendarId ?? '');
-  const [typeId, setTypeId] = useState(event?.typeId ?? '');
+  const [typeId, setTypeId] = useState(event?.typeId ?? defaults?.typeId ?? '');
+  const [applicationId, setApplicationId] = useState(event?.applicationId ?? defaults?.applicationId ?? '');
   const [location, setLocation] = useState(event?.location ?? '');
   const [link, setLink] = useState(event?.link ?? '');
   const [notes, setNotes] = useState(event?.notes ?? '');
@@ -144,6 +145,7 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
       allDay: time.allDay,
       calendarId: calendarId || null,
       typeId: typeId || null,
+      applicationId: applicationId || null,
       location: location.trim() || null,
       link: normalizedLink,
       notes: notes.trim() || null,
@@ -244,6 +246,24 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
           )}
         </Field>
       </div>
+
+      {(applications.length > 0 || applicationId) && (
+        <Field label="Application" hint="An interview or deadline for an internship you're tracking.">
+          {(p) => (
+            <Select {...p} value={applicationId} onChange={(e) => setApplicationId(e.target.value)}>
+              <option value="">None</option>
+              {[...applications]
+                .filter((a) => isOpen(a.status) || a.id === applicationId)
+                .sort((a, b) => a.company.localeCompare(b.company))
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.company} — {a.role}
+                  </option>
+                ))}
+            </Select>
+          )}
+        </Field>
+      )}
 
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">

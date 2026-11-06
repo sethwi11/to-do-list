@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ExternalLink, GraduationCap, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, TriangleAlert, X } from 'lucide-react';
+import { Briefcase, ExternalLink, GraduationCap, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, TriangleAlert, X } from 'lucide-react';
 import { findConflicts, selfIds } from '@todo/shared';
 import { Link } from 'react-router';
 import { useApp } from '../../app/AppContext';
@@ -58,10 +58,11 @@ function Notes({ text }: { text: string | null }) {
 }
 
 function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'event' }>; onClose: () => void }) {
-  const { openDialog, deleteEvent, eventTypesById, events, coursesById } = useApp();
+  const { openDialog, deleteEvent, eventTypesById, events, coursesById, applicationsById } = useApp();
   const { occurrence } = item;
   const event = occurrence.event;
   const course = event.courseId ? coursesById.get(event.courseId) : undefined;
+  const application = event.applicationId ? applicationsById.get(event.applicationId) : undefined;
   // An override ("this one moved") has no rule of its own; its series does.
   const rule = (occurrence.seriesId ? events.find((e) => e.id === occurrence.seriesId) : event)?.recurrence ?? null;
   const type = event.typeId ? eventTypesById.get(event.typeId) : undefined;
@@ -85,6 +86,14 @@ function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'e
             <Link to={`/courses/${course.id}`} onClick={onClose} className="text-accent-ink underline underline-offset-2">
               {course.name}
             </Link>
+          </Row>
+        )}
+        {application && (
+          <Row icon={Briefcase}>
+            <Link to={`/applications/${application.id}`} onClick={onClose} className="text-accent-ink underline underline-offset-2">
+              {application.company}
+            </Link>
+            <span className="text-ink-muted"> · {application.role}</span>
           </Row>
         )}
         {event.link && (

@@ -142,3 +142,33 @@ describe('automatic backup before upgrading', () => {
     expect(fs.existsSync(path.join(dir, 'backups'))).toBe(false);
   });
 });
+
+describe('upgrading from schema 3 to 4 (the follow-up memory)', () => {
+  it('adds the column and leaves existing applications, their timelines and their links alone', () => {
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    runMigrations(db, 3);
+    expect(db.pragma('user_version', { simple: true })).toBe(3);
+
+    const now = '2026-11-03T12:00:00.000Z';
+    db.prepare(
+      `INSERT INTO applications (id, company, role, status, date_applied, sort_order, created_at, updated_at)
+       VALUES ('a1', 'Acme', 'SWE Intern', 'Applied', '2026-10-20', 1024, @now, @now)`,
+    ).run({ now });
+    db.prepare("INSERT INTO application_status_history (application_id, status, changed_at) VALUES ('a1', 'Wishlist', @now), ('a1', 'Applied', @now)").run({ now });
+    db.prepare(
+      `INSERT INTO events (id, title, start_at, end_at, all_day, application_id, source, created_at, updated_at)
+       VALUES ('e1', 'Acme interview', '2026-11-12T10:00', '2026-11-12T11:00', 0, 'a1', 'manual', @now, @now)`,
+    ).run({ now });
+
+    runMigrations(db);
+
+    expect(db.pragma('user_version', { simple: true })).toBe(LATEST_VERSION);
+    const row = db.prepare('SELECT company, status, date_applied, follow_up_handled_at FROM applications WHERE id = ?').get('a1');
+    expect(row).toEqual({ company: 'Acme', status: 'Applied', date_applied: '2026-10-20', follow_up_handled_at: null });
+    expect((db.prepare('SELECT COUNT(*) n FROM application_status_history WHERE application_id = ?').get('a1') as { n: number }).n).toBe(2);
+    expect((db.prepare("SELECT application_id a FROM events WHERE id = 'e1'").get() as { a: string }).a).toBe('a1');
+    expect(db.pragma('integrity_check', { simple: true })).toBe('ok');
+    expect(db.pragma('foreign_key_check')).toEqual([]);
+  });
+});

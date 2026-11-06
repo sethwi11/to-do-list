@@ -23,7 +23,8 @@ export const StatusSchema = z.enum(STATUSES);
 export const RECURRENCES = ['none', 'daily', 'weekdays', 'weekly', 'monthly'] as const;
 export const RecurrenceSchema = z.enum(RECURRENCES);
 
-export const TASK_SOURCES = ['manual', 'voice', 'file-import', 'ics-import'] as const;
+/** 'application-deadline' marks the "Apply to ..." to-do the tracker keeps in step with a wishlist application's deadline. */
+export const TASK_SOURCES = ['manual', 'voice', 'file-import', 'ics-import', 'application-deadline'] as const;
 export const TaskSourceSchema = z.enum(TASK_SOURCES);
 
 export const SubtaskSchema = z.object({

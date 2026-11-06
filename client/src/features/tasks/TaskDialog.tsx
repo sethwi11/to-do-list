@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Plus, X } from 'lucide-react';
-import { PRIORITIES, RECURRENCES, type Priority, type Recurrence, type Subtask, type Task } from '@todo/shared';
+import { isOpen, PRIORITIES, RECURRENCES, type Priority, type Recurrence, type Subtask, type Task } from '@todo/shared';
 import { useApp, type TaskDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { Button, IconButton } from '../../ui/Button';
@@ -63,7 +63,7 @@ export function TaskDialog() {
 }
 
 function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefaults }) {
-  const { calendars, addTask, saveTask, closeDialog, showToast } = useApp();
+  const { calendars, applications, addTask, saveTask, closeDialog, showToast } = useApp();
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [notes, setNotes] = useState(task?.notes ?? '');
@@ -71,6 +71,7 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
   const [dueTime, setDueTime] = useState(task?.dueTime ?? '');
   const [priority, setPriority] = useState<Priority>(task?.priority ?? defaults.priority ?? 'medium');
   const [calendarId, setCalendarId] = useState(task?.calendarId ?? defaults.calendarId ?? '');
+  const [applicationId, setApplicationId] = useState(task?.applicationId ?? defaults.applicationId ?? '');
   const [recurrence, setRecurrence] = useState<Recurrence>(task?.recurrence ?? 'none');
   const [estimate, setEstimate] = useState(task?.estimatedMinutes?.toString() ?? '');
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? []);
@@ -100,6 +101,7 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
       dueTime: dueDate && dueTime ? dueTime : null, // a time needs a date
       priority,
       calendarId: calendarId || null,
+      applicationId: applicationId || null,
       recurrence,
       estimatedMinutes: Number.isFinite(minutes) && minutes > 0 ? Math.min(minutes, 1440) : null,
       subtasks,
@@ -160,6 +162,24 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
           )}
         </Field>
       </div>
+
+      {(applications.length > 0 || applicationId) && (
+        <Field label="Application" hint="Follow-ups and prep for an internship you're tracking.">
+          {(p) => (
+            <Select {...p} value={applicationId} onChange={(e) => setApplicationId(e.target.value)}>
+              <option value="">None</option>
+              {[...applications]
+                .filter((a) => isOpen(a.status) || a.id === applicationId)
+                .sort((a, b) => a.company.localeCompare(b.company))
+                .map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.company} — {a.role}
+                  </option>
+                ))}
+            </Select>
+          )}
+        </Field>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Repeat">

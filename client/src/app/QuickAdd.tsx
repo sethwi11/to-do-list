@@ -15,7 +15,7 @@ export function QuickAdd({ defaults, className }: { defaults?: TaskDefaults; cla
     e.preventDefault();
     const title = value.trim();
     if (!title) return;
-    const task = await addTask({ title, dueDate: defaults?.dueDate ?? null, calendarId: defaults?.calendarId ?? null });
+    const task = await addTask({ title, dueDate: defaults?.dueDate ?? null, calendarId: defaults?.calendarId ?? null, applicationId: defaults?.applicationId ?? null });
     if (task) setValue('');
   }
 

@@ -3,10 +3,29 @@ import type { CalendarColor } from '@todo/shared';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
 
-/** A minimal application card: company, role, date applied in mono, and the calendar's color square. */
-export function KanbanCard({ company, role, dateApplied, color, calendarName }: { company: string; role: string; dateApplied?: string; color: CalendarColor; calendarName?: string }) {
+/**
+ * A minimal application card: company, role, date applied in mono, and the calendar's color square.
+ * `company` can be a link, and `extra` adds a line below (a deadline, a cue).
+ */
+export function KanbanCard({
+  company,
+  role,
+  dateApplied,
+  color,
+  calendarName,
+  extra,
+  className,
+}: {
+  company: ReactNode;
+  role: string;
+  dateApplied?: string;
+  color: CalendarColor;
+  calendarName?: string;
+  extra?: ReactNode;
+  className?: string;
+}) {
   return (
-    <article style={calendarVars(color)} className="border-b border-hairline py-3">
+    <article style={calendarVars(color)} className={cx('border-b border-hairline py-3', className)}>
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-body font-medium text-ink">{company}</h3>
         <span title={calendarName} className="mt-1.5 size-2 shrink-0 bg-(color:--c)">
@@ -20,14 +39,18 @@ export function KanbanCard({ company, role, dateApplied, color, calendarName }: 
           {dateApplied}
         </p>
       )}
+      {extra}
     </article>
   );
 }
 
-/** A column of cards. Columns are separated by vertical hairlines, not boxes. */
+/**
+ * A column of cards. Columns are separated by vertical hairlines, not boxes. Seven fit on a laptop screen; on a narrower
+ * one the board scrolls sideways, and the width is chosen so a column is left half in view (a hint that there's more).
+ */
 export function KanbanColumn({ title, count, children, className }: { title: string; count: number; children: ReactNode; className?: string }) {
   return (
-    <section aria-label={title} className={cx('min-w-48 flex-1 border-l border-hairline px-4 first:border-l-0 first:pl-0', className)}>
+    <section aria-label={title} className={cx('min-w-[9.5rem] flex-1 border-l border-hairline px-3 first:border-l-0 first:pl-0', className)}>
       <h2 className="mb-1 flex items-baseline justify-between gap-2 border-b border-rule pb-2 text-label text-ink-muted uppercase">
         {title}
         <span className="font-mono font-normal">{count}</span>

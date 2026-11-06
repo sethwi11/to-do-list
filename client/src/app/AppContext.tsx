@@ -1,10 +1,11 @@
 import { createContext, useContext } from 'react';
-import type { Calendar, CalendarColor, Course, CreateTaskInput, Event, EventOccurrence, EventType, Semester, Task, UpdateCalendarInput, UpdateTaskInput } from '@todo/shared';
+import type { Application, Calendar, CalendarColor, Course, CreateTaskInput, Event, EventOccurrence, EventType, Semester, Task, UpdateCalendarInput, UpdateTaskInput } from '@todo/shared';
+import type { ApplicationActions } from './useApplicationActions';
 import type { CourseActions } from './useCourseActions';
 import type { EventActions } from './useEventActions';
 
 /** Starting values for a new task, e.g. "due today" when added from the Today page. */
-export type TaskDefaults = Partial<Pick<CreateTaskInput, 'dueDate' | 'calendarId' | 'priority'>>;
+export type TaskDefaults = Partial<Pick<CreateTaskInput, 'dueDate' | 'calendarId' | 'priority' | 'applicationId'>>;
 
 /** Starting values for a new event (e.g. the time range a person dragged out on the calendar). `end` is exclusive for an all-day event. */
 export interface EventDefaults {
@@ -13,6 +14,9 @@ export interface EventDefaults {
   allDay?: boolean;
   calendarId?: string | null;
   title?: string;
+  /** Start out as this type and/or tied to this application (e.g. "Add interview" on an application's page). */
+  typeId?: string | null;
+  applicationId?: string | null;
   /** Files to attach once the event is saved (e.g. the file an import found nothing in). */
   files?: File[];
 }
@@ -31,11 +35,14 @@ export type DialogState =
   | { kind: 'event'; mode: 'edit'; occurrence: EventOccurrence }
   | { kind: 'semester'; id: string | 'new' }
   | { kind: 'course'; id: string | 'new'; semesterId?: string }
+  | { kind: 'application'; id: string | 'new' }
+  /** Asked after an Interview event is made: which application is it for, and add the prep to-dos? One question per event. */
+  | { kind: 'interview'; eventIds: string[] }
   | { kind: 'calendar'; id: string | 'new' }
   | { kind: 'settings' }
   | { kind: 'shortcuts' };
 
-export interface AppApi extends EventActions, CourseActions {
+export interface AppApi extends EventActions, CourseActions, ApplicationActions {
   // ---- data ----
   tasks: Task[];
   calendars: Calendar[];
@@ -51,6 +58,9 @@ export interface AppApi extends EventActions, CourseActions {
   semesters: Semester[];
   coursesById: Map<string, Course>;
   coursesLoading: boolean;
+  applications: Application[];
+  applicationsById: Map<string, Application>;
+  applicationsLoading: boolean;
   /** Events, except the class meetings of archived semesters (archiving hides them everywhere). */
   events: Event[];
   eventTypes: EventType[];

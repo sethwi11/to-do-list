@@ -31,14 +31,23 @@ export const ApplicationFieldsSchema = z.object({
   notes: z.string().max(20_000).nullable(),
   /** Position within its kanban column. */
   sortOrder: z.number(),
+  /**
+   * When you answered the "time to follow up?" suggestion (by accepting or dismissing it). The suggestion
+   * stays away until the status changes again, so it's judged against the latest status change.
+   */
+  followUpHandledAt: z.iso.datetime().nullable(),
 });
 
 /**
  * statusHistory is server-owned: the server appends to it whenever `status`
  * changes, so the timeline can't be forgotten (or forged) by a client.
+ *
+ * `followUpHandledAt` defaults to null here (and only here) so that backup files made before it existed
+ * still load. The default is deliberately NOT on the fields above: a PATCH that doesn't mention it must leave it alone.
  */
 export const ApplicationSchema = ApplicationFieldsSchema.extend({
   id: z.uuid(),
+  followUpHandledAt: z.iso.datetime().nullable().default(null),
   statusHistory: z.array(StatusChangeSchema),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),

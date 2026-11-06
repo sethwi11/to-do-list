@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link, NavLink, useLocation } from 'react-router';
-import { CalendarCheck, CalendarDays, GraduationCap, ListTodo, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
+import { Briefcase, CalendarCheck, CalendarDays, GraduationCap, ListTodo, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
+import { followUpSuggestions } from '@todo/shared';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
 import { tasksUrl } from '../lib/taskParams';
@@ -31,7 +32,7 @@ const navClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =
  * phone's slide-out drawer.
  */
 export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigate }: SidebarProps) {
-  const { calendars, tasks, today, openDialog, hiddenCalendarIds, toggleCalendarHidden } = useApp();
+  const { calendars, tasks, applications, today, openDialog, hiddenCalendarIds, toggleCalendarHidden } = useApp();
   const location = useLocation();
   const activeCalendar = location.pathname === '/tasks' ? new URLSearchParams(location.search).get('calendar') : null;
 
@@ -40,12 +41,15 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
     for (const t of tasks) if (t.status === 'todo' && t.calendarId) counts.set(t.calendarId, (counts.get(t.calendarId) ?? 0) + 1);
     return counts;
   }, [tasks]);
+  // Applications waiting on you (the follow-up rule), shown as a count like Today's.
+  const needFollowUp = useMemo(() => followUpSuggestions(applications, today).length, [applications, today]);
   const dueToday = tasks.filter((t) => t.status === 'todo' && t.dueDate !== null && t.dueDate <= today).length;
 
   const nav = [
     { to: '/', label: 'Today', icon: CalendarCheck, end: true, count: dueToday },
     { to: '/calendar', label: 'Calendar', icon: CalendarDays, end: false, count: 0 },
     { to: '/tasks', label: 'Tasks', icon: ListTodo, end: false, count: 0 },
+    { to: '/applications', label: 'Applications', icon: Briefcase, end: false, count: needFollowUp },
     { to: '/courses', label: 'Courses', icon: GraduationCap, end: false, count: 0 },
   ];
 

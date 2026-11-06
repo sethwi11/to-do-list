@@ -6,8 +6,7 @@ import { Menu, type MenuItem } from '../ui/Menu';
 import { useApp } from './AppContext';
 
 /**
- * The "New" button and its menu. Task, Event and Import file work; the others are listed so you can see
- * what's coming, but can't be chosen yet. Each is enabled when its feature is built.
+ * The "New" button and its menu: a task, an event, a file to read events from, or an internship application.
  */
 export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
   const { openDialog, today, chooseFilesToImport } = useApp();
@@ -18,7 +17,7 @@ export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
     { label: 'Task', icon: ListPlus, onSelect: () => openDialog({ kind: 'task', mode: 'new', defaults: {} }) },
     { label: 'Event', icon: CalendarPlus, onSelect: () => openDialog({ kind: 'event', mode: 'new', defaults: newEventSpan(lookingAt, new Date()) }) },
     { label: 'Import file', icon: FileUp, onSelect: chooseFilesToImport },
-    { label: 'Application', icon: Briefcase, disabled: true, hint: 'Soon' },
+    { label: 'Application', icon: Briefcase, onSelect: () => openDialog({ kind: 'application', id: 'new' }) },
   ];
 
   return (

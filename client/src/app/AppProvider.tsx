@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { nextOccurrence, type Calendar, type Course, type EventType, type Semester, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
+import { INTERVIEW_EVENT_TYPE, nextOccurrence, type Application, type Calendar, type Course, type EventType, type Semester, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
 import { DeleteFilesDialog, useFileDeletionPrompt } from '../features/attachments/DeleteFilesDialog';
 import { newEventSpan } from '../features/calendar/calendarModel';
 import { ScopeDialog } from '../features/calendar/ScopeDialog';
+import { ApplicationDialog } from '../features/applications/ApplicationDialog';
+import { InterviewDialog } from '../features/applications/InterviewDialog';
 import { CalendarDialog } from '../features/calendars/CalendarDialog';
 import { CourseDialog } from '../features/courses/CourseDialog';
 import { SemesterDialog } from '../features/courses/SemesterDialog';
@@ -20,9 +22,11 @@ import { formatDueDate } from '../lib/dates';
 import { computeMove } from '../lib/ordering';
 import { ToastHost, useToast } from '../ui/Toast';
 import { AppContext, type AppApi, type DialogState, type ImportOptions } from './AppContext';
+import { applicationHooks } from '../data/useApplications';
 import { courseHooks, semesterHooks } from '../data/useCourses';
+import { useApplicationActions } from './useApplicationActions';
 import { useCourseActions } from './useCourseActions';
-import { useEventActions } from './useEventActions';
+import { useEventActions, type EventActions } from './useEventActions';
 
 /**
  * Holds everything the screens share: the data, the actions that change it, the open dialog,
@@ -41,6 +45,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const semestersQuery = semesterHooks.useList();
   const courses: Course[] = coursesQuery.data ?? NO_COURSES;
   const semesters: Semester[] = semestersQuery.data ?? NO_SEMESTERS;
+  const applicationsQuery = applicationHooks.useList();
+  const applications: Application[] = applicationsQuery.data ?? NO_APPLICATIONS;
 
   // Which calendars show on the calendar page. Remembered per device, so hiding "Work" on the laptop doesn't hide it on the phone.
   const [hiddenIds, setHiddenIds] = usePersistedState<string[]>('voice-todo.calendar.hidden', [], isStringArray);
@@ -150,9 +156,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return allEvents.filter((e) => !e.courseId || !archivedCourses.has(e.courseId));
   }, [allEvents, courses, semesters]);
   const courseActions = useCourseActions({ showToast, confirmFiles, applyEventPlan: eventActions.applyEventPlan, eventTypes, tasks, updateTask });
+  const applicationActions = useApplicationActions({
+    showToast,
+    confirmFiles,
+    applyEventPlan: eventActions.applyEventPlan,
+    calendars,
+    today,
+    addTasks,
+    updateTask,
+    deleteTask,
+    restoreTask,
+  });
+  const applicationsById = useMemo(() => new Map(applications.map((a) => [a.id, a])), [applications]);
+
+  // A new Interview event raises a question (which application? add the prep checklist?), however it was made: the form, a drag
+  // on the calendar, or an import. So the two ways of making events are wrapped here, once, rather than at every call site.
+  const interviewTypeId = useMemo(() => eventTypes.find((t) => t.name.toLowerCase() === INTERVIEW_EVENT_TYPE.toLowerCase())?.id ?? null, [eventTypes]);
+  const offerInterviewLink = useCallback((ids: string[]) => {
+    if (ids.length > 0) setDialog({ kind: 'interview', eventIds: ids });
+  }, []);
+  const { createEvent: createEventBase, createEvents: createEventsBase } = eventActions;
+  const createEvent = useCallback<EventActions['createEvent']>(
+    async (input, options) => {
+      const id = input.id ?? crypto.randomUUID();
+      const saved = await createEventBase({ ...input, id }, options);
+      if (saved && interviewTypeId && input.typeId === interviewTypeId) offerInterviewLink([id]);
+      return saved;
+    },
+    [createEventBase, interviewTypeId, offerInterviewLink],
+  );
+  const createEvents = useCallback<EventActions['createEvents']>(
+    async (inputs) => {
+      const withIds = inputs.map((i) => ({ ...i, id: i.id ?? crypto.randomUUID() }));
+      const result = await createEventsBase(withIds);
+      if (result && interviewTypeId) offerInterviewLink(withIds.filter((i) => i.typeId === interviewTypeId).map((i) => i.id));
+      return result;
+    },
+    [createEventsBase, interviewTypeId, offerInterviewLink],
+  );
 
   // Finding events in files: the session, and the small pieces (drop, paste, picker) that start it.
-  const importer = useImportSession({ eventTypes, events, tasks, courses, createEvents: eventActions.createEvents, addTasks, showToast });
+  const importer = useImportSession({ eventTypes, events, tasks, courses, createEvents, addTasks, showToast });
   // What the next file pick should start out as (set by e.g. a course page's "Import syllabus"; drops and pastes never use it).
   const nextPickOptions = useRef<ImportOptions | undefined>(undefined);
   const openPicker = useRef<() => void>(() => undefined);
@@ -164,7 +208,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value: AppApi = {
     ...eventActions,
+    createEvent,
+    createEvents,
     ...courseActions,
+    ...applicationActions,
+    applications,
+    applicationsById,
+    applicationsLoading: applicationsQuery.isPending,
     courses,
     semesters,
     coursesById,
@@ -214,6 +264,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         <EventDialog />
         <CourseDialog />
         <SemesterDialog />
+        <ApplicationDialog />
+        <InterviewDialog />
         <ScopeDialog {...scopeDialog} />
         <DeleteFilesDialog {...fileDialog} />
         <ImportLayer
@@ -242,3 +294,4 @@ const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every
 
 const NO_COURSES: Course[] = [];
 const NO_SEMESTERS: Semester[] = [];
+const NO_APPLICATIONS: Application[] = [];

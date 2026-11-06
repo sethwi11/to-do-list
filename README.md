@@ -13,13 +13,14 @@ A personal planner built from a to-do app: tasks today, with a calendar, courses
 - **Today** page: the day's schedule as a timeline (with a line for the current moment), an "Up next" card with a live countdown and join link, to-dos and overdue beside it, and a summary line ("5 events · 3 tasks · 2 overdue")
 - **Conflict warnings**: if an event overlaps another, you're told when you pick the time, on the Today timeline, in an event's details, and after a drag. You are warned, never blocked
 - **Courses**: set up a semester (dates and breaks such as Thanksgiving), add each class with its meeting days, times, room and instructor, and every meeting appears on the calendar. Cancel or move a single class, import a syllabus from the course's page, and archive a finished semester without deleting anything
+- **Applications**: an internship tracker with a board (drag a card to change its status) and a sortable, filterable table, an offer goal with a progress bar, response and interview rates, a "time to follow up?" nudge after 14 days of silence, and a page for each application with its timeline, interviews, to-dos, files and notes. A new Interview event asks which application it belongs to and offers the prep checklist
 - **Tasks** page with tabs (All, Upcoming, Overdue, Completed), search, filters, sorting, and drag-to-reorder
 - Tasks with subtasks, priorities, due dates and times, recurrence, estimates, and notes
 - **Calendars** (color-coded areas of life such as School, ACM, Personal): create, rename, recolor, delete, and filter the task list by one
 - Quick-add on every page, a mini month in the sidebar (dots mark days with events or open tasks), and a New menu
 - Undo for delete, complete, and every calendar change; keyboard shortcuts (press `?`); dark mode; JSON export and import
 - Works on a phone-width screen: the sidebar becomes a drawer, the calendar opens on the Agenda, and a + button replaces the New menu
-- Data foundation for everything coming next: internship applications, templates, focus sessions, weekly reviews, settings
+- Data foundation for everything coming next: templates, focus sessions, weekly reviews
 
 ## Setup
 
@@ -116,6 +117,20 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 - **Archive semester** hides a finished semester's classes from the calendar, Today, and conflict warnings. Nothing is deleted: the courses, their to-dos, and their files are all still there (turn on *Show archived* on the Courses page), and Restore brings the classes back. Deleting a semester is separate, asks first, and removes its courses and classes.
 - **Deleting a course** removes its classes. To-dos, exams and deadlines that were tied to it stay (just no longer tied to a course), and Undo puts everything back.
 - No new database tables or packages: courses, semesters and the course links were part of the Phase 1 foundation.
+
+## Applications
+
+**Applications** in the sidebar is the internship tracker. **New application** (or New > Application) takes the company, role, status, dates, link, contact and notes. Everything is one page: your goal and numbers at the top, anything that needs a follow-up, then the **Board** (a column per status; drag a card to change its status, or grab its grip and use the keyboard) or the **Table** (click a heading to sort; filter by status, company or role, and the date applied). The table is the default on a phone, and every row has a plain status menu. Where you are (view, filters, sort) is in the address bar.
+
+- **The timeline is written by the server.** Every status change adds an entry to the application's history in the same transaction as the change, so a client can't skip or forge one. One exception, on purpose: a change that is reversed within two minutes (a card dropped in the wrong column, then Undo) erases the slip from the timeline rather than logging the mistake and its fix. After two minutes both stay, because by then the first change really happened.
+- **What the numbers mean** (`shared/src/applications.ts`, all tested). *Applied* means you sent it (it left the wishlist for a real stage, even if it later ended in a rejection). *Heard back* means a company answered: an assessment, an interview, an offer or a rejection (withdrawing is your decision, so it doesn't count). *Interviews* means it reached Interviewing. They're read from the whole timeline, so a rejection after an interview still counts as an interview. The offer goal counts an offer you later turned down, because you earned it. The goal and its date are in Settings.
+- **Moving into a "sent" stage with no date applied records today**, so the stats and the follow-up wait have something to count from.
+- **"Time to follow up?"** An application that has sat in Applied for 14 days with no change (counted from the date applied if you entered one) is suggested on the Applications page, on its own page, and as a count in the sidebar. *Add follow-up to-do* makes a to-do due today, linked to it; *Dismiss* hides the suggestion. Neither is automatic, and either can be undone. Your answer is saved with the application and judged against its latest status change, so the nudge stays away until the application moves and then sits for another 14 days.
+- **A deadline on a wishlist application keeps an "Apply to ..." to-do in step with it**: due on the deadline, with a reminder three days before (the same way a syllabus deadline gets its reminders; reminders are delivered in a later phase). Change the deadline and the to-do moves. Move the application on and the to-do is ticked off. Clear the deadline and it's removed. A to-do you ticked off yourself isn't recreated, and one you deleted isn't brought back by editing something unrelated.
+- **A new Interview event asks which application it's for**, however it was made (the form, a drag on the calendar, an imported file). The company named in the title is picked for you when exactly one matches. You can also move that application to Interviewing, and add the **Interview prep** checklist as to-dos dated around the interview (an item that would already be in the past is due today instead). The event gets linked and filed on the Applications calendar; one Undo takes it all back.
+- **Notes are Markdown**, shown with a small renderer that builds screen elements directly (headings, lists, bold, italic, code, web links) and never injects HTML, so a note can't run anything.
+- **Deleting an application asks first** and can't be undone: it removes the application, its timeline and its notes (and offers to delete files only it uses). Its to-dos and events stay, no longer linked to it. To keep a record, move it to Withdrawn or Rejected instead.
+- **One small schema change** (version 4) adds the column that remembers your follow-up answer. As with every upgrade, the server saves a full backup of your database first.
 
 ## The app shell
 

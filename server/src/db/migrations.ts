@@ -304,6 +304,12 @@ const migrations: Migration[] = [
       ['Book room', -14], ['Make flyer', -10], ['Post on socials', -7], ['Order food', -3], ['Set up', 0], ['Send recap', 1],
     ]);
   },
+
+  // v4: the application tracker remembers when you answered its "time to follow up?" suggestion,
+  // so a dismissed suggestion doesn't come back on the next visit. One nullable column; nothing existing changes.
+  (db) => {
+    db.exec(`ALTER TABLE applications ADD COLUMN follow_up_handled_at TEXT;`);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

@@ -1,12 +1,14 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import { useApp } from '../../app/AppContext';
 import { ApiError } from '../../api/client';
 import { backupApi, type ImportSummary } from '../../api/backup';
+import { useAppSettings } from '../../data/useApplications';
 import { notificationsSupported } from '../../hooks/useDueNotifications';
 import { useSettings } from '../../hooks/useSettings';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
+import { Input } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
 import { ThemeToggle } from '../../app/ThemeToggle';
 
@@ -80,6 +82,8 @@ export function SettingsDialog() {
           />
         </label>
 
+        <OfferGoal />
+
         <div className={`${row} flex-wrap`}>
           <span className="text-body">Your data</span>
           <span className="flex gap-2">
@@ -119,5 +123,56 @@ export function SettingsDialog() {
         </div>
       </div>
     </Dialog>
+  );
+}
+
+/** The internship goal: how many offers, by when. It's saved as you change it (when you leave the field, or pick a date). */
+function OfferGoal() {
+  const { showToast } = useApp();
+  const { settings, update: save } = useAppSettings();
+  const update = (changes: Parameters<typeof save>[0]) =>
+    save(changes).catch(() => {
+      showToast('Couldn’t save the goal. Check that the server is running.');
+      setGoal(String(settings.offerGoal));
+      setDate(settings.offerTargetDate);
+    });
+  const [goal, setGoal] = useState(String(settings.offerGoal));
+  const [date, setDate] = useState(settings.offerTargetDate);
+  useEffect(() => {
+    setGoal(String(settings.offerGoal));
+    setDate(settings.offerTargetDate);
+  }, [settings.offerGoal, settings.offerTargetDate]);
+
+  const commitGoal = () => {
+    const n = Number.parseInt(goal, 10);
+    if (Number.isInteger(n) && n >= 1 && n <= 1000) {
+      if (n !== settings.offerGoal) void update({ offerGoal: n });
+    } else setGoal(String(settings.offerGoal)); // not a usable number: put the old one back
+  };
+
+  return (
+    <div className={`${row} flex-wrap`}>
+      <span>
+        <span className="block text-body">Internship goal</span>
+        <span className="block text-meta text-ink-muted">Shown as a progress bar on the Applications page.</span>
+      </span>
+      <span className="flex items-end gap-3">
+        <label className="block">
+          <span className="mb-1 block text-label text-ink-muted uppercase">Offers</span>
+          <Input type="number" inputMode="numeric" min={1} max={1000} value={goal} className="w-20" onChange={(e) => setGoal(e.target.value)} onBlur={commitGoal} onKeyDown={(e) => e.key === 'Enter' && commitGoal()} />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-label text-ink-muted uppercase">By</span>
+          <Input
+            type="date"
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              if (e.target.value && e.target.value !== settings.offerTargetDate) void update({ offerTargetDate: e.target.value });
+            }}
+          />
+        </label>
+      </span>
+    </div>
   );
 }

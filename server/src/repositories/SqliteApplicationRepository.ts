@@ -14,6 +14,12 @@ import type { CrudRepository } from './types';
 type ApplicationCore = Omit<Application, 'statusHistory'>;
 
 /**
+ * A status change that is reversed within this long is treated as fixing a slip (a card dropped in the wrong column),
+ * not as something that happened: the slip is erased from the timeline instead of the correction being added after it.
+ */
+export const CORRECTION_WINDOW_MS = 2 * 60 * 1000;
+
+/**
  * Applications are the one entity with a second table: every status change is
  * appended to application_status_history *by the server*, in the same
  * transaction as the change itself. A client can't skip or fake a timeline
@@ -40,6 +46,16 @@ export class SqliteApplicationRepository
     this.db
       .prepare('INSERT INTO application_status_history (application_id, status, changed_at) VALUES (?, ?, ?)')
       .run(applicationId, status, at);
+  }
+
+  /** Log a change of status, unless it just undoes the previous change moments ago (then the previous one is erased). */
+  private recordStatusChange(applicationId: string, from: ApplicationStatus, to: ApplicationStatus, at: string) {
+    const [last, before] = this.db
+      .prepare('SELECT rowid AS id, status, changed_at FROM application_status_history WHERE application_id = ? ORDER BY rowid DESC LIMIT 2')
+      .all(applicationId) as { id: number; status: ApplicationStatus; changed_at: string }[];
+    const isCorrection = last && before && last.status === from && before.status === to && Date.parse(at) - Date.parse(last.changed_at) < CORRECTION_WINDOW_MS;
+    if (isCorrection) this.db.prepare('DELETE FROM application_status_history WHERE rowid = ?').run(last.id);
+    else this.addHistory(applicationId, to, at);
   }
 
   async list(): Promise<Application[]> {
@@ -72,6 +88,7 @@ export class SqliteApplicationRepository
       contactName: input.contactName ?? null,
       contactEmail: input.contactEmail ?? null,
       notes: input.notes ?? null,
+      followUpHandledAt: input.followUpHandledAt ?? null,
       sortOrder: input.sortOrder ?? this.nextSortOrder(),
       createdAt: now,
       updatedAt: now,
@@ -89,7 +106,7 @@ export class SqliteApplicationRepository
       if (!existing) return false;
       const now = new Date().toISOString();
       this.patchSync(id, { ...changes, updatedAt: now });
-      if (changes.status !== undefined && changes.status !== existing.status) this.addHistory(id, changes.status, now);
+      if (changes.status !== undefined && changes.status !== existing.status) this.recordStatusChange(id, existing.status, changes.status, now);
       return true;
     })();
     return found ? this.get(id) : null;

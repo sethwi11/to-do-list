@@ -14,6 +14,7 @@ export type { ExtractedItem, ExtractOptions } from './eventExtractor';
 export type { IcsResult } from './icsImport';
 export * from './models/courses';
 export * from './models/applications';
+export * from './applications';
 export * from './models/templates';
 export * from './models/misc';
 export * from './backup';
