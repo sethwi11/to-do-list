@@ -7,7 +7,9 @@ A personal planner built from a to-do app: tasks today, with a calendar, courses
 ## What works today
 
 - **Calendar** with Month, Week, Day, and Agenda views: drag across empty time to add an event, drag an event to move it, drag its edge to resize it, click one for its details. Events can repeat (every day, weekday, week on chosen days, or month) and you choose whether a change applies to *this event*, *this and following*, or *all events*
-- **To-dos on the calendar**: dashed, checkable, and draggable to a new day or time. Calendars can be hidden from the sidebar, and events and to-dos can be switched off separately
+- **To-dos on the calendar**: dashed, checkable, and draggable to a new day or time. Calendars can be hidden from the sidebar, and events, to-dos and time blocks can be switched off separately
+- **Time blocking**: set time aside to work on a to-do. Drag a to-do from the list beside the Week or Day calendar onto a time (or use the schedule button on any to-do, which works from the keyboard and on a phone). Blocks are hatched, move and resize like events, and show up on Today. A to-do can have several, and its row shows the total time set aside
+- **Workload map**: in Month view, turn on *Workload* to shade each day by how heavy it is (four shades, with a legend), and hover a day for "2 events, 4h scheduled, 3 tasks due"
 - **Add events from files**: drop in (or paste, or pick) a screenshot, PDF, Word document, text file or calendar (.ics) file, review what was found, and add it. Pictures and scanned PDFs are read on your computer with OCR; nothing is uploaded until you press Add
 - **Attachments**: the original file is kept and attached to everything made from it; you can attach files to any event or to-do yourself, and open them in a preview
 - **Today** page: the day's schedule as a timeline (with a line for the current moment), an "Up next" card with a live countdown and join link, to-dos and overdue beside it, and a summary line ("5 events · 3 tasks · 2 overdue")
@@ -105,6 +107,14 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 - **The Today model** (`features/today/todayModel.ts`) is plain functions of "now" (next event, what's under way, the timeline, the summary), so it is unit-tested without a browser. Up next looks two weeks ahead and skips all-day events.
 - **The clock** (`hooks/useNow.ts`) wakes once a minute, exactly on the minute, so the countdown and the now-line stay right without ticking every second.
 - Today shows every event, including calendars you've hidden from the calendar page: hiding is about the calendar view, not about your day.
+
+### Time blocks and the workload map
+
+- **A time block is a slot for working on a to-do, separate from the day it's due.** It's a small row of its own (a to-do, a start, an end), so a to-do can have several, and removing one never removes the to-do. Its length starts as the to-do's estimate, or an hour; a block that would run past midnight stops at midnight. Blocks take their calendar's color from the to-do and use the hatched fill from the style guide, so they read differently from events (solid stripe) and to-dos (dashed outline) at a glance. The checkbox on a block ticks the to-do itself.
+- **Deleting a to-do hides its blocks, and undoing the delete brings them back** (a to-do is only soft-deleted, so its blocks stay in the database).
+- **The list you drag from sits beside the calendar, not in the app's sidebar,** because that's where you're looking when you plan. It only appears on Week and Day on a wide screen; the to-dos without any time set aside come first. Without a mouse, the schedule button on each to-do (and "Set time aside" in its edit dialog) opens a plain form for the day, time and length. It's also how you change a block's time precisely: click the block, then Edit time.
+- **Overlaps are warned about, never blocked,** and now count blocks as well as events: scheduling over a meeting (or over another block) says so, in the form and in the toast. (`findClashes` in `shared/src/conflicts.ts`.)
+- **The workload score** (`shared/src/workload.ts`) is *hours of events + hours of time blocks + the open to-dos due that day, weighted by priority (high 3, medium 2, low 1)*. Everything that decides what counts as heavy is in one constant, `HEATMAP`: the weights, and where "moderate", "busy" and "packed" begin (a day with a class and a couple of to-dos is moderate; a full day of classes is busy; nine or more is packed). All-day events count as an event but add no hours, and an overnight event counts only the part inside each day. Ticking a to-do off lightens its day. The map counts everything, even calendars hidden from the view: hiding a calendar tidies the page, it doesn't free up your week.
 
 ## Courses
 

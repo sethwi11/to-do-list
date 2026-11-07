@@ -226,3 +226,23 @@
     transition: none !important;
   }
 }
+
+/* ---- Workload map: four shades of tomato wash over the paper, light to heavy ---- */
+:root {
+  --heat-1: color-mix(in srgb, var(--accent) 8%, var(--paper));
+  --heat-2: color-mix(in srgb, var(--accent) 17%, var(--paper));
+  --heat-3: color-mix(in srgb, var(--accent) 28%, var(--paper));
+  --heat-4: color-mix(in srgb, var(--accent) 40%, var(--paper));
+}
+.planner-cal .fc-daygrid-day.heat-1 {
+  background-color: var(--heat-1);
+}
+.planner-cal .fc-daygrid-day.heat-2 {
+  background-color: var(--heat-2);
+}
+.planner-cal .fc-daygrid-day.heat-3 {
+  background-color: var(--heat-3);
+}
+.planner-cal .fc-daygrid-day.heat-4 {
+  background-color: var(--heat-4);
+}

@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import { addDays, expandOccurrences, isoWeekNumber } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
-import { localDateTime, toEventItem, type CalendarItem } from '../features/calendar/calendarModel';
+import { localDateTime, toBlockItem, toEventItem, type CalendarItem } from '../features/calendar/calendarModel';
 import { ItemDetail } from '../features/calendar/ItemDetail';
 import { Timeline } from '../features/today/Timeline';
-import { nextUpcoming, summarize, timelineRows } from '../features/today/todayModel';
+import { blocksOnDay, nextUpcoming, summarize, timelineRows } from '../features/today/todayModel';
 import { UpNextCard } from '../features/today/UpNextCard';
 import { StatsBlock } from '../features/tasks/StatsBlock';
 import { CompletedSection, TaskList } from '../features/tasks/TaskList';
@@ -29,15 +29,16 @@ const Num = ({ children, tone }: { children: number; tone?: 'danger' }) => (
  */
 export default function TodayPage() {
   const app = useApp();
-  const { tasks, events, calendarsById, today, loading, eventsLoading, error, dismissError, reload, openDialog } = app;
+  const { tasks, events, timeBlocks, calendarsById, today, loading, eventsLoading, error, dismissError, reload, openDialog, toggleTask } = app;
   const now = useNow();
   const nowText = localDateTime(now);
   const [detail, setDetail] = useState<{ item: CalendarItem; anchor: PopoverAnchor } | null>(null);
 
   const todays = useMemo(() => expandOccurrences(events, today, addDays(today, 1)), [events, today]);
-  const rows = useMemo(() => timelineRows(todays, nowText), [todays, nowText]);
+  const todaysBlocks = useMemo(() => blocksOnDay(timeBlocks, tasks, today), [timeBlocks, tasks, today]);
+  const rows = useMemo(() => timelineRows(todays, nowText, todaysBlocks), [todays, nowText, todaysBlocks]);
   const next = useMemo(() => nextUpcoming(events, nowText), [events, nowText]);
-  const summary = useMemo(() => summarize(todays, tasks, today), [todays, tasks, today]);
+  const summary = useMemo(() => summarize(todays, tasks, today, todaysBlocks.length), [todays, tasks, today, todaysBlocks]);
 
   const { overdue, dueToday, doneToday } = useMemo(() => {
     const open = tasks.filter((t) => t.status === 'todo');
@@ -68,7 +69,15 @@ export default function TodayPage() {
       ) : (
         <>
           <p className="mb-8 text-meta text-ink-muted">
-            <Num>{summary.events}</Num> {summary.events === 1 ? 'event' : 'events'} · <Num>{summary.tasks}</Num> {summary.tasks === 1 ? 'task' : 'tasks'}
+            <Num>{summary.events}</Num> {summary.events === 1 ? 'event' : 'events'}
+            {summary.blocks > 0 && (
+              <>
+                {' · '}
+                <Num>{summary.blocks}</Num> {summary.blocks === 1 ? 'time block' : 'time blocks'}
+              </>
+            )}
+            {' · '}
+            <Num>{summary.tasks}</Num> {summary.tasks === 1 ? 'task' : 'tasks'}
             {summary.overdue > 0 && (
               <>
                 {' · '}
@@ -87,11 +96,20 @@ export default function TodayPage() {
 
           <div className="grid gap-10 @3xl:grid-cols-2 @3xl:gap-14">
             <section aria-label="Schedule">
-              <SectionLabel count={todays.length} className="mb-3">
+              <SectionLabel count={todays.length + todaysBlocks.length} className="mb-3">
                 Schedule
               </SectionLabel>
               {rows.length > 0 ? (
-                <Timeline rows={rows} now={now} today={today} itemFor={itemFor} onOpen={(item, el) => setDetail({ item, anchor: anchorOf(el) })} />
+                <Timeline
+                  rows={rows}
+                  now={now}
+                  today={today}
+                  itemFor={itemFor}
+                  onOpen={(item, el) => setDetail({ item, anchor: anchorOf(el) })}
+                  blockFor={(block, task) => toBlockItem(block, task, calendarsById)}
+                  onOpenBlock={(item, el) => setDetail({ item, anchor: anchorOf(el) })}
+                  onToggleTask={(task) => void toggleTask(task)}
+                />
               ) : (
                 <EmptyState message="Nothing scheduled today.">
                   <Button variant="ghost" onClick={() => openDialog({ kind: 'event', mode: 'new', defaults: { start: `${today}T09:00`, end: `${today}T10:00` } })}>

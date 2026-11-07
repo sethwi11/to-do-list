@@ -1,8 +1,9 @@
 import { createContext, useContext } from 'react';
-import type { Application, Calendar, CalendarColor, Course, CreateTaskInput, Event, EventOccurrence, EventType, Semester, Task, UpdateCalendarInput, UpdateTaskInput } from '@todo/shared';
+import type { Application, Calendar, CalendarColor, Clash, Course, CreateTaskInput, Event, EventOccurrence, EventType, Semester, Span, Task, TimeBlock, UpdateCalendarInput, UpdateTaskInput } from '@todo/shared';
 import type { ApplicationActions } from './useApplicationActions';
 import type { CourseActions } from './useCourseActions';
 import type { EventActions } from './useEventActions';
+import type { TimeBlockActions } from './useTimeBlockActions';
 
 /** Starting values for a new task, e.g. "due today" when added from the Today page. */
 export type TaskDefaults = Partial<Pick<CreateTaskInput, 'dueDate' | 'calendarId' | 'priority' | 'applicationId'>>;
@@ -38,11 +39,13 @@ export type DialogState =
   | { kind: 'application'; id: string | 'new' }
   /** Asked after an Interview event is made: which application is it for, and add the prep to-dos? One question per event. */
   | { kind: 'interview'; eventIds: string[] }
+  /** Set time aside to work on a to-do (or change a block's time: pass its id). */
+  | { kind: 'schedule'; taskId: string; blockId?: string }
   | { kind: 'calendar'; id: string | 'new' }
   | { kind: 'settings' }
   | { kind: 'shortcuts' };
 
-export interface AppApi extends EventActions, CourseActions, ApplicationActions {
+export interface AppApi extends EventActions, CourseActions, ApplicationActions, TimeBlockActions {
   // ---- data ----
   tasks: Task[];
   calendars: Calendar[];
@@ -61,6 +64,12 @@ export interface AppApi extends EventActions, CourseActions, ApplicationActions 
   applications: Application[];
   applicationsById: Map<string, Application>;
   applicationsLoading: boolean;
+  /** Time blocks for to-dos that still exist (a deleted to-do's blocks are hidden, and come back if it's restored). */
+  timeBlocks: TimeBlock[];
+  /** Minutes set aside per to-do, across all its blocks. */
+  scheduledMinutesByTask: ReadonlyMap<string, number>;
+  /** Events and time blocks that overlap a span. `ignore` leaves out the thing being checked (and, for events, its series). */
+  clashesFor: (span: Span, ignore?: { events?: ReadonlySet<string>; blocks?: ReadonlySet<string> }) => Clash[];
   /** Events, except the class meetings of archived semesters (archiving hides them everywhere). */
   events: Event[];
   eventTypes: EventType[];

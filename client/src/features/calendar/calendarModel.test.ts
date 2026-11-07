@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildEvent, type Calendar, type Task } from '@todo/shared';
+import { buildEvent, type Calendar, type Task, type TimeBlock } from '@todo/shared';
 import {
   buildItems,
   calendarUrl,
@@ -82,6 +82,7 @@ const sources = (over: Partial<Parameters<typeof buildItems>[0]> = {}) => ({
 
 const ev = (title: string, start: string, end: string, extra = {}) => buildEvent({ title, start, end, ...extra }, `id-${title}`, '2026-11-04T00:00:00.000Z');
 const task = (title: string, dueDate: string | null, extra: Partial<Task> = {}) => buildBlank(title, dueDate, extra);
+const block = (taskTitle: string, start: string, end: string): TimeBlock => ({ id: `block-${taskTitle}-${start}`, taskId: taskTitle, start, end, createdAt: '', updatedAt: '' });
 
 describe('buildItems', () => {
   it('includes events and to-dos in range, coloured by their calendar', () => {
@@ -112,6 +113,50 @@ describe('buildItems', () => {
   it('an event\'s own colour wins over its calendar\'s', () => {
     const [item] = buildItems(sources({ events: [ev('A', '2026-11-04T10:00', '2026-11-04T11:00', { calendarId: calendar.id, color: 'plum' })] }), '2026-11-01', '2026-12-01');
     expect(item!.color).toBe('plum');
+  });
+});
+
+describe('buildItems with time blocks', () => {
+  const lab = task('Lab report', '2026-11-06', { calendarId: calendar.id });
+  const reading = task('Reading', null);
+  const base = sources({
+    tasks: [lab, reading],
+    blocks: [block('Lab report', '2026-11-04T10:00', '2026-11-04T11:30'), block('Reading', '2026-11-04T14:00', '2026-11-04T15:00')],
+    showBlocks: true,
+  });
+
+  it('draws a block in its to-do\'s calendar colour, even when the to-do has no due date', () => {
+    const items = buildItems(base, '2026-11-01', '2026-12-01').filter((i) => i.kind === 'block');
+    expect(items.map((i) => i.kind === 'block' && i.task.title)).toEqual(['Lab report', 'Reading']);
+    expect(items[0]).toMatchObject({ color: 'dusty-blue', calendarName: 'School' });
+    expect(items[1]!.color).toBe('slate'); // no calendar: the neutral colour
+  });
+
+  it('only shows blocks in range, and not at all when the layer is off', () => {
+    expect(buildItems(base, '2026-11-05', '2026-12-01').filter((i) => i.kind === 'block')).toEqual([]);
+    expect(buildItems(base, '2026-11-04T10:30', '2026-11-04T12:00').filter((i) => i.kind === 'block')).toHaveLength(1); // overlapping the range counts
+    expect(buildItems({ ...base, showBlocks: false }, '2026-11-01', '2026-12-01').filter((i) => i.kind === 'block')).toEqual([]);
+  });
+
+  it('hides blocks of a hidden calendar, and of a to-do that no longer exists', () => {
+    const hidden = buildItems({ ...base, hiddenCalendarIds: new Set([calendar.id]) }, '2026-11-01', '2026-12-01').filter((i) => i.kind === 'block');
+    expect(hidden.map((i) => i.kind === 'block' && i.task.title)).toEqual(['Reading']);
+    const orphaned = buildItems({ ...base, tasks: [lab] }, '2026-11-01', '2026-12-01').filter((i) => i.kind === 'block');
+    expect(orphaned.map((i) => i.kind === 'block' && i.task.title)).toEqual(['Lab report']);
+  });
+
+  it('sorts blocks between events and to-dos that start at the same time', () => {
+    const items = buildItems(
+      sources({
+        events: [ev('Class', '2026-11-04T10:00', '2026-11-04T11:00')],
+        tasks: [task('Quiz', '2026-11-04', { dueTime: '10:00' }), lab],
+        blocks: [block('Lab report', '2026-11-04T10:00', '2026-11-04T11:00')],
+        showBlocks: true,
+      }),
+      '2026-11-01',
+      '2026-12-01',
+    );
+    expect(itemsOnDay(items, '2026-11-04').map((i) => i.kind)).toEqual(['event', 'block', 'task']);
   });
 });
 

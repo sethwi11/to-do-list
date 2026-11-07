@@ -8,10 +8,11 @@ import { Checkbox } from '../../ui/Checkbox';
 import { anchorOf, type PopoverAnchor } from '../../ui/Popover';
 import { EmptyState } from '../../ui/states';
 import { daysWithItems, itemsOnDay, taskSpan, weekStart, type CalendarItem } from './calendarModel';
-import { formatEventTimeOnDay } from './format';
+import { formatEventTimeOnDay, formatTimeRange } from './format';
 
 /** The label in the time column of a row: when this item happens on this day. */
 function timeLabel(item: CalendarItem, date: string): string {
+  if (item.kind === 'block') return formatTimeRange(timePart(item.block.start), timePart(item.block.end));
   if (item.kind === 'task') {
     const span = taskSpan(item.task);
     return span.allDay ? 'To-do' : formatTime(timePart(span.start));
@@ -69,7 +70,7 @@ export function AgendaView({ date, items, onOpenItem, onCreate }: AgendaViewProp
               <ul>
                 {dayItems.map((item) => (
                   <li key={`${d}:${item.id}`} style={calendarVars(item.color)} className="flex items-center gap-1 border-b border-hairline first:pt-0">
-                    {item.kind === 'task' ? (
+                    {item.kind !== 'event' ? (
                       <Checkbox
                         checked={item.task.status === 'done'}
                         onChange={() => void toggleTask(item.task)}
@@ -85,11 +86,12 @@ export function AgendaView({ date, items, onOpenItem, onCreate }: AgendaViewProp
                     >
                       <span className="font-mono text-meta text-ink-muted">{timeLabel(item, d)}</span>
                       <span className="flex min-w-0 items-center gap-2">
-                        <span aria-hidden className={cx('size-2.5 shrink-0', item.kind === 'event' ? 'bg-(color:--c)' : 'border border-dashed border-(color:--c)')} />
-                        <span className={cx('truncate text-body', item.kind === 'task' && item.task.status === 'done' && 'text-ink-muted line-through')}>
+                        <span aria-hidden className={cx('size-2.5 shrink-0', item.kind === 'event' ? 'bg-(color:--c)' : item.kind === 'block' ? 'hatch' : 'border border-dashed border-(color:--c)')} />
+                        <span className={cx('truncate text-body', item.kind !== 'event' && item.task.status === 'done' && 'text-ink-muted line-through')}>
                           {item.kind === 'event' ? item.occurrence.event.title : item.task.title}
                         </span>
                         {item.kind === 'event' && item.occurrence.event.location && <span className="truncate text-meta text-ink-muted max-sm:hidden">{item.occurrence.event.location}</span>}
+                        {item.kind === 'block' && <span className="sr-only">Time block</span>}
                         {item.calendarName && <span className="sr-only">Calendar: {item.calendarName}</span>}
                       </span>
                     </button>

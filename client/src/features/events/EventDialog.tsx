@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { dayOfWeek, findConflicts, isOpen, selfIds, type EventOccurrence } from '@todo/shared';
+import { dayOfWeek, isOpen, selfIds, type EventOccurrence } from '@todo/shared';
 import { useApp, type EventDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { Button } from '../../ui/Button';
@@ -78,7 +78,7 @@ export function EventDialog() {
 }
 
 function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | null; defaults: EventDefaults | null }) {
-  const { calendars, eventTypes, events, applications, createEvent, editEvent, closeDialog, showToast } = useApp();
+  const { calendars, eventTypes, events, applications, clashesFor, createEvent, editEvent, closeDialog, showToast } = useApp();
 
   // The series' rule: an override ("this one moved") has none of its own, so look the series up.
   const series = occurrence?.seriesId ? events.find((e) => e.id === occurrence.seriesId) : undefined;
@@ -104,12 +104,12 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
 
   const repeats = !!occurrence?.isRecurring;
 
-  // Warn (never block) if these times overlap another event. The event being edited, and its series, don't count against themselves.
+  // Warn (never block) if these times overlap another event or a time block. The event being edited, and its series, don't count against themselves.
   const conflicts = useMemo(() => {
     if (timeProblem(time) !== null) return [];
     const { start, end } = fromTimeFields(time);
-    return findConflicts(events, { start, end, allDay: time.allDay }, occurrence ? selfIds(occurrence) : undefined);
-  }, [events, time, occurrence]);
+    return clashesFor({ start, end, allDay: time.allDay }, { events: occurrence ? selfIds(occurrence) : undefined });
+  }, [clashesFor, time, occurrence]);
 
   function changeStart(startDate: string, startTime: string) {
     // A weekly repeat on just the old start's weekday follows the start to its new weekday.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { EventOccurrence } from '@todo/shared';
+import type { Clash } from '@todo/shared';
 import { describeConflicts, describeRepeat, formatClockShort, formatEventTimeOnDay, formatTimeRange, formatWhen } from './format';
 
 describe('formatTimeRange', () => {
@@ -36,7 +36,8 @@ describe('formatClockShort', () => {
   });
 });
 
-const occ = (title: string) => ({ event: { title } }) as EventOccurrence;
+const occ = (title: string): Clash => ({ key: title, title, start: '', end: '', kind: 'event' });
+const block = (title: string): Clash => ({ key: `block:${title}`, title, start: '', end: '', kind: 'block' });
 
 describe('describeConflicts', () => {
   it('names one, two, or many', () => {
@@ -44,6 +45,11 @@ describe('describeConflicts', () => {
     expect(describeConflicts([occ('A')])).toBe('Overlaps with “A”');
     expect(describeConflicts([occ('A'), occ('B')])).toBe('Overlaps with “A” and “B”');
     expect(describeConflicts([occ('A'), occ('B'), occ('C'), occ('D')])).toBe('Overlaps with “A” and 3 more');
+  });
+
+  it('says when it is time set aside for a to-do that overlaps', () => {
+    expect(describeConflicts([block('Lab report')])).toBe('Overlaps with time for “Lab report”');
+    expect(describeConflicts([occ('Standup'), block('Lab report')])).toBe('Overlaps with “Standup” and time for “Lab report”');
   });
 });
 

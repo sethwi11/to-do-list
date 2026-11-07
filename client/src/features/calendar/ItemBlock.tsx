@@ -1,7 +1,7 @@
-import { timePart } from '@todo/shared';
+import { timePart, type Task } from '@todo/shared';
 import { calendarVars } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
-import { EventBlock, TodoBlock } from '../../ui/blocks';
+import { EventBlock, TimeBlockBlock, TodoBlock } from '../../ui/blocks';
 import type { CalendarItem } from './calendarModel';
 import { formatClockShort, formatTimeRange } from './format';
 
@@ -11,11 +11,37 @@ interface ItemBlockProps {
   compact: boolean;
   /** In the month grid, where a phone's columns are too narrow for any text: draw a slim bar instead of a titled chip. */
   month?: boolean;
-  onToggleTask: (item: Extract<CalendarItem, { kind: 'task' }>) => void;
+  /** Called with the to-do when its checkbox is ticked (on a to-do, or on a time block, which ticks its to-do). */
+  onToggleTask: (task: Task) => void;
 }
 
-/** How one event or to-do is drawn inside a FullCalendar cell. */
+/** How one event, to-do or time block is drawn inside a FullCalendar cell. */
 export function ItemBlock({ item, compact, month = false, onToggleTask }: ItemBlockProps) {
+  if (item.kind === 'block') {
+    const { task, block } = item;
+    const done = task.status === 'done';
+    const block_ = (
+      <TimeBlockBlock
+        title={task.title}
+        time={compact ? undefined : formatTimeRange(timePart(block.start), timePart(block.end))}
+        color={item.color}
+        calendarName={item.calendarName}
+        done={done}
+        onToggle={() => onToggleTask(task)}
+        className={compact ? 'h-6 items-center py-0' : 'h-full'}
+      />
+    );
+    if (!month) return block_;
+    return (
+      <>
+        <div className="max-sm:hidden">{block_}</div>
+        <span style={calendarVars(item.color)} title={`Time to work on: ${task.title}`} className={cx('hatch block h-2 rounded-control sm:hidden', done && 'opacity-50')}>
+          <span className="sr-only">Time block: {task.title}</span>
+        </span>
+      </>
+    );
+  }
+
   if (item.kind === 'task') {
     const { task } = item;
     const block = (
@@ -24,7 +50,7 @@ export function ItemBlock({ item, compact, month = false, onToggleTask }: ItemBl
         color={item.color}
         calendarName={item.calendarName}
         done={task.status === 'done'}
-        onToggle={() => onToggleTask(item)}
+        onToggle={() => onToggleTask(task)}
         className={compact ? 'h-6 py-0' : 'h-full'}
       />
     );

@@ -12,6 +12,7 @@ import {
   type Event,
   type EventOccurrence,
   type Task,
+  type TimeBlock,
 } from '@todo/shared';
 import { parseLocalISODate } from '../../lib/dates';
 
@@ -105,7 +106,9 @@ export function dataRange(date: string): [string, string] {
 
 export type CalendarItem =
   | { kind: 'event'; id: string; occurrence: EventOccurrence; color: CalendarColor; calendarName?: string }
-  | { kind: 'task'; id: string; task: Task; color: CalendarColor; calendarName?: string };
+  | { kind: 'task'; id: string; task: Task; color: CalendarColor; calendarName?: string }
+  /** Time set aside to work on a to-do. Drawn in the to-do's calendar color. */
+  | { kind: 'block'; id: string; block: TimeBlock; task: Task; color: CalendarColor; calendarName?: string };
 
 /** Things with no calendar of their own (and no color of their own) use the neutral slate. */
 const NEUTRAL: CalendarColor = 'slate';
@@ -116,16 +119,25 @@ export function toEventItem(occurrence: EventOccurrence, calendarsById: Readonly
   return { kind: 'event', id: occurrence.key, occurrence, color: occurrence.event.color ?? calendar?.color ?? NEUTRAL, calendarName: calendar?.name };
 }
 
+/** A time block as a calendar item: it takes its to-do's calendar color and name. */
+export function toBlockItem(block: TimeBlock, task: Task, calendarsById: ReadonlyMap<string, Calendar>): Extract<CalendarItem, { kind: 'block' }> {
+  const calendar = task.calendarId ? calendarsById.get(task.calendarId) : undefined;
+  return { kind: 'block', id: `block:${block.id}`, block, task, color: calendar?.color ?? NEUTRAL, calendarName: calendar?.name };
+}
+
 export interface ItemSources {
   events: Event[];
   tasks: Task[];
+  /** Time blocks (only those whose to-do exists are drawn). */
+  blocks?: TimeBlock[];
   calendarsById: ReadonlyMap<string, Calendar>;
   hiddenCalendarIds: ReadonlySet<string>;
   showEvents: boolean;
   showTasks: boolean;
+  showBlocks?: boolean;
 }
 
-/** Everything to show in [rangeStart, rangeEnd): events (repeats expanded) and to-dos, minus hidden calendars. */
+/** Everything to show in [rangeStart, rangeEnd): events (repeats expanded), to-dos and time blocks, minus hidden calendars. */
 export function buildItems(src: ItemSources, rangeStart: string, rangeEnd: string): CalendarItem[] {
   const visible = (calendarId: string | null) => calendarId === null || !src.hiddenCalendarIds.has(calendarId);
   const items: CalendarItem[] = [];
@@ -141,6 +153,16 @@ export function buildItems(src: ItemSources, rangeStart: string, rangeEnd: strin
       if (!task.dueDate || task.dueDate < rangeStart.slice(0, 10) || task.dueDate >= rangeEnd.slice(0, 10) || !visible(task.calendarId)) continue;
       const calendar = task.calendarId ? src.calendarsById.get(task.calendarId) : undefined;
       items.push({ kind: 'task', id: `task:${task.id}`, task, color: calendar?.color ?? NEUTRAL, calendarName: calendar?.name });
+    }
+  }
+
+  if (src.showBlocks && src.blocks) {
+    const tasksById = new Map(src.tasks.map((t) => [t.id, t]));
+    for (const block of src.blocks) {
+      const task = tasksById.get(block.taskId);
+      // A block overlaps the range if it starts before the range ends and ends after it starts.
+      if (!task || !(block.start < rangeEnd && block.end > rangeStart) || !visible(task.calendarId)) continue;
+      items.push(toBlockItem(block, task, src.calendarsById));
     }
   }
   return items;
@@ -161,7 +183,8 @@ export function taskSpan(task: Task): { start: string; end: string; allDay: bool
 export function itemsOnDay(items: CalendarItem[], date: string): CalendarItem[] {
   const dayStart = combine(date);
   const dayEnd = combine(addDays(date, 1));
-  const span = (i: CalendarItem) => (i.kind === 'event' ? { start: i.occurrence.start, end: i.occurrence.end, allDay: i.occurrence.allDay } : taskSpan(i.task));
+  const span = (i: CalendarItem) =>
+    i.kind === 'event' ? { start: i.occurrence.start, end: i.occurrence.end, allDay: i.occurrence.allDay } : i.kind === 'block' ? { start: i.block.start, end: i.block.end, allDay: false } : taskSpan(i.task);
   const touches = (i: CalendarItem) => {
     const s = span(i);
     const start = s.start.length === 10 ? combine(s.start) : s.start;
@@ -170,7 +193,8 @@ export function itemsOnDay(items: CalendarItem[], date: string): CalendarItem[] 
   };
   const sortKey = (i: CalendarItem) => {
     const s = span(i);
-    return `${s.allDay ? '0' : '1'}${i.kind === 'event' ? '0' : '1'}${s.start.length === 10 ? combine(s.start) : s.start}`;
+    // At the same start: events, then time blocks, then to-dos.
+    return `${s.allDay ? '0' : '1'}${i.kind === 'event' ? '0' : i.kind === 'block' ? '1' : '2'}${s.start.length === 10 ? combine(s.start) : s.start}`;
   };
   return items.filter(touches).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 }

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, X } from 'lucide-react';
+import { CalendarClock, Plus, X } from 'lucide-react';
 import { isOpen, PRIORITIES, RECURRENCES, type Priority, type Recurrence, type Subtask, type Task } from '@todo/shared';
 import { useApp, type TaskDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
@@ -22,7 +22,7 @@ const PRIORITY_LABEL: Record<Priority, string> = { low: 'Low', medium: 'Medium',
 
 /** The dialog for adding a task or editing one. Which one is decided by the shared dialog state. */
 export function TaskDialog() {
-  const { dialog, closeDialog, tasks, removeTask } = useApp();
+  const { dialog, closeDialog, openDialog, tasks, removeTask } = useApp();
   const open = dialog?.kind === 'task';
   const editing = open && dialog.mode === 'edit' ? (tasks.find((t) => t.id === dialog.id) ?? null) : null;
 
@@ -43,6 +43,11 @@ export function TaskDialog() {
               }}
             >
               Delete
+            </Button>
+          )}
+          {editing && editing.status === 'todo' && (
+            <Button variant="ghost" icon={CalendarClock} onClick={() => openDialog({ kind: 'schedule', taskId: editing.id })}>
+              Set time aside
             </Button>
           )}
           <Button variant="ghost" onClick={() => closeDialog('task')}>

@@ -1,5 +1,4 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { findConflicts } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { Button } from '../../ui/Button';
@@ -24,7 +23,7 @@ const isString = (v: unknown): v is string => typeof v === 'string';
  * Enter, done. "More options" opens the full form with the same values filled in.
  */
 export function QuickCreate({ selection, onClose }: { selection: Selection; onClose: () => void }) {
-  const { calendars, events, createEvent, openDialog } = useApp();
+  const { calendars, clashesFor, createEvent, openDialog } = useApp();
   const [lastCalendar, setLastCalendar] = usePersistedState('voice-todo.calendar.lastUsed', '', isString);
   const [title, setTitle] = useState('');
   const [calendarId, setCalendarId] = useState(calendars.some((c) => c.id === lastCalendar) ? lastCalendar : '');
@@ -32,10 +31,7 @@ export function QuickCreate({ selection, onClose }: { selection: Selection; onCl
   const [error, setError] = useState<string | undefined>();
 
   const span = fromTimeFields(time);
-  const conflicts = useMemo(
-    () => (timeProblem(time) === null ? findConflicts(events, { ...fromTimeFields(time), allDay: time.allDay }) : []),
-    [events, time],
-  );
+  const conflicts = useMemo(() => (timeProblem(time) === null ? clashesFor({ ...fromTimeFields(time), allDay: time.allDay }) : []), [clashesFor, time]);
 
   function more() {
     onClose();

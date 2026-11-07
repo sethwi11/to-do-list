@@ -3,7 +3,7 @@ import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ChevronRight } from 'lucide-react';
-import type { Task } from '@todo/shared';
+import { formatMinutes, type Task } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { formatDueDate, formatTime } from '../../lib/dates';
 import { cx } from '../../lib/cx';
@@ -11,11 +11,12 @@ import { TaskRow, type TaskRowProps } from '../../ui/TaskRow';
 
 /** Turns a task into the props the task row displays, wired to the app's actions. */
 function useRowProps() {
-  const { calendarsById, today, toggleTask, openDialog } = useApp();
+  const { calendarsById, today, toggleTask, openDialog, scheduledMinutesByTask } = useApp();
   return (task: Task): Omit<TaskRowProps, 'leaveOnComplete'> => {
     const done = task.status === 'done';
     const calendar = task.calendarId ? calendarsById.get(task.calendarId) : undefined;
     const edit = () => openDialog({ kind: 'task', mode: 'edit', id: task.id });
+    const planned = scheduledMinutesByTask.get(task.id);
     return {
       title: task.title,
       done,
@@ -24,9 +25,12 @@ function useRowProps() {
       dueTone: task.dueDate && !done && task.dueDate < today ? 'overdue' : task.dueDate === today ? 'today' : 'normal',
       calendar: calendar ? { name: calendar.name, color: calendar.color } : null,
       subtasks: task.subtasks.length ? { done: task.subtasks.filter((s) => s.done).length, total: task.subtasks.length } : null,
+      scheduledLabel: planned ? formatMinutes(planned) : null,
       onToggle: () => void toggleTask(task),
       onOpen: edit,
       onEdit: edit,
+      // Finished to-dos don't need time set aside for them.
+      onSchedule: done ? undefined : () => openDialog({ kind: 'schedule', taskId: task.id }),
     };
   };
 }

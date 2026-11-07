@@ -1,5 +1,5 @@
 import { expandOccurrences, type EventOccurrence } from './eventSeries';
-import type { Event } from './models/events';
+import type { Event, TimeBlock } from './models/events';
 
 /*
  * Schedule conflicts: two things you can't both be at.
@@ -46,4 +46,49 @@ export function conflictMap(occurrences: EventOccurrence[]): Map<string, EventOc
     if (clashes.length > 0) out.set(a.key, clashes);
   }
   return out;
+}
+
+// ---- time blocks count as busy time too ------------------------------------
+
+/**
+ * One thing a time overlaps, whether it's an event or a time block (time you set aside to work on a to-do). The warning
+ * screens only need a name and a time, so both are reduced to this.
+ */
+export interface Clash {
+  key: string;
+  title: string;
+  start: string;
+  end: string;
+  kind: 'event' | 'block';
+}
+
+export const clashOfOccurrence = (o: EventOccurrence): Clash => ({ key: o.key, title: o.event.title, start: o.start, end: o.end, kind: 'event' });
+
+/** The part of a time block that matters here. */
+export type BlockLike = Pick<TimeBlock, 'id' | 'taskId' | 'start' | 'end'>;
+
+/**
+ * The time blocks that overlap `span`. `titleOf` gives the name of a block's to-do (undefined for one that has been deleted:
+ * its blocks are hidden everywhere, so they can't clash with anything either).
+ */
+export function findBlockClashes(blocks: readonly BlockLike[], titleOf: (taskId: string) => string | undefined, span: Span, ignore: ReadonlySet<string> = new Set()): Clash[] {
+  if (span.allDay || span.end <= span.start) return [];
+  const out: Clash[] = [];
+  for (const b of blocks) {
+    const title = titleOf(b.taskId);
+    if (title === undefined || ignore.has(b.id) || !(b.start < span.end && b.end > span.start)) continue;
+    out.push({ key: `block:${b.id}`, title, start: b.start, end: b.end, kind: 'block' });
+  }
+  return out;
+}
+
+export interface ClashSources {
+  events: Event[];
+  blocks: readonly BlockLike[];
+  titleOf: (taskId: string) => string | undefined;
+}
+
+/** Everything (events and time blocks) that overlaps `span`, earliest first. `ignore` leaves out the thing being checked and its series. */
+export function findClashes(src: ClashSources, span: Span, ignore: { events?: ReadonlySet<string>; blocks?: ReadonlySet<string> } = {}): Clash[] {
+  return [...findConflicts(src.events, span, ignore.events).map(clashOfOccurrence), ...findBlockClashes(src.blocks, src.titleOf, span, ignore.blocks)].sort((a, b) => a.start.localeCompare(b.start) || a.key.localeCompare(b.key));
 }

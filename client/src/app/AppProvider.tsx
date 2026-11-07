@@ -1,10 +1,11 @@
 import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
-import { INTERVIEW_EVENT_TYPE, nextOccurrence, type Application, type Calendar, type Course, type EventType, type Semester, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
+import { findClashes, INTERVIEW_EVENT_TYPE, nextOccurrence, scheduledMinutesByTask, type Application, type Calendar, type Course, type EventType, type Semester, type TimeBlock, type CalendarColor, type CreateTaskInput, type Task, type UpdateCalendarInput, type UpdateTaskInput } from '@todo/shared';
 import { DeleteFilesDialog, useFileDeletionPrompt } from '../features/attachments/DeleteFilesDialog';
 import { newEventSpan } from '../features/calendar/calendarModel';
 import { ScopeDialog } from '../features/calendar/ScopeDialog';
 import { ApplicationDialog } from '../features/applications/ApplicationDialog';
 import { InterviewDialog } from '../features/applications/InterviewDialog';
+import { ScheduleDialog } from '../features/calendar/ScheduleDialog';
 import { CalendarDialog } from '../features/calendars/CalendarDialog';
 import { CourseDialog } from '../features/courses/CourseDialog';
 import { SemesterDialog } from '../features/courses/SemesterDialog';
@@ -23,9 +24,11 @@ import { computeMove } from '../lib/ordering';
 import { ToastHost, useToast } from '../ui/Toast';
 import { AppContext, type AppApi, type DialogState, type ImportOptions } from './AppContext';
 import { applicationHooks } from '../data/useApplications';
+import { timeBlockHooks } from '../data/useTimeBlocks';
 import { courseHooks, semesterHooks } from '../data/useCourses';
 import { useApplicationActions } from './useApplicationActions';
 import { useCourseActions } from './useCourseActions';
+import { useTimeBlockActions } from './useTimeBlockActions';
 import { useEventActions, type EventActions } from './useEventActions';
 
 /**
@@ -47,6 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const semesters: Semester[] = semestersQuery.data ?? NO_SEMESTERS;
   const applicationsQuery = applicationHooks.useList();
   const applications: Application[] = applicationsQuery.data ?? NO_APPLICATIONS;
+  const timeBlocksQuery = timeBlockHooks.useList();
 
   // Which calendars show on the calendar page. Remembered per device, so hiding "Work" on the laptop doesn't hide it on the phone.
   const [hiddenIds, setHiddenIds] = usePersistedState<string[]>('voice-todo.calendar.hidden', [], isStringArray);
@@ -169,6 +173,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const applicationsById = useMemo(() => new Map(applications.map((a) => [a.id, a])), [applications]);
 
+  // Time blocks belong to a to-do. Deleting a to-do is a soft delete, so its blocks stay in the database: hide them while it's gone,
+  // and they come back with it if the delete is undone.
+  const timeBlockActions = useTimeBlockActions({ showToast });
+  const timeBlocks = useMemo<TimeBlock[]>(() => {
+    const live = new Set(tasks.map((t) => t.id));
+    return (timeBlocksQuery.data ?? NO_BLOCKS).filter((b) => live.has(b.taskId));
+  }, [timeBlocksQuery.data, tasks]);
+  const scheduledMinutesByTaskMap = useMemo(() => scheduledMinutesByTask(timeBlocks), [timeBlocks]);
+
   // A new Interview event raises a question (which application? add the prep checklist?), however it was made: the form, a drag
   // on the calendar, or an import. So the two ways of making events are wrapped here, once, rather than at every call site.
   const interviewTypeId = useMemo(() => eventTypes.find((t) => t.name.toLowerCase() === INTERVIEW_EVENT_TYPE.toLowerCase())?.id ?? null, [eventTypes]);
@@ -204,6 +217,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     openPicker.current = open;
   }, []);
 
+  const clashesFor = useCallback<AppApi['clashesFor']>(
+    (span, ignore) => findClashes({ events, blocks: timeBlocks, titleOf: (id) => tasks.find((t) => t.id === id)?.title }, span, ignore),
+    [events, timeBlocks, tasks],
+  );
+
   const eventTypesById = useMemo(() => new Map<string, EventType>(eventTypes.map((t) => [t.id, t])), [eventTypes]);
 
   const value: AppApi = {
@@ -212,6 +230,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     createEvents,
     ...courseActions,
     ...applicationActions,
+    ...timeBlockActions,
+    timeBlocks,
+    scheduledMinutesByTask: scheduledMinutesByTaskMap,
+    clashesFor,
     applications,
     applicationsById,
     applicationsLoading: applicationsQuery.isPending,
@@ -266,6 +288,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         <SemesterDialog />
         <ApplicationDialog />
         <InterviewDialog />
+        <ScheduleDialog />
         <ScopeDialog {...scopeDialog} />
         <DeleteFilesDialog {...fileDialog} />
         <ImportLayer
@@ -295,3 +318,4 @@ const isStringArray = (v: unknown): v is string[] => Array.isArray(v) && v.every
 const NO_COURSES: Course[] = [];
 const NO_SEMESTERS: Semester[] = [];
 const NO_APPLICATIONS: Application[] = [];
+const NO_BLOCKS: TimeBlock[] = [];

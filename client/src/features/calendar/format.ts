@@ -1,4 +1,4 @@
-import { addDays, datePart, timePart, type EventOccurrence, type EventRecurrence } from '@todo/shared';
+import { addDays, datePart, timePart, type Clash, type EventRecurrence } from '@todo/shared';
 import { formatTime, parseLocalISODate } from '../../lib/dates';
 
 const day = (date: string, withYear = false) =>
@@ -43,8 +43,8 @@ export function formatClockShort(time: string): string {
 }
 
 /** "Overlaps with “A”", "...“A” and “B”", "...“A” and 2 more": for a toast, where there's room for one short line. */
-export function describeConflicts(conflicts: EventOccurrence[]): string {
-  const names = conflicts.map((o) => `“${o.event.title}”`);
+export function describeConflicts(conflicts: Clash[]): string {
+  const names = conflicts.map((c) => (c.kind === 'block' ? `time for “${c.title}”` : `“${c.title}”`));
   if (names.length === 0) return '';
   if (names.length === 1) return `Overlaps with ${names[0]}`;
   if (names.length === 2) return `Overlaps with ${names[0]} and ${names[1]}`;

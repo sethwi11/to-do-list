@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { findConflicts, selfIds, type EventOccurrence } from '@todo/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { blockMinutesFor, describeLoad, selfIds, type DayLoad, type EventOccurrence } from '@todo/shared';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import type { DateSelectArg, EventClickArg, EventContentArg, EventDropArg, EventInput } from '@fullcalendar/core';
-import type { EventResizeDoneArg } from '@fullcalendar/interaction';
+import type { DropArg, EventResizeDoneArg } from '@fullcalendar/interaction';
 import { useApp } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { anchorOf, type PopoverAnchor } from '../../ui/Popover';
 import '../../styles/calendar.css';
 import { describeConflicts } from './format';
-import { localDate, selectionToSpan, spanFromFullCalendar, taskSpan, type CalendarItem } from './calendarModel';
+import { localDate, localDateTime, selectionToSpan, spanFromFullCalendar, taskSpan, type CalendarItem } from './calendarModel';
+import { HeatTooltip } from './HeatLegend';
 import { ItemBlock } from './ItemBlock';
 import type { Selection } from './QuickCreate';
 
@@ -25,6 +26,10 @@ function toFullCalendarEvent(item: CalendarItem): EventInput {
     // All-day events are plain dates; FullCalendar treats a date-only end as exclusive, same as the stored value.
     const day = (v: string) => (occurrence.allDay ? v.slice(0, 10) : v);
     return { id: item.id, title: occurrence.event.title, start: day(occurrence.start), end: day(occurrence.end), allDay: occurrence.allDay, extendedProps: { item } };
+  }
+  if (item.kind === 'block') {
+    // A time block is moved and stretched like an event, but always has a start and end on the grid (never all-day).
+    return { id: item.id, title: item.task.title, start: item.block.start, end: item.block.end, allDay: false, extendedProps: { item } };
   }
   const span = taskSpan(item.task);
   // A to-do can be moved but not stretched: it has a due time, not a duration.
@@ -42,6 +47,8 @@ interface CalendarViewProps {
   onSelect: (selection: Selection) => void;
   onOpenItem: (item: CalendarItem, anchor: PopoverAnchor) => void;
   onOpenDay: (date: string) => void;
+  /** Month view only: how heavy each day is, to shade it (null = the workload map is off). */
+  loads?: Map<string, DayLoad> | null;
 }
 
 /**
@@ -49,8 +56,9 @@ interface CalendarViewProps {
  * events, dragging, resizing, selecting). The page owns the date and view (they're in the address
  * bar), and this component just follows them. Items are drawn by our own blocks.
  */
-export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay }: CalendarViewProps) {
-  const { events: allEvents, editEvent, rescheduleTask, toggleTask } = useApp();
+export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay, loads = null }: CalendarViewProps) {
+  const { clashesFor, editEvent, rescheduleTask, toggleTask, tasks, scheduleTask, moveTimeBlock, showToast } = useApp();
+  const [tip, setTip] = useState<{ load: DayLoad; x: number; y: number } | null>(null);
   const ref = useRef<FullCalendar>(null);
   const container = useRef<HTMLDivElement>(null);
 
@@ -89,11 +97,16 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
   }
 
   /** A warning for the toast if the new time overlaps something. */
-  const clashNote = (occurrence: EventOccurrence, span: { start: string; end: string; allDay: boolean }) => describeConflicts(findConflicts(allEvents, span, selfIds(occurrence)));
+  const clashNote = (occurrence: EventOccurrence, span: { start: string; end: string; allDay: boolean }) => describeConflicts(clashesFor(span, { events: selfIds(occurrence) }));
 
   async function handleDrop(info: EventDropArg) {
     const item = itemOf(info);
     const span = spanFromFullCalendar(info.event.start!, info.event.end, info.event.allDay);
+    if (item.kind === 'block') {
+      const saved = await moveTimeBlock(item.block, { start: span.start, end: span.end });
+      if (!saved) info.revert();
+      return;
+    }
     if (item.kind === 'task') {
       const saved = await rescheduleTask(item.task, { dueDate: span.start.slice(0, 10), dueTime: span.allDay ? null : span.start.slice(11, 16) });
       if (!saved) info.revert();
@@ -106,6 +119,11 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
 
   async function handleResize(info: EventResizeDoneArg) {
     const item = itemOf(info);
+    if (item.kind === 'block') {
+      const span = spanFromFullCalendar(info.event.start!, info.event.end, false);
+      if (!(await moveTimeBlock(item.block, { start: span.start, end: span.end }))) info.revert();
+      return;
+    }
     if (item.kind !== 'event') return info.revert();
     const span = spanFromFullCalendar(info.event.start!, info.event.end, info.event.allDay);
     const title = item.occurrence.event.title;
@@ -113,16 +131,38 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
     if (!saved) info.revert();
   }
 
+  /** A to-do dragged in from the panel and dropped on a time: set that time aside for it. */
+  function handleExternalDrop(info: DropArg) {
+    const task = tasks.find((t) => t.id === info.draggedEl.dataset.taskId);
+    if (!task) return;
+    if (info.allDay) {
+      showToast('Drop it on a time of day to set that time aside for it.');
+      return;
+    }
+    void scheduleTask(task, localDateTime(info.date), blockMinutesFor(task));
+  }
+
   function renderContent(arg: EventContentArg) {
     const item = arg.event.extendedProps.item as CalendarItem | undefined;
     // While you drag out a range, FullCalendar draws a temporary "ghost" event that isn't one of ours.
     if (!item) return <div className="h-full rounded-control border border-dashed border-accent bg-accent-soft" />;
     const compact = arg.view.type === 'dayGridMonth' || arg.event.allDay;
-    return <ItemBlock item={item} compact={compact} month={arg.view.type === 'dayGridMonth'} onToggleTask={(t) => void toggleTask(t.task)} />;
+    return <ItemBlock item={item} compact={compact} month={arg.view.type === 'dayGridMonth'} onToggleTask={(task) => void toggleTask(task)} />;
   }
 
   return (
-    <div ref={container} className={cx('planner-cal h-full min-h-0')}>
+    <div
+      ref={container}
+      className={cx('planner-cal h-full min-h-0')}
+      onMouseMove={(e) => {
+        if (!loads || view !== 'month') return;
+        const target = e.target as HTMLElement;
+        const cell = target.closest<HTMLElement>('.fc-daygrid-day[data-date]');
+        const load = cell && !target.closest('.fc-event, .fc-popover') ? loads.get(cell.dataset.date!) : undefined;
+        setTip(load ? { load, x: e.clientX, y: e.clientY } : null);
+      }}
+      onMouseLeave={() => setTip(null)}
+    >
       <FullCalendar
         ref={ref}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -156,6 +196,11 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
         unselectAuto={false}
         selectLongPressDelay={350}
         editable
+        droppable={view !== 'month'}
+        dropAccept="[data-schedule-task]"
+        drop={handleExternalDrop}
+        // A time block belongs to a time of day, so it can't be dropped into the all-day row.
+        eventAllow={(dropInfo, dragged) => !(dragged?.extendedProps.item?.kind === 'block' && dropInfo.allDay)}
         eventLongPressDelay={350}
         eventResizableFromStart
         select={handleSelect}
@@ -174,10 +219,22 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
             </span>
           );
         }}
-        dayCellContent={(arg) => (
-          <span className={cx('grid size-6 place-items-center rounded-full font-mono text-meta', arg.isToday ? 'bg-accent-ink text-on-accent' : 'text-ink')}>{arg.date.getDate()}</span>
-        )}
+        // The workload map: each day gets a shade (heat-1 to heat-4) from its load, and its description for screen readers.
+        dayCellClassNames={(arg) => {
+          const load = loads?.get(localDate(arg.date));
+          return load && load.level > 0 ? [`heat-${load.level}`] : [];
+        }}
+        dayCellContent={(arg) => {
+          const load = loads?.get(localDate(arg.date));
+          return (
+            <>
+              <span className={cx('grid size-6 place-items-center rounded-full font-mono text-meta', arg.isToday ? 'bg-accent-ink text-on-accent' : 'text-ink')}>{arg.date.getDate()}</span>
+              {load && <span className="sr-only">{describeLoad(load)}</span>}
+            </>
+          );
+        }}
       />
+      {tip && <HeatTooltip load={tip.load} x={tip.x} y={tip.y} />}
     </div>
   );
 }

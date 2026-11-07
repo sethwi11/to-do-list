@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type Ref } from 'react';
-import { CalendarPlus, CircleAlert, GripVertical, ListChecks, Pencil, Timer } from 'lucide-react';
+import { CalendarClock, CalendarPlus, CircleAlert, GripVertical, ListChecks, Pencil, Timer } from 'lucide-react';
 import type { CalendarColor, Priority } from '@todo/shared';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
@@ -19,6 +19,8 @@ export interface TaskRowProps {
   subtasks?: { done: number; total: number } | null;
   /** Total focus time logged, in minutes. */
   focusMinutes?: number | null;
+  /** Total time set aside on the calendar to work on it (all its time blocks), already formatted: "1h 30m". */
+  scheduledLabel?: string | null;
   /** Called when the checkbox is toggled, after any animation has played. */
   onToggle: () => void;
   onOpen?: () => void;
@@ -62,6 +64,7 @@ export function TaskRow({
   calendar,
   subtasks,
   focusMinutes,
+  scheduledLabel,
   onToggle,
   onOpen,
   onEdit,
@@ -123,7 +126,7 @@ export function TaskRow({
 
   const checked = done || leaving !== 'idle';
   const bar = PRIORITY_BAR[priority];
-  const showMeta = dueLabel || calendar || subtasks || focusMinutes;
+  const showMeta = dueLabel || calendar || subtasks || focusMinutes || scheduledLabel;
 
   return (
     // Collapse: animating a grid row from 1fr to 0fr smoothly shrinks the row to nothing (height itself can't animate from "auto").
@@ -176,6 +179,13 @@ export function TaskRow({
                   <span className="font-mono tabular-nums">{focusMinutes}m</span>
                 </span>
               ) : null}
+              {scheduledLabel && (
+                <span className="hidden items-center gap-1 sm:inline-flex" title="Time set aside on the calendar to work on this">
+                  <CalendarClock className="size-4" aria-hidden />
+                  <span className="sr-only">Time set aside:</span>
+                  <span className="font-mono tabular-nums">{scheduledLabel}</span>
+                </span>
+              )}
               {dueLabel && (
                 <span
                   className={cx(

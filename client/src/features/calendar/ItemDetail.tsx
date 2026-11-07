@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { Briefcase, ExternalLink, GraduationCap, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, TriangleAlert, X } from 'lucide-react';
-import { findConflicts, selfIds } from '@todo/shared';
+import { Briefcase, CalendarCheck, Clock, ExternalLink, GraduationCap, ListChecks, MapPin, Pencil, Repeat, Tag, Trash2, TriangleAlert, X } from 'lucide-react';
+import { blockMinutes, formatMinutes, selfIds } from '@todo/shared';
 import { Link } from 'react-router';
 import { useApp } from '../../app/AppContext';
 import { calendarVars } from '../../lib/calendarColors';
@@ -17,9 +17,9 @@ const REPEAT_WORDS = { daily: 'every day', weekdays: 'every weekday', weekly: 'e
 /** What you see when you click something on the calendar: the details, and Edit / Delete. */
 export function ItemDetail({ item, anchor, onClose }: { item: CalendarItem; anchor: PopoverAnchor; onClose: () => void }) {
   return (
-    <Popover anchor={anchor} label={item.kind === 'event' ? 'Event details' : 'To-do details'} onClose={onClose}>
+    <Popover anchor={anchor} label={item.kind === 'event' ? 'Event details' : item.kind === 'block' ? 'Time block details' : 'To-do details'} onClose={onClose}>
       <div style={calendarVars(item.color)} className="border-l-[3px] border-l-(color:--c) p-4">
-        {item.kind === 'event' ? <EventDetail item={item} onClose={onClose} /> : <TaskDetail item={item} onClose={onClose} />}
+        {item.kind === 'event' ? <EventDetail item={item} onClose={onClose} /> : item.kind === 'block' ? <BlockDetail item={item} onClose={onClose} /> : <TaskDetail item={item} onClose={onClose} />}
       </div>
     </Popover>
   );
@@ -58,7 +58,7 @@ function Notes({ text }: { text: string | null }) {
 }
 
 function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'event' }>; onClose: () => void }) {
-  const { openDialog, deleteEvent, eventTypesById, events, coursesById, applicationsById } = useApp();
+  const { openDialog, deleteEvent, eventTypesById, events, coursesById, applicationsById, clashesFor } = useApp();
   const { occurrence } = item;
   const event = occurrence.event;
   const course = event.courseId ? coursesById.get(event.courseId) : undefined;
@@ -66,7 +66,7 @@ function EventDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'e
   // An override ("this one moved") has no rule of its own; its series does.
   const rule = (occurrence.seriesId ? events.find((e) => e.id === occurrence.seriesId) : event)?.recurrence ?? null;
   const type = event.typeId ? eventTypesById.get(event.typeId) : undefined;
-  const conflicts = findConflicts(events, { start: occurrence.start, end: occurrence.end, allDay: occurrence.allDay }, selfIds(occurrence));
+  const conflicts = clashesFor({ start: occurrence.start, end: occurrence.end, allDay: occurrence.allDay }, { events: selfIds(occurrence) });
 
   return (
     <>
@@ -192,6 +192,77 @@ function TaskDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'ta
           <Pencil className="size-4" aria-hidden />
           Edit
         </button>
+      </div>
+    </>
+  );
+}
+
+/** A time block: when you plan to work on a to-do. Removing it never removes the to-do. */
+function BlockDetail({ item, onClose }: { item: Extract<CalendarItem, { kind: 'block' }>; onClose: () => void }) {
+  const { openDialog, removeTimeBlock, toggleTask, scheduledMinutesByTask, clashesFor, today } = useApp();
+  const { block, task } = item;
+  const done = task.status === 'done';
+  const length = blockMinutes(block);
+  const total = scheduledMinutesByTask.get(task.id) ?? length;
+  const conflicts = clashesFor({ start: block.start, end: block.end, allDay: false }, { blocks: new Set([block.id]) });
+
+  return (
+    <>
+      <div className="mb-3 flex items-start gap-1">
+        <Checkbox
+          checked={done}
+          label={`Mark "${task.title}" as ${done ? 'not done' : 'done'}`}
+          onChange={() => {
+            onClose();
+            void toggleTask(task);
+          }}
+          className="-ml-2"
+        />
+        <h2 className={`min-w-0 flex-1 pt-1 font-display text-section break-words ${done ? 'text-ink-muted line-through' : ''}`}>{task.title}</h2>
+        <IconButton icon={X} label="Close" onClick={onClose} className="-mt-0 -mr-2 shrink-0" />
+      </div>
+      <div className="space-y-2">
+        <p className="font-mono text-meta text-ink-muted">Time to work on this · {formatWhen(block.start, block.end, false)}</p>
+        {conflicts.length > 0 && <Row icon={TriangleAlert}>{describeConflicts(conflicts)}</Row>}
+        <Row icon={Clock}>
+          {formatMinutes(length)} set aside{total > length && `, ${formatMinutes(total)} in all for this to-do`}
+        </Row>
+        {task.dueDate && <Row icon={CalendarCheck}>Due {formatDueDate(task.dueDate, today)}</Row>}
+        <CalendarLine item={item} />
+      </div>
+      <div className="mt-4 flex items-center justify-between gap-2 border-t border-hairline pt-3">
+        <IconButton
+          icon={Trash2}
+          label="Remove time block"
+          className="text-danger"
+          onClick={() => {
+            onClose();
+            void removeTimeBlock(block);
+          }}
+        />
+        <span className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              openDialog({ kind: 'task', mode: 'edit', id: task.id });
+            }}
+            className="inline-flex h-8 items-center gap-2 rounded-control px-3 text-body font-medium text-ink transition-colors duration-150 ease-out hover:bg-accent-soft"
+          >
+            Open to-do
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              openDialog({ kind: 'schedule', taskId: task.id, blockId: block.id });
+            }}
+            className="inline-flex h-8 items-center gap-2 rounded-control border border-ink px-3 text-body font-medium text-ink transition-colors duration-150 ease-out hover:bg-accent-soft"
+          >
+            <Pencil className="size-4" aria-hidden />
+            Edit time
+          </button>
+        </span>
       </div>
     </>
   );
