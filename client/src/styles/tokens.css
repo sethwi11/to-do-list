@@ -52,6 +52,10 @@
   --cal-ochre: #c28a1e;
   --cal-teal: #3f8a8c;
   --cal-terracotta: #b8653f;
+  --cal-indigo: #5a55a8;
+  --cal-rose: #b84d74;
+  --cal-umber: #7a5a3a;
+  --cal-olive: #6b7a26;
 
   /* Workload heatmap: four warm tints from paper toward a soft tomato wash. */
   --heat-1: color-mix(in srgb, var(--accent) 10%, var(--paper));
@@ -93,6 +97,10 @@
   /* Slate ink and crimson would nearly vanish on the dark page, so they are lifted. */
   --cal-slate: #9aa0a8;
   --cal-crimson: #c2405a;
+  --cal-indigo: #8f8ae0;
+  --cal-rose: #df7aa0;
+  --cal-umber: #b8946c;
+  --cal-olive: #a3b25a;
 
   --heat-1: color-mix(in srgb, var(--accent) 10%, var(--paper));
   --heat-2: color-mix(in srgb, var(--accent) 18%, var(--paper));
@@ -126,4 +134,8 @@
   --cal-ochre-soft: color-mix(in srgb, var(--cal-ochre) 16%, var(--paper));
   --cal-teal-soft: color-mix(in srgb, var(--cal-teal) 16%, var(--paper));
   --cal-terracotta-soft: color-mix(in srgb, var(--cal-terracotta) 16%, var(--paper));
+  --cal-indigo-soft: color-mix(in srgb, var(--cal-indigo) 16%, var(--paper));
+  --cal-rose-soft: color-mix(in srgb, var(--cal-rose) 16%, var(--paper));
+  --cal-umber-soft: color-mix(in srgb, var(--cal-umber) 16%, var(--paper));
+  --cal-olive-soft: color-mix(in srgb, var(--cal-olive) 16%, var(--paper));
 }

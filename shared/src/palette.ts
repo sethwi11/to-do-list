@@ -11,6 +11,10 @@ export const CALENDAR_COLORS = [
   'ochre',
   'teal',
   'terracotta',
+  'indigo',
+  'rose',
+  'umber',
+  'olive',
 ] as const;
 export const CalendarColorSchema = z.enum(CALENDAR_COLORS);
 export type CalendarColor = z.infer<typeof CalendarColorSchema>;

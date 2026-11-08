@@ -4,6 +4,7 @@ import { useSettings, type Settings } from '../hooks/useSettings';
 import { CalendarParts } from './styleguide/CalendarParts';
 import { Colors } from './styleguide/Colors';
 import { Controls } from './styleguide/Controls';
+import { Directions } from './styleguide/Directions';
 import { Overlays } from './styleguide/Overlays';
 import { Pages } from './styleguide/Pages';
 import { Tasks } from './styleguide/Tasks';
@@ -17,6 +18,7 @@ const SECTIONS = [
   ['calendar', 'Calendar'],
   ['overlays', 'Popovers & toasts'],
   ['pages', 'Pages'],
+  ['directions', 'Today directions'],
 ];
 
 /** The style guide: every design token and every component, rendered from the real code. */
@@ -68,6 +70,7 @@ export default function StyleGuide() {
           <CalendarParts />
           <Overlays onShowToast={() => show('Deleted “Return library books”', () => {})} />
           <Pages />
+          <Directions />
         </main>
       </div>
       <ToastHost toast={toast} onDismiss={dismiss} />

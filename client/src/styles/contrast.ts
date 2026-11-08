@@ -58,6 +58,10 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
   mark('cal-ochre', 'paper', 'Ochre calendar'),
   mark('cal-teal', 'paper', 'Teal calendar'),
   mark('cal-terracotta', 'paper', 'Terracotta calendar'),
+  mark('cal-indigo', 'paper', 'Indigo calendar'),
+  mark('cal-rose', 'paper', 'Rose calendar'),
+  mark('cal-umber', 'paper', 'Umber calendar'),
+  mark('cal-olive', 'paper', 'Olive calendar'),
   mark('warning', 'paper', 'Medium-priority bar'),
 ];
 
