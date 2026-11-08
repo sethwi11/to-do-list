@@ -54,7 +54,7 @@ export function KanbanColumn({ title, count, children, className }: { title: str
   );
 }
 
-/** A thin (4px) progress bar: tomato fill on a hairline track. */
+/** A thin (4px) progress bar: honey fill on a hairline track. */
 export function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
   return (

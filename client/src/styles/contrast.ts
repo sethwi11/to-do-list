@@ -42,7 +42,7 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
   text('ink', 'accent-soft', 'Text on a hovered or selected row'),
   text('danger', 'paper', 'Overdue dates, errors'),
   text('danger', 'surface', 'Errors in popovers'),
-  text('on-accent', 'accent-ink', 'Primary button label'),
+  text('on-accent-fill', 'accent-fill', 'Primary button label, the number in today\'s circle'),
   text('toast-text', 'toast-bg', 'Toast message'),
   text('toast-link', 'toast-bg', 'Toast Undo link'),
   mark('ink', 'paper', 'Checkbox border'),
@@ -69,7 +69,6 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
 export const KNOWN_EXCEPTIONS: Record<string, string> = {
   'light cal-sage / paper': 'Sage is 2.8:1. A supplementary mark next to the calendar name; blocks also carry a title.',
   'light cal-ochre / paper': 'Ochre is 2.7:1. A supplementary mark next to the calendar name; blocks also carry a title.',
-  'light warning / paper': 'Ochre is 2.7:1. The medium-priority bar is also half the height of the high-priority bar, so shape carries the meaning too.',
 };
 
 // Not checked on purpose: faint ink (disabled controls only, which WCAG exempts) and hairline/rule (decorative separators).

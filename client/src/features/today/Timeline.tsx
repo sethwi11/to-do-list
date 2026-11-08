@@ -32,7 +32,7 @@ function gutter(o: EventOccurrence, today: string): { start: string; end: string
   return { start: datePart(o.start) === today ? formatTime(timePart(o.start)) : formatTime('00:00'), end: endsToday ? formatTime(timePart(o.end)) : '→' };
 }
 
-/** Today as a vertical timeline: times in a mono gutter on the left, each event beside its time, and a tomato line for the current moment. */
+/** Today as a vertical timeline: times in a mono gutter on the left, each event beside its time, and a honey line for the current moment. */
 export function Timeline({ rows, now, today, itemFor, onOpen, blockFor, onOpenBlock, onToggleTask }: TimelineProps) {
   const clock = now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 

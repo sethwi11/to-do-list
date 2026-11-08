@@ -30,10 +30,10 @@ export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
           {...props}
           aria-label={variant === 'sidebar' ? undefined : 'New'}
           className={cx(
-            'inline-flex items-center justify-center bg-accent-ink text-on-accent transition-colors duration-150 ease-out hover:bg-accent-ink/90',
+            'inline-flex items-center justify-center bg-accent-fill text-on-accent-fill transition-colors duration-150 ease-out hover:bg-accent-fill/85',
             variant === 'sidebar' && 'h-8 w-full gap-2 rounded-control px-3 text-body font-medium',
             variant === 'rail' && 'size-8 rounded-control',
-            // On a phone: a square tomato button with 4px corners, bottom right.
+            // On a phone: a square honey button with 4px corners, bottom right.
             variant === 'fab' && 'size-14 rounded-control',
           )}
         >

@@ -8,11 +8,11 @@ const base =
   'inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-control px-3 text-body font-medium whitespace-nowrap transition-colors duration-150 ease-out disabled:cursor-not-allowed';
 
 const variants: Record<Variant, string> = {
-  // Solid tomato. The fill is --accent-ink, the text-safe tomato, so the label passes 4.5:1.
-  primary: 'bg-accent-ink text-on-accent hover:bg-accent-ink/90 disabled:bg-hairline disabled:text-ink-faint',
+  // Solid honey with cerulean text (about 9:1).
+  primary: 'bg-accent-fill text-on-accent-fill hover:bg-accent-fill/85 disabled:bg-hairline disabled:text-ink-faint',
   // A 1px ink outline, no fill.
   secondary: 'border border-ink text-ink hover:bg-accent-soft disabled:border-rule disabled:text-ink-faint disabled:hover:bg-transparent',
-  // Text only; a soft tomato wash on hover.
+  // Text only; a soft sky wash on hover.
   ghost: 'text-ink hover:bg-accent-soft disabled:text-ink-faint disabled:hover:bg-transparent',
 };
 

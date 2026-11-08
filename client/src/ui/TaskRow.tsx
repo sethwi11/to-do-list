@@ -42,7 +42,7 @@ const COLLAPSE_AFTER_MS = 400;
 const COLLAPSE_MS = 250;
 
 const PRIORITY_BAR: Record<Priority, string | null> = {
-  // High is the full height of the row and medium is half of it, so the two differ by shape, not only by color (the bars are tomato and ochre).
+  // High is the full height of the row and medium is half of it, so the two differ by shape, not only by color (the bars are honey and ochre).
   high: 'inset-y-0 bg-accent',
   medium: 'inset-y-[25%] bg-warning',
   low: null,

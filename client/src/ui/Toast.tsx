@@ -44,7 +44,7 @@ interface ToastViewProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'
   onDismiss?: () => void;
 }
 
-/** The toast itself: inverted colors (ink background, paper text), 4px corners, an Undo link in tomato. */
+/** The toast itself: inverted colors (ink background, paper text), 4px corners, an Undo link in honey. */
 export function ToastView({ message, onUndo, onDismiss, className, ...rest }: ToastViewProps) {
   return (
     <div role="status" className={cx('flex max-w-md items-center gap-4 rounded-control bg-toast-bg py-2 pr-1.5 pl-4 text-body text-toast-text', className)} {...rest}>

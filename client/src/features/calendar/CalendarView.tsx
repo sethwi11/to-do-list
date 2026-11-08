@@ -209,7 +209,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
           return (
             <span className="flex items-center gap-2 px-2 py-2">
               <span className="text-label text-ink-muted uppercase">{weekday}</span>
-              <span className={cx('grid size-8 place-items-center rounded-full font-display text-section', arg.isToday && 'bg-accent-ink text-on-accent')}>{arg.date.getUTCDate()}</span>
+              <span className={cx('grid size-8 place-items-center rounded-full font-display text-section', arg.isToday && 'bg-accent-fill text-on-accent-fill')}>{arg.date.getUTCDate()}</span>
             </span>
           );
         }}
@@ -222,7 +222,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
           const load = loads?.get(localDate(arg.date));
           return (
             <>
-              <span className={cx('grid size-6 place-items-center rounded-full font-mono text-meta', arg.isToday ? 'bg-accent-ink text-on-accent' : 'text-ink')}>{arg.date.getDate()}</span>
+              <span className={cx('grid size-6 place-items-center rounded-full font-mono text-meta', arg.isToday ? 'bg-accent-fill text-on-accent-fill' : 'text-ink')}>{arg.date.getDate()}</span>
               {load && <span className="sr-only">{describeLoad(load)}</span>}
             </>
           );

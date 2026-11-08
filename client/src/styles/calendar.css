@@ -227,7 +227,7 @@
   }
 }
 
-/* ---- Workload map: four shades of tomato wash over the paper, light to heavy ---- */
+/* ---- Workload map: four shades of honey wash over the page, light to heavy ---- */
 :root {
   --heat-1: color-mix(in srgb, var(--accent) 8%, var(--paper));
   --heat-2: color-mix(in srgb, var(--accent) 17%, var(--paper));

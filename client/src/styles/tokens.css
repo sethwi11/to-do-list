@@ -3,8 +3,8 @@
  * once, as a CSS variable. Components never contain hex values; they refer to
  * these names (through the Tailwind classes mapped in theme.css).
  *
- * Two modes. Light is "paper"; dark is "night desk": the same notebook under a
- * lamp, warm rather than blue-black. The mode is chosen by a `.dark` class on
+ * Two modes. Light is "morning sky"; dark is "night": deep cerulean with the
+ * same honey accent. The mode is chosen by a `.dark` class on
  * <html> (see hooks/useTheme.ts). `.light` and `.dark` also work on any
  * element, which is how the style guide shows both modes side by side.
  *
@@ -15,32 +15,33 @@
 .light {
   color-scheme: light;
 
-  /* Surfaces and lines */
-  --paper: #f5f1ea;
-  --surface: #fbf8f3;
-  --hairline: #e3dccf;
-  --rule: #cfc6b6;
+  /* Morning sky: a pale sky-green page, cerulean ink, one honey accent. */
+  --paper: #f2f8f5;
+  --surface: #fbfdfc;
+  --hairline: #d6e6e0;
+  --rule: #b5cdc6;
 
   /* Text. muted passes 4.5:1 on paper; faint does not, so it is for disabled controls only. */
-  --ink: #1c1b19;
-  --ink-muted: #6e6658;
-  --ink-faint: #a39b8c;
+  --ink: #00303f;
+  --ink-muted: #456963;
+  --ink-faint: #8fa9a3;
 
-  /* Accent (tomato). --accent is for marks that aren't text: the today circle, the current-time
-     line, focus rings, priority bars. It is only 3.6:1 on paper, too faint for small text, so
-     --accent-ink (5.4:1) is for accent text and the primary button's fill. */
-  --accent: #e04a2f;
-  --accent-ink: #b5331d;
-  --accent-soft: #f7ded6;
-  --on-accent: #f5f1ea;
+  /* Honey. --accent-fill is the bright honey for fills (primary buttons, today's circle) with cerulean on top;
+     honey text would be too faint on the page, so --accent-ink is a deeper honey for text and --accent for thin marks. */
+  --accent: #9c7400;
+  --accent-ink: #765800;
+  --accent-fill: #dcae1d;
+  --on-accent-fill: #00303f;
+  --accent-soft: #dcece6;
+  --on-accent: #f2f8f5;
 
   /* Status. Marks only (bars, dots, icons); text uses ink, ink-muted, danger, or accent-ink. */
-  --success: #4f7a4a;
-  --warning: #c28a1e;
+  --success: #2f7a52;
+  --warning: #a87b00;
   --danger: #b23a28;
 
   /* Toast link (the toast itself is inverted: see the shared block at the bottom). */
-  --toast-link: #ff6b4e;
+  --toast-link: #f0c83c;
 
   /* Calendar colors: the "highlighter" palette. */
   --cal-dusty-blue: #5a7ba6;
@@ -57,15 +58,15 @@
   --cal-umber: #7a5a3a;
   --cal-olive: #6b7a26;
 
-  /* Workload heatmap: four warm tints from paper toward a soft tomato wash. */
-  --heat-1: color-mix(in srgb, var(--accent) 10%, var(--paper));
-  --heat-2: color-mix(in srgb, var(--accent) 20%, var(--paper));
-  --heat-3: color-mix(in srgb, var(--accent) 32%, var(--paper));
-  --heat-4: color-mix(in srgb, var(--accent) 46%, var(--paper));
+  /* Workload heatmap: four honey washes over the page. */
+  --heat-1: color-mix(in srgb, var(--accent-fill) 14%, var(--paper));
+  --heat-2: color-mix(in srgb, var(--accent-fill) 28%, var(--paper));
+  --heat-3: color-mix(in srgb, var(--accent-fill) 44%, var(--paper));
+  --heat-4: color-mix(in srgb, var(--accent-fill) 62%, var(--paper));
 
   /* The one soft shadow, for popovers, menus, and modals only. */
-  --shadow-popover: 0 1px 2px rgb(28 27 25 / 0.06), 0 12px 32px rgb(28 27 25 / 0.1);
-  --backdrop: rgb(28 27 25 / 0.4);
+  --shadow-popover: 0 1px 2px rgb(0 48 63 / 0.06), 0 12px 32px rgb(0 48 63 / 0.12);
+  --backdrop: rgb(0 32 42 / 0.45);
 
   /* A very faint paper grain: SVG noise at 3% opacity (2% in dark mode). */
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E");
@@ -74,25 +75,28 @@
 .dark {
   color-scheme: dark;
 
-  --paper: #141311;
-  --surface: #1c1b18;
-  --hairline: #2d2b27;
-  --rule: #3a3732;
+  /* Night: deep cerulean, sky-white ink, the same honey. */
+  --paper: #00222c;
+  --surface: #002c39;
+  --hairline: #0d3a47;
+  --rule: #1a4b59;
 
-  --ink: #ede8df;
-  --ink-muted: #a39c90;
-  --ink-faint: #6e685e;
+  --ink: #e8f3ef;
+  --ink-muted: #9dbcb5;
+  --ink-faint: #5b7c76;
 
-  --accent: #ff6b4e;
-  --accent-ink: #ff6b4e;
-  --accent-soft: #3a221c;
-  --on-accent: #141311;
+  --accent: #e4b62c;
+  --accent-ink: #ecc650;
+  --accent-fill: #dcae1d;
+  --on-accent-fill: #00303f;
+  --accent-soft: #0c3a44;
+  --on-accent: #00222c;
 
-  --success: #7fb07a;
-  --warning: #d9a33a;
-  --danger: #f0806c;
+  --success: #7cc49a;
+  --warning: #e4b62c;
+  --danger: #f2907e;
 
-  --toast-link: #b5331d;
+  --toast-link: #765800;
 
   /* Slate ink and crimson would nearly vanish on the dark page, so they are lifted. */
   --cal-slate: #9aa0a8;
@@ -102,10 +106,10 @@
   --cal-umber: #b8946c;
   --cal-olive: #a3b25a;
 
-  --heat-1: color-mix(in srgb, var(--accent) 10%, var(--paper));
-  --heat-2: color-mix(in srgb, var(--accent) 18%, var(--paper));
-  --heat-3: color-mix(in srgb, var(--accent) 28%, var(--paper));
-  --heat-4: color-mix(in srgb, var(--accent) 40%, var(--paper));
+  --heat-1: color-mix(in srgb, var(--accent-fill) 14%, var(--paper));
+  --heat-2: color-mix(in srgb, var(--accent-fill) 26%, var(--paper));
+  --heat-3: color-mix(in srgb, var(--accent-fill) 40%, var(--paper));
+  --heat-4: color-mix(in srgb, var(--accent-fill) 56%, var(--paper));
 
   --shadow-popover: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px rgb(0 0 0 / 0.45);
   --backdrop: rgb(0 0 0 / 0.55);

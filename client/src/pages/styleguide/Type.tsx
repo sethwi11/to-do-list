@@ -97,7 +97,7 @@ export function Typography() {
               <div className="flex items-end gap-4">
                 <div className="grid size-16 place-items-center border border-rule font-mono text-time text-ink-muted rounded-control">4px</div>
                 <div className="grid size-16 place-items-center border border-rule font-mono text-time text-ink-muted rounded-panel">8px</div>
-                <div className="grid size-8 place-items-center rounded-full bg-accent-ink font-mono text-time text-on-accent">12</div>
+                <div className="grid size-8 place-items-center rounded-full bg-accent-fill font-mono text-time text-on-accent-fill">12</div>
               </div>
               <p className={`${spec} mt-2`}>Controls and blocks 4px, popovers 8px. Nothing rounder, except the circular today marker.</p>
             </div>

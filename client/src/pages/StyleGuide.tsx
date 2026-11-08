@@ -35,7 +35,7 @@ export default function StyleGuide() {
               <p className="font-display text-section italic">Planner</p>
               <h1 className="mt-6 font-display text-page">Style guide</h1>
               <p className="mt-2 max-w-[56ch] text-body text-ink-muted">
-                A modern paper planner: warm paper, ink, and one tomato accent. Everything below is the real code, so what you see is what the app will use.
+                Morning sky, cerulean ink and one honey accent; at night, deep cerulean with the same honey. Everything below is the real code, so what you see is what the app will use.
               </p>
             </div>
             <Segmented

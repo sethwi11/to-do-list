@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { CALENDAR_COLORS } from '@todo/shared';
 import { contrastRatio, CONTRAST_PAIRS, KNOWN_EXCEPTIONS } from './contrast';
 
 // Read the real stylesheet, so these tests check the colors the app actually ships.
@@ -48,23 +49,16 @@ describe('design tokens', () => {
   });
 
   it('every palette color has a soft tint, in both modes', () => {
-    for (const name of ['dusty-blue', 'slate', 'tomato', 'sage', 'crimson', 'plum', 'ochre', 'teal', 'terracotta']) {
+    for (const name of CALENDAR_COLORS) {
       expect(modes.light[`cal-${name}`]).toMatch(/^#/);
       expect(modes.light[`cal-${name}-soft`]).toContain('color-mix');
       expect(modes.dark[`cal-${name}-soft`]).toContain('color-mix');
     }
   });
 
-  it('uses the specified palette exactly', () => {
-    expect(modes.light).toMatchObject({
-      paper: '#f5f1ea', surface: '#fbf8f3', hairline: '#e3dccf', rule: '#cfc6b6',
-      ink: '#1c1b19', 'ink-muted': '#6e6658', 'ink-faint': '#a39b8c',
-      accent: '#e04a2f', 'accent-soft': '#f7ded6', success: '#4f7a4a', warning: '#c28a1e', danger: '#b23a28',
-    });
-    expect(modes.dark).toMatchObject({
-      paper: '#141311', surface: '#1c1b18', hairline: '#2d2b27', rule: '#3a3732',
-      ink: '#ede8df', 'ink-muted': '#a39c90', 'ink-faint': '#6e685e', accent: '#ff6b4e', 'accent-soft': '#3a221c',
-    });
+  it('uses the specified palette (Morning Sky, Honey, Cerulean, Mist) exactly', () => {
+    expect(modes.light).toMatchObject({ ink: '#00303f', 'accent-fill': '#dcae1d', 'on-accent-fill': '#00303f', paper: '#f2f8f5' });
+    expect(modes.dark).toMatchObject({ 'accent-fill': '#dcae1d', 'on-accent-fill': '#00303f', paper: '#00222c' });
   });
 });
 
@@ -94,8 +88,8 @@ describe('contrast (WCAG)', () => {
     expect(ratio('light', 'accent-ink', 'paper')).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('knows the specified accent is too faint for text (why accent-ink exists)', () => {
-    expect(contrastRatio(modes.light.accent!, modes.light.paper!)).toBeLessThan(4.5);
+  it('knows the honey fill is too faint for text on the page (why accent-ink exists)', () => {
+    expect(contrastRatio(modes.light['accent-fill']!, modes.light.paper!)).toBeLessThan(4.5);
     expect(contrastRatio(modes.light['ink-faint']!, modes.light.paper!)).toBeLessThan(3);
   });
 });

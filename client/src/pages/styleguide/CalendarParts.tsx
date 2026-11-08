@@ -43,7 +43,7 @@ function DayColumn({ today, date, weekday, children }: { today?: boolean; date: 
       <div className="flex items-center gap-2 px-2 py-2">
         <span className="text-label text-ink-muted uppercase">{weekday}</span>
         {today ? (
-          <span className="grid size-8 place-items-center rounded-full bg-accent-ink font-display text-section text-on-accent">{date}</span>
+          <span className="grid size-8 place-items-center rounded-full bg-accent-fill font-display text-section text-on-accent-fill">{date}</span>
         ) : (
           <span className="grid size-8 place-items-center font-display text-section">{date}</span>
         )}
@@ -86,7 +86,7 @@ function WeekSample() {
             <div className="absolute inset-x-1" style={{ top: y(12, 30), height: 28 }}>
               <TodoBlock title="Email the recruiter" color="tomato" calendarName="Applications" done={false} onToggle={() => {}} className="h-full" />
             </div>
-            {/* The current-time line: 1.5px tomato, with a dot on the left edge. */}
+            {/* The current-time line: 1.5px honey, with a dot on the left edge. */}
             <div aria-hidden className="pointer-events-none absolute inset-x-0 z-10 h-[1.5px] bg-accent" style={{ top: y(12, 15) }}>
               <span className="absolute -top-[3.5px] -left-1 size-2 rounded-full bg-accent" />
             </div>
@@ -139,7 +139,7 @@ function MonthSample() {
                 className={cx('min-h-16 border-r border-b border-hairline p-1.5 [&:nth-child(7n)]:border-r-0 sm:min-h-20', c.weekend && !heat && 'bg-weekend', heat && HEAT_LEVELS[load], heat && c.weekend && !load && 'bg-weekend')}
               >
                 {c.today ? (
-                  <span className="grid size-6 place-items-center rounded-full bg-accent-ink font-mono text-meta text-on-accent">{c.day}</span>
+                  <span className="grid size-6 place-items-center rounded-full bg-accent-fill font-mono text-meta text-on-accent-fill">{c.day}</span>
                 ) : (
                   <span className={cx('grid size-6 place-items-center font-mono text-meta', c.other ? 'text-ink-muted' : 'text-ink')}>{c.day}</span>
                 )}

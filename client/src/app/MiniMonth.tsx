@@ -78,7 +78,7 @@ export function MiniMonth({ onNavigate }: { onNavigate?: () => void }) {
               className={cx(
                 'relative mx-auto grid size-8 place-items-center font-mono text-time transition-colors duration-150 ease-out',
                 // Only today's marker is a circle; every other day is a square-cornered button.
-                isToday ? 'rounded-full bg-accent-ink text-on-accent' : cx('rounded-control hover:bg-accent-soft', c.inMonth ? 'text-ink' : 'text-ink-muted'),
+                isToday ? 'rounded-full bg-accent-fill text-on-accent-fill' : cx('rounded-control hover:bg-accent-soft', c.inMonth ? 'text-ink' : 'text-ink-muted'),
                 isSelected && !isToday && 'outline outline-1 outline-ink',
               )}
             >

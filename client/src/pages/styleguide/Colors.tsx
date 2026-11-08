@@ -12,7 +12,8 @@ const COLOR_TOKENS: [string, string][] = [
   ['ink-muted', 'Secondary text'],
   ['ink-faint', 'Disabled controls only'],
   ['accent', 'Marks: today, time line, focus ring, priority bar'],
-  ['accent-ink', 'Accent text, primary button'],
+  ['accent-fill', 'Honey fill: primary button, today circle'],
+  ['accent-ink', 'Honey text'],
   ['accent-soft', 'Hover and selected backgrounds'],
   ['success', 'Marks only'],
   ['warning', 'Marks only'],
@@ -25,7 +26,7 @@ const ALL_TOKENS = [
   ...CALENDAR_COLORS.map((c) => `cal-${c}`),
 ];
 
-const MODE_LABEL: Record<Mode, string> = { light: 'Light: paper', dark: 'Dark: night desk' };
+const MODE_LABEL: Record<Mode, string> = { light: 'Light: morning sky', dark: 'Dark: night' };
 
 /** A column showing every token for one mode. The wrapper's own class makes it render in that mode regardless of the page's theme. */
 function ModeColumn({ mode }: { mode: Mode }) {
@@ -132,7 +133,7 @@ export function Colors() {
     <Section
       id="color"
       title="Color"
-      intro="Every color is a CSS variable, defined once in tokens.css, so a component never contains a hex code. Dark mode flips the same names to the night-desk values."
+      intro="Every color is a CSS variable, defined once in tokens.css, so a component never contains a hex code. Dark mode flips the same names to the night values."
     >
       <div className="grid gap-4 lg:grid-cols-2">
         <ModeColumn mode="light" />
