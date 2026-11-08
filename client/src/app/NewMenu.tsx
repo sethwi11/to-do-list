@@ -5,9 +5,7 @@ import { cx } from '../lib/cx';
 import { Menu, type MenuItem } from '../ui/Menu';
 import { useApp } from './AppContext';
 
-/**
- * The "New" button and its menu: a task, an event, a file to read events from, or an internship application.
- */
+/** The "New" button and its menu: a task, an event, a file to read events from, or an internship application. */
 export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
   const { openDialog, today, chooseFilesToImport } = useApp();
   const location = useLocation();

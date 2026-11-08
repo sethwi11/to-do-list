@@ -27,11 +27,7 @@ export interface TaskRowProps {
   onEdit?: () => void;
   onSchedule?: () => void;
   onTimer?: () => void;
-  /**
-   * Play the full completion sequence (strike through, fade, collapse) and *then* call
-   * onToggle. Use where a completed task disappears from the list; leave off where
-   * completed tasks stay visible.
-   */
+  /** Play the full completion sequence (strike through, fade, collapse) and *then* call onToggle. */
   leaveOnComplete?: boolean;
   /** Manual ordering: pass the drag listeners and the row shows a grip handle. */
   dragHandle?: HTMLAttributes<HTMLButtonElement>;
@@ -41,14 +37,12 @@ export interface TaskRowProps {
   dragging?: boolean;
 }
 
-// The sequence, from the click: the line draws for 250ms; at 400ms the row starts to fade and
-// collapse (250ms); when that finishes, the change is committed and the list drops the row.
+// The sequence, from the click: the line draws for 250ms; at 400ms the row starts to fade and collapse (250ms); when that finishes, the change is committed and the list drops the row.
 const COLLAPSE_AFTER_MS = 400;
 const COLLAPSE_MS = 250;
 
 const PRIORITY_BAR: Record<Priority, string | null> = {
-  // High is the full height of the row and medium is half of it, so the two differ by shape,
-  // not only by color (the bars are tomato and ochre).
+  // High is the full height of the row and medium is half of it, so the two differ by shape, not only by color (the bars are tomato and ochre).
   high: 'inset-y-0 bg-accent',
   medium: 'inset-y-[25%] bg-warning',
   low: null,

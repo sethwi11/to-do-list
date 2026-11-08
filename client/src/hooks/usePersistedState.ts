@@ -1,11 +1,6 @@
 import { useCallback, useState } from 'react';
 
-/**
- * useState that survives a page reload, for per-device UI preferences (sidebar collapsed,
- * sort order). `isValid` guards against a stale or hand-edited value of the wrong shape.
- * Storage can throw (private windows, blocked cookies), so every access is wrapped and
- * the app simply forgets the preference instead of breaking.
- */
+/** useState that survives a page reload, for per-device UI preferences (sidebar collapsed, sort order). */
 export function usePersistedState<T>(key: string, initial: T, isValid: (value: unknown) => value is T): [T, (value: T) => void] {
   const [value, setValue] = useState<T>(() => {
     try {

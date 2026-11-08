@@ -4,14 +4,7 @@ import { todayLocalISO } from '../lib/dates';
 
 export const notificationsSupported = () => typeof window !== 'undefined' && 'Notification' in window;
 
-/**
- * Shows a browser notification when a task's due time arrives.
- *
- * Limitation, by design: this uses timers in the open page, so it only works
- * while the app is open in a tab (it can be in the background). Notifying
- * with the app closed would need a service worker plus a push server, which
- * is a lot of machinery for a local app.
- */
+/** Shows a browser notification when a task's due time arrives. */
 export function useDueNotifications(tasks: Task[], enabled: boolean) {
   const notified = useRef(new Set<string>());
 

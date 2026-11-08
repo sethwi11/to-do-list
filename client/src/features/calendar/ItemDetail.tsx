@@ -9,7 +9,7 @@ import { IconButton } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Popover, type PopoverAnchor } from '../../ui/Popover';
 import type { CalendarItem } from './calendarModel';
-import { AttachmentList } from '../files/AttachmentList';
+import { AttachmentList } from '../attachments/AttachmentList';
 import { describeConflicts, describeRepeat, formatWhen } from './format';
 
 const REPEAT_WORDS = { daily: 'every day', weekdays: 'every weekday', weekly: 'every week', monthly: 'every month' } as const;

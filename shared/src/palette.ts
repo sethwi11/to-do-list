@@ -1,11 +1,6 @@
 import { z } from 'zod';
 
-/*
- * Calendar colors are stored as palette *names*, never hex codes. The client
- * maps each name to CSS variables, so one name can render correctly in both
- * light and dark mode (a fixed hex can't), and a future re-tint changes one
- * stylesheet instead of the database.
- */
+// Calendar colors are stored as palette *names*, never hex codes.
 export const CALENDAR_COLORS = [
   'dusty-blue',
   'slate',

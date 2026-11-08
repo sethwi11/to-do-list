@@ -2,7 +2,7 @@ import { Link } from 'react-router';
 import { appliedDate, type Application, type CalendarColor } from '@todo/shared';
 import { cx } from '../../lib/cx';
 import { KanbanCard } from '../../ui/kanban';
-import { shortDate } from './format';
+import { shortDate } from '../../lib/dates';
 
 /** One application as a board card: company (a link to its page), role, the date applied, and a cue if something needs doing. */
 export function ApplicationCard({ application: a, color, calendarName, needsFollowUp, className }: { application: Application; color: CalendarColor; calendarName?: string; needsFollowUp?: boolean; className?: string }) {

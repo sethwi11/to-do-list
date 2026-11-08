@@ -6,10 +6,7 @@ export interface MonthCell {
   inMonth: boolean;
 }
 
-/**
- * The cells of a month calendar: whole weeks (Sunday first), padded with days from the
- * neighboring months so every row is full. `month` is 1-12.
- */
+/** The cells of a month calendar: whole weeks (Sunday first), padded with days from the neighboring months so every row is full. */
 export function monthGrid(year: number, month: number): MonthCell[] {
   const first = `${year}-${String(month).padStart(2, '0')}-01`;
   const start = addDays(first, -dayOfWeek(first));

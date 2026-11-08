@@ -51,11 +51,7 @@ interface CalendarViewProps {
   loads?: Map<string, DayLoad> | null;
 }
 
-/**
- * Month, Week, and Day, drawn by FullCalendar (which does the hard parts: layout of overlapping
- * events, dragging, resizing, selecting). The page owns the date and view (they're in the address
- * bar), and this component just follows them. Items are drawn by our own blocks.
- */
+/** Month, Week, and Day, drawn by FullCalendar (which does the hard parts: layout of overlapping events, dragging, resizing, selecting). */
 export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay, loads = null }: CalendarViewProps) {
   const { clashesFor, editEvent, rescheduleTask, toggleTask, tasks, scheduleTask, moveTimeBlock, showToast } = useApp();
   const [tip, setTip] = useState<{ load: DayLoad; x: number; y: number } | null>(null);
@@ -81,7 +77,6 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
     const span = spanFromFullCalendar(info.start, info.end, info.allDay);
     const { start, end } = selectionToSpan(span.start, span.end, span.allDay);
     // Point at the highlighted range if it is on screen (after FullCalendar has drawn it), else where the pointer was.
-    // A timer, not requestAnimationFrame: animation frames pause whenever the page isn't being painted.
     window.setTimeout(() => {
       const mark = container.current?.querySelector('.fc-highlight, .fc-event-mirror');
       const pointer = info.jsEvent && 'clientX' in info.jsEvent ? { x: info.jsEvent.clientX, y: info.jsEvent.clientY } : { x: window.innerWidth / 2, y: window.innerHeight / 3 };
@@ -208,8 +203,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
         eventDrop={(info) => void handleDrop(info)}
         eventResize={(info) => void handleResize(info)}
         dayHeaderContent={(arg) => {
-          // For headers FullCalendar hands over midnight UTC of the day (the month view even uses a reference week in 1970),
-          // so read it as UTC: reading it in local time would show the day before in the Americas.
+          // For headers FullCalendar hands over midnight UTC of the day (the month view even uses a reference week in 1970), so read it as UTC: reading it in local time would show the day before in the Americas.
           const weekday = arg.date.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' });
           if (arg.view.type === 'dayGridMonth') return <span className="block px-2 py-2 text-label text-ink-muted uppercase">{weekday}</span>;
           return (

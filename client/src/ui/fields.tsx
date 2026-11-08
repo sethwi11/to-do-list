@@ -2,11 +2,7 @@ import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttribu
 import { ChevronDown } from 'lucide-react';
 import { cx } from '../lib/cx';
 
-/*
- * Form controls. The border is --rule (the stronger hairline) on a --surface fill: at
- * 1.5:1 it is still below the 3:1 WCAG asks of a control's outline, so each control also
- * has a label above it and a 2px accent ring on focus to stay identifiable.
- */
+// Form controls.
 const control =
   'w-full rounded-control border border-rule bg-surface px-3 text-body text-ink transition-colors duration-150 ease-out hover:border-ink-muted disabled:cursor-not-allowed disabled:text-ink-faint disabled:hover:border-rule';
 
@@ -73,10 +69,7 @@ interface QuickAddProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'cla
   shortcut?: string;
 }
 
-/**
- * The quick-add box: a single underlined line, no box. The shortcut hint on the right
- * is decoration (screen readers skip it) and is hidden on a phone.
- */
+/** The quick-add box: a single underlined line, no box. */
 export function QuickAddInput({ className, placeholder = 'Add a task or event…', shortcut = isMac ? '⌘K' : 'Ctrl K', ...rest }: QuickAddProps) {
   return (
     <div

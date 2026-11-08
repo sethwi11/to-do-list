@@ -26,11 +26,7 @@ export function Stage({ children, className }: { children: ReactNode; className?
 
 export type Mode = 'light' | 'dark';
 
-/**
- * Reads CSS variables as the browser actually resolves them inside an element that
- * carries `.light` or `.dark`. The style guide shows real values from the stylesheet
- * rather than a second copy of the hex codes, so it can never drift from tokens.css.
- */
+/** Reads CSS variables as the browser actually resolves them inside an element that carries `.light` or `.dark`. */
 export function useModeTokens(names: readonly string[]) {
   const ref = useRef<HTMLDivElement>(null);
   const [values, setValues] = useState<Record<string, string>>({});

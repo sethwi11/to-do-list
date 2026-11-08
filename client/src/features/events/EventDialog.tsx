@@ -8,7 +8,7 @@ import { Field, Input, Label, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
 import { uploadAndLink } from '../attachments/useAttachments';
 import { describeConflicts } from '../calendar/format';
-import { AttachmentList } from '../files/AttachmentList';
+import { AttachmentList } from '../attachments/AttachmentList';
 import { ConflictNotice } from './ConflictNotice';
 import {
   fromRepeatFields,

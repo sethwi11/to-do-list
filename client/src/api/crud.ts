@@ -2,11 +2,7 @@ import { apiFetch } from './client';
 
 const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
 
-/**
- * The same five calls for every kind of data, mirroring the server's generic
- * router: list, get, create, update, remove (and restore, for things whose
- * deletes can be undone).
- */
+/** The same five calls for every kind of data, mirroring the server's generic router: list, get, create, update, remove (and restore, for things whose deletes can be undone). */
 export function createCrudApi<T, C, U>(path: string) {
   return {
     list: () => apiFetch<T[]>(path),

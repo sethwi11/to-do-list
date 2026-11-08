@@ -6,11 +6,7 @@ import { keys } from './queryClient';
 export const useEventsQuery = () => useQuery({ queryKey: keys.events, queryFn: eventsApi.list });
 export const useEventTypesQuery = () => useQuery({ queryKey: keys.eventTypes, queryFn: eventTypesApi.list });
 
-/**
- * Every change to events (create, edit, move, delete, and undo of each) is one batch.
- * Optimistic like the other mutations: the calendar updates at once, using the very same
- * applyPlan the tests use, and rolls back if the server refuses any part of it.
- */
+/** Every change to events (create, edit, move, delete, and undo of each) is one batch. */
 export function useApplyEventBatch() {
   const qc = useQueryClient();
   return useMutation({

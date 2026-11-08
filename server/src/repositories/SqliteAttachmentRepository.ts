@@ -22,11 +22,7 @@ const toAttachment = (r: Row): Attachment => ({ id: r.id, filename: r.filename, 
 /** Which table holds each kind of owner, so a link can't point at something that doesn't exist. */
 const OWNER_TABLE: Record<AttachmentOwnerType, string> = { task: 'tasks', event: 'events', application: 'applications', course: 'courses' };
 
-/**
- * File metadata and the links between files and the things they are attached to. (The bytes
- * themselves are on disk; the routes look after those.) One file can be linked to many items, so
- * "delete the file too?" is only asked when this was the last link.
- */
+/** File metadata and the links between files and the things they are attached to. */
 export class SqliteAttachmentRepository {
   constructor(private readonly db: Db) {}
 

@@ -8,12 +8,7 @@ export interface ToastMessage {
   onUndo?: () => void;
 }
 
-/**
- * One toast at a time: a new one replaces the last (and the last one's chance to Undo).
- *
- * `onCommit` is for things that can't be taken back once done, like deleting a file: it runs when the
- * undo window closes WITHOUT Undo being used (the toast times out, is dismissed, or is replaced by a newer one).
- */
+/** One toast at a time: a new one replaces the last (and the last one's chance to Undo). */
 export function useToast() {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const pendingCommit = useRef<(() => void) | null>(null);
@@ -70,11 +65,7 @@ export function ToastView({ message, onUndo, onDismiss, className, ...rest }: To
 
 const DURATION_MS = 5000;
 
-/**
- * Shows the current toast bottom-center (above the + button on a phone, so it never covers it, and clear of the sidebar's Settings link on a desktop) and dismisses it after 5 seconds. The timer
- * pauses while the pointer or keyboard focus is on the toast, so nobody is racing a clock
- * to hit Undo.
- */
+/** Shows the current toast bottom-center (above the + button on a phone, so it never covers it, and clear of the sidebar's Settings link on a desktop) and dismisses it after 5 seconds. */
 export function ToastHost({ toast, onDismiss }: { toast: ToastMessage | null; onDismiss: () => void }) {
   const [paused, setPaused] = useState(false);
   const timer = useRef<number | undefined>(undefined);

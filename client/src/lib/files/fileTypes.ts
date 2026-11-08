@@ -1,6 +1,4 @@
-/*
- * Which files the app can take, and what to say about the ones it can't.
- */
+// Which files the app can take, and what to say about the ones it can't.
 
 /** The most one file may be. (The server enforces the same limit; checking here gives the message before a slow upload.) */
 export const MAX_FILE_BYTES = 15 * 1024 * 1024;

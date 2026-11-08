@@ -15,10 +15,7 @@ export interface Stats {
   streak: number;
 }
 
-/**
- * completedAt is a UTC timestamp; a completion belongs to the user's *local*
- * day, so convert before bucketing (11 PM in California is tomorrow in UTC).
- */
+/** completedAt is a UTC timestamp; a completion belongs to the user's *local* day, so convert before bucketing (11 PM in California is tomorrow in UTC). */
 export function computeStats(tasks: Task[], today: string): Stats {
   const perDay = new Map<string, number>();
   for (const t of tasks) {

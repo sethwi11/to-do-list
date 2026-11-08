@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { APPLICATION_STATUSES, CreateApplicationInputSchema, DEADLINE_REMINDER_DAYS, type Application, type ApplicationStatus } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
-import type { ApplicationFields } from '../../app/useApplicationActions';
+import type { ApplicationFields } from '../../actions/useApplicationActions';
 import { Button } from '../../ui/Button';
 import { Field, Input, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';

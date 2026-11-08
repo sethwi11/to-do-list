@@ -12,12 +12,7 @@ interface CheckboxProps {
   className?: string;
 }
 
-/**
- * A square checkbox: 16px, 1.5px ink border, 3px corners; fills with ink and shows a check
- * when on. It is a real <input type="checkbox"> (invisible, stretched over a roomier hit
- * area), so keyboard, screen readers, and form behavior all come for free; the visible
- * square is drawn beside it and reacts through `peer`.
- */
+/** A square checkbox: 16px, 1.5px ink border, 3px corners; fills with ink and shows a check when on. */
 export function Checkbox({ checked, onChange, label, size = 'md', className }: CheckboxProps) {
   const md = size === 'md';
   return (

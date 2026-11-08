@@ -23,11 +23,7 @@ const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 /** A phone has no room for a month grid, so it starts on the agenda. */
 const firstView = (): CalendarViewId => (typeof matchMedia === 'function' && matchMedia('(max-width: 639px)').matches ? 'agenda' : 'month');
 
-/**
- * The calendar. Which view and date it shows live in the address bar (/calendar?view=week&date=...),
- * so a link, the mini month, and the back button all land in the right place. With no view in the
- * address, it opens on the one you used last.
- */
+/** The calendar. */
 export default function CalendarPage() {
   const app = useApp();
   const { events, tasks, timeBlocks, calendarsById, hiddenCalendarIds, today } = app;
@@ -57,8 +53,7 @@ export default function CalendarPage() {
     return buildItems({ events, tasks, blocks: timeBlocks, calendarsById, hiddenCalendarIds, showEvents: layers.events, showTasks: layers.tasks, showBlocks: layers.blocks }, from, to);
   }, [events, tasks, timeBlocks, calendarsById, hiddenCalendarIds, layers.events, layers.tasks, layers.blocks, date]);
 
-  // The workload map counts everything you have on, whichever calendars are hidden from view: hiding a calendar tidies the
-  // page, but it doesn't free up your week.
+  // The workload map counts everything you have on, whichever calendars are hidden from view: hiding a calendar tidies the page, but it doesn't free up your week.
   const loads = useMemo(() => {
     if (!heat || view !== 'month') return null;
     const [from, to] = dataRange(date);

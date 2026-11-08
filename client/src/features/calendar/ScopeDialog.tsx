@@ -19,11 +19,7 @@ const OPTIONS: { scope: EditScope; label: string; hint: string }[] = [
 
 const CONFIRM_LABEL: Record<ScopeVerb, string> = { Edit: 'Save', Move: 'Move', Resize: 'Resize', Delete: 'Delete' };
 
-/**
- * Asking "which events?" from code that is in the middle of something (a drag, a save) is
- * easiest as a promise: `const scope = await ask(...)`, where null means they cancelled.
- * The dialog itself is rendered from the returned `dialog` props.
- */
+/** Asking "which events?" from code that is in the middle of something (a drag, a save) is easiest as a promise: `const scope = await ask(...)`, where null means they cancelled. */
 export function useScopePrompt() {
   const resolver = useRef<((scope: EditScope | null) => void) | null>(null);
   const [request, setRequest] = useState<ScopeRequest | null>(null);

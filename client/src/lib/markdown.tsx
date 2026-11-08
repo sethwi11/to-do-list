@@ -1,13 +1,6 @@
 import { Fragment, type ReactNode } from 'react';
 
-/*
- * A small, safe Markdown renderer for notes. It supports what people actually type in notes:
- * headings (#, ##, ###), bullet and numbered lists, paragraphs, **bold**, *italic*, `code`, and [links](https://...).
- *
- * Safety is the reason it is hand-written instead of a library call that returns HTML: it builds React elements, never an
- * HTML string, so a note can't inject markup or script. Anything it doesn't understand stays plain text, and a link only
- * becomes a link if it is http or https (a javascript: link just shows as text).
- */
+// A small, safe Markdown renderer for notes.
 
 type Block = { kind: 'heading'; level: 1 | 2 | 3; text: string } | { kind: 'ul' | 'ol'; items: string[] } | { kind: 'p'; lines: string[] };
 

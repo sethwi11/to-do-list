@@ -9,12 +9,7 @@ export interface PdfTextItem {
 const LINE_TOLERANCE = 3; // points: two fragments this close in height are on one line
 const COLUMN_GAP = 14; // points: a gap this wide between fragments is a table column, not a word space
 
-/**
- * pdf.js gives a page's text as loose fragments with positions. Put them back into lines (fragments
- * at the same height, left to right), keep table columns apart with a wide space (the event finder
- * splits rows on those), and leave a blank line where the vertical gap is much bigger than usual,
- * so paragraphs stay paragraphs.
- */
+/** pdf.js gives a page's text as loose fragments with positions. */
 export function textFromItems(items: PdfTextItem[]): string {
   const pieces = items.filter((i) => i.str.trim() !== '' || i.str === ' ').map((i) => ({ text: i.str, x: i.transform[4]!, y: i.transform[5]!, width: i.width }));
   if (pieces.length === 0) return '';

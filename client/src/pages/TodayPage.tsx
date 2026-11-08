@@ -22,11 +22,7 @@ const Num = ({ children, tone }: { children: number; tone?: 'danger' }) => (
   <span className={`font-mono tabular-nums ${tone === 'danger' ? 'text-danger' : 'text-ink'}`}>{children}</span>
 );
 
-/**
- * Today: the day's schedule as a timeline, what's next, and the to-dos that need doing (overdue
- * first). On a wide screen the timeline sits left and the to-dos right; on a phone they stack,
- * schedule first.
- */
+/** Today: the day's schedule as a timeline, what's next, and the to-dos that need doing (overdue first). */
 export default function TodayPage() {
   const app = useApp();
   const { tasks, events, timeBlocks, calendarsById, today, loading, eventsLoading, error, dismissError, reload, openDialog, toggleTask } = app;

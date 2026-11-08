@@ -1,10 +1,6 @@
 import { LocalDateSchema } from '@todo/shared';
 
-/*
- * What the Tasks page is showing lives in the URL (/tasks?view=overdue&calendar=...),
- * not in component state. That makes the browser's back button work, lets any link
- * (a calendar in the sidebar, a day in the mini month) open the right list, and survives a reload.
- */
+// What the Tasks page is showing lives in the URL (/tasks?view=overdue&calendar=...), not in component state.
 
 export const TASK_TABS = [
   { id: 'all', label: 'All' },

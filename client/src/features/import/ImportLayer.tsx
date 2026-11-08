@@ -16,13 +16,7 @@ const dragHasFiles = (e: DragEvent) => !!e.dataTransfer && [...e.dataTransfer.ty
 /** Is the person typing somewhere? Then Ctrl/Cmd+V is for that field, not for us. */
 const isTyping = (target: EventTarget | null) => target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 
-/**
- * The ways in that aren't a button: a file dragged onto the page (with a full-page drop target while it's over),
- * and a screenshot pasted with Ctrl/Cmd+V. Also owns the hidden file picker the buttons open.
- *
- * Works on every page, not only the calendar: a file dropped where nothing is listening would make the browser
- * navigate away to it, losing your place.
- */
+/** The ways in that aren't a button: a file dragged onto the page (with a full-page drop target while it's over), and a screenshot pasted with Ctrl/Cmd+V. */
 export function ImportLayer({ onFiles, registerPicker, busy }: ImportLayerProps) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);

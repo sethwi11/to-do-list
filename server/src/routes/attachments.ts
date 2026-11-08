@@ -12,15 +12,7 @@ import type { SqliteAttachmentRepository } from '../repositories/SqliteAttachmen
 const OwnerSchema = z.object({ ownerType: AttachmentOwnerTypeSchema, ownerId: z.uuid() });
 const supportedList = Object.keys(FILE_KINDS).map((e) => `.${e}`).join(', ');
 
-/**
- * Files:
- *   POST   /                         upload one file (multipart, field "file"); returns its record
- *   GET    /?ownerType=&ownerId=     the files attached to an item
- *   GET    /:id/file[?download=1]    the bytes
- *   POST   /:id/links                attach it to an item  { ownerType, ownerId }
- *   DELETE /:id/links/:type/:ownerId detach it
- *   DELETE /:id                      delete the file (and its links)
- */
+/** Files: upload (multipart field "file"), list an item's files, serve the bytes, link or unlink an item, delete. */
 export function attachmentsRouter(repo: SqliteAttachmentRepository, uploadsDir: string): Router {
   const router = Router();
   fs.mkdirSync(uploadsDir, { recursive: true });
@@ -82,8 +74,7 @@ export function attachmentsRouter(repo: SqliteAttachmentRepository, uploadsDir: 
     const kind = FILE_KINDS[extensionOf(attachment.path)]!;
     const asDownload = req.query.download === '1' || !kind.inline;
     res.set({
-      // The type is the one we decided at upload. nosniff stops browsers second-guessing it, and the
-      // sandbox policy means that even a hostile file couldn't run anything from this address.
+      // The type is the one we decided at upload. nosniff stops browsers second-guessing it, and the sandbox policy means that even a hostile file couldn't run anything from this address.
       'Content-Type': attachment.mimeType,
       'X-Content-Type-Options': 'nosniff',
       'Content-Security-Policy': "default-src 'none'; sandbox",

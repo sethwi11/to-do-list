@@ -13,18 +13,10 @@ import type { CrudRepository } from './types';
 /** An application as stored in its own table: everything except the timeline, which lives in a second table. */
 type ApplicationCore = Omit<Application, 'statusHistory'>;
 
-/**
- * A status change that is reversed within this long is treated as fixing a slip (a card dropped in the wrong column),
- * not as something that happened: the slip is erased from the timeline instead of the correction being added after it.
- */
+/** A status change reversed within this long is a slip (a card dropped in the wrong column): it is erased from the timeline, not logged twice. */
 export const CORRECTION_WINDOW_MS = 2 * 60 * 1000;
 
-/**
- * Applications are the one entity with a second table: every status change is
- * appended to application_status_history *by the server*, in the same
- * transaction as the change itself. A client can't skip or fake a timeline
- * entry, and dragging a card between kanban columns needs nothing but a PATCH.
- */
+/** Applications are the one entity with a second table: every status change is appended to application_status_history *by the server*, in the same transaction as the change itself. */
 export class SqliteApplicationRepository
   extends SqliteCrud<ApplicationCore>
   implements CrudRepository<Application, CreateApplicationInput, UpdateApplicationInput>

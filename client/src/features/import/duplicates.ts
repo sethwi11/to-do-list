@@ -3,10 +3,7 @@ import { addDays, datePart, expandOccurrences, type Event, type Task } from '@to
 /** Lower-case words only: "Quiz #2 (Ch. 1-3)" -> ["quiz", "2", "ch", "1", "3"]. */
 const words = (title: string) => title.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
 
-/**
- * Whether two titles are probably the same thing: identical, one inside the other ("Midterm" and "Midterm exam"),
- * or sharing most of their words. Deliberately generous: a wrong "possible duplicate" costs a glance, while a missed one means doubles.
- */
+/** Whether two titles are probably the same thing: identical, one inside the other ("Midterm" and "Midterm exam"), or sharing most of their words. */
 export function titlesAlike(a: string, b: string): boolean {
   const x = words(a);
   const y = words(b);
@@ -19,10 +16,7 @@ export function titlesAlike(a: string, b: string): boolean {
   return shared / new Set([...x, ...y]).size >= 0.6;
 }
 
-/**
- * The title of an existing event or to-do on the same day with a similar title, or null. For an event
- * "the same day" means any day it covers; for a to-do, its due date.
- */
+/** The title of an existing event or to-do on the same day with a similar title, or null. */
 export function findDuplicate(candidate: { title: string; start: string; end: string }, events: Event[], tasks: Task[]): string | null {
   const first = datePart(candidate.start);
   const lastExclusive = candidate.end > candidate.start && datePart(candidate.end) > first ? datePart(candidate.end) : addDays(first, 1);

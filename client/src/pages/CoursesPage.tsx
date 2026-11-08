@@ -7,18 +7,13 @@ import { PageHeader } from '../app/PageHeader';
 import { currentSemester, describeMeetingDays } from '../features/courses/courseModel';
 import { formatTimeRange } from '../features/calendar/format';
 import { calendarVars } from '../lib/calendarColors';
-import { formatDueDate } from '../lib/dates';
+import { formatDueDate, shortDate } from '../lib/dates';
 import { Button, IconButton } from '../ui/Button';
 import { Select } from '../ui/fields';
 import { EmptyState, SkeletonRows } from '../ui/states';
 
-/** "Aug 24": a plain date, for ranges (the friendly "Today" / "Tomorrow" would read oddly as the start of a range). */
-const shortDate = (date: string) => new Date(`${date}T12:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
-/**
- * Your classes, a semester at a time. Which semester is in the address (/courses?semester=...), so a link or the back
- * button lands on the right one; with none given, it shows the one you're in.
- */
+/** Your classes, a semester at a time. */
 export default function CoursesPage() {
   const app = useApp();
   const { courses, semesters, events, tasks, today, coursesLoading, openDialog } = app;

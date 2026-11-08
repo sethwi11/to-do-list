@@ -3,7 +3,8 @@ import { APPLICATION_STATUSES, applicationStats, goalProgress, stageCounts, week
 import { Button } from '../../ui/Button';
 import { ProgressBar } from '../../ui/kanban';
 import { SectionLabel } from '../../ui/fields';
-import { longDate, percent, shortDate } from './format';
+import { percent } from './format';
+import { longDate, shortDate } from '../../lib/dates';
 
 interface GoalPanelProps {
   applications: Application[];
@@ -14,10 +15,7 @@ interface GoalPanelProps {
   onEditGoal: () => void;
 }
 
-/**
- * The top of the tracker: offers so far against your goal (with the target date), the number of applications in each stage,
- * and the three numbers worth watching: how many you're sending, how many companies answer, how many get you to an interview.
- */
+/** The top of the tracker: offers against your goal, applications per stage, and the three numbers worth watching. */
 export function GoalPanel({ applications, goal, targetDate, today, onEditGoal }: GoalPanelProps) {
   const progress = goalProgress(applications, goal, targetDate, today);
   const stats = applicationStats(applications, today);

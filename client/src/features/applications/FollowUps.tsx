@@ -2,7 +2,8 @@ import { Link } from 'react-router';
 import { FOLLOW_UP_AFTER_DAYS, type Application, type FollowUpSuggestion } from '@todo/shared';
 import { Button } from '../../ui/Button';
 import { SectionLabel } from '../../ui/fields';
-import { ago, shortDate } from './format';
+import { ago } from './format';
+import { shortDate } from '../../lib/dates';
 
 interface FollowUpsProps {
   suggestions: FollowUpSuggestion[];

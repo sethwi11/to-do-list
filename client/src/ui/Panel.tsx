@@ -3,10 +3,7 @@ import { X } from 'lucide-react';
 import { cx } from '../lib/cx';
 import { IconButton } from './Button';
 
-/**
- * The look shared by popovers, menus, and modals: surface color, 8px corners, a hairline
- * border, and the app's one soft shadow. (Nothing else in the app casts a shadow.)
- */
+/** The look shared by popovers, menus, and modals: surface color, 8px corners, a hairline border, and the app's one soft shadow. */
 export function Panel({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={cx('rounded-panel border border-hairline bg-surface text-ink shadow-popover', className)}>{children}</div>;
 }
@@ -31,12 +28,7 @@ interface DialogProps {
   size?: 'md' | 'full';
 }
 
-/**
- * A modal dialog built on the browser's own <dialog> element. showModal() gives, for
- * free and correctly: focus moves into the dialog and stays trapped there, Escape closes
- * it, the page behind becomes inert, and focus returns to the opener on close. Clicking
- * the dimmed backdrop closes it too (a click there lands on the <dialog> itself).
- */
+/** A modal on the browser's own <dialog>: showModal() gives focus trapping, Escape to close, an inert page and focus return for free. */
 export function Dialog({ open, onClose, title, children, footer, size = 'md' }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -45,8 +37,7 @@ export function Dialog({ open, onClose, title, children, footer, size = 'md' }: 
     if (!dialog) return;
     if (open && !dialog.open) {
       dialog.showModal();
-      // React's autoFocus runs while the dialog is still closed (so it does nothing), and the
-      // browser then focuses the first button. A field marked data-autofocus gets focus instead.
+      // React's autoFocus runs while the dialog is still closed (so it does nothing), and the browser then focuses the first button.
       dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus();
     }
     if (!open && dialog.open) dialog.close();

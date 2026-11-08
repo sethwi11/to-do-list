@@ -5,14 +5,7 @@ import { keys } from './queryClient';
 
 export const useTasksQuery = () => useQuery({ queryKey: keys.tasks, queryFn: tasksApi.list });
 
-/**
- * Task mutations. They follow the same optimistic pattern as createEntityHooks
- * (see there for the why), plus two task-specific things:
- *   - completing or reopening a *recurring* task makes the server create or remove
- *     a different row (the next occurrence), which the optimistic update can't
- *     predict. The refetch after every mutation picks that up.
- *   - delete/restore are soft on the server, so Undo is just "restore".
- */
+/** Task mutations. */
 export function useTaskMutations() {
   const qc = useQueryClient();
   const refresh = () => qc.invalidateQueries({ queryKey: keys.tasks });

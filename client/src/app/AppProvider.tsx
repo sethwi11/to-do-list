@@ -6,7 +6,7 @@ import { ScopeDialog } from '../features/calendar/ScopeDialog';
 import { ApplicationDialog } from '../features/applications/ApplicationDialog';
 import { InterviewDialog } from '../features/applications/InterviewDialog';
 import { ScheduleDialog } from '../features/calendar/ScheduleDialog';
-import { CalendarDialog } from '../features/calendars/CalendarDialog';
+import { CalendarDialog } from '../features/calendar/CalendarDialog';
 import { CourseDialog } from '../features/courses/CourseDialog';
 import { SemesterDialog } from '../features/courses/SemesterDialog';
 import { EventDialog } from '../features/events/EventDialog';
@@ -17,7 +17,7 @@ import { ImportReview } from '../features/import/ImportReview';
 import { useImportSession } from '../features/import/useImportSession';
 import { TaskDialog } from '../features/tasks/TaskDialog';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { useTodoData } from '../hooks/useTodoData';
+import { useTodoData } from '../data/useTodoData';
 import { useToday } from '../hooks/useToday';
 import { formatDueDate } from '../lib/dates';
 import { computeMove } from '../lib/ordering';
@@ -26,16 +26,12 @@ import { AppContext, type AppApi, type DialogState, type ImportOptions } from '.
 import { applicationHooks } from '../data/useApplications';
 import { timeBlockHooks } from '../data/useTimeBlocks';
 import { courseHooks, semesterHooks } from '../data/useCourses';
-import { useApplicationActions } from './useApplicationActions';
-import { useCourseActions } from './useCourseActions';
-import { useTimeBlockActions } from './useTimeBlockActions';
-import { useEventActions, type EventActions } from './useEventActions';
+import { useApplicationActions } from '../actions/useApplicationActions';
+import { useCourseActions } from '../actions/useCourseActions';
+import { useTimeBlockActions } from '../actions/useTimeBlockActions';
+import { useEventActions, type EventActions } from '../actions/useEventActions';
 
-/**
- * Holds everything the screens share: the data, the actions that change it, the open dialog,
- * and the toast. Screens read it with useApp() instead of passing props down through
- * the layout. The dialogs and toast are rendered here so any screen can open them.
- */
+/** Holds everything the screens share: the data, the actions that change it, the open dialog, and the toast. */
 export function AppProvider({ children }: { children: ReactNode }) {
   const data = useTodoData();
   const { tasks, calendars, updateTask, deleteTask, restoreTask, reorderAll } = data;
@@ -173,8 +169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   });
   const applicationsById = useMemo(() => new Map(applications.map((a) => [a.id, a])), [applications]);
 
-  // Time blocks belong to a to-do. Deleting a to-do is a soft delete, so its blocks stay in the database: hide them while it's gone,
-  // and they come back with it if the delete is undone.
+  // Time blocks belong to a to-do.
   const timeBlockActions = useTimeBlockActions({ showToast });
   const timeBlocks = useMemo<TimeBlock[]>(() => {
     const live = new Set(tasks.map((t) => t.id));
@@ -182,8 +177,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [timeBlocksQuery.data, tasks]);
   const scheduledMinutesByTaskMap = useMemo(() => scheduledMinutesByTask(timeBlocks), [timeBlocks]);
 
-  // A new Interview event raises a question (which application? add the prep checklist?), however it was made: the form, a drag
-  // on the calendar, or an import. So the two ways of making events are wrapped here, once, rather than at every call site.
+  // A new Interview event raises a question (which application? add the prep checklist?), however it was made: the form, a drag on the calendar, or an import.
   const interviewTypeId = useMemo(() => eventTypes.find((t) => t.name.toLowerCase() === INTERVIEW_EVENT_TYPE.toLowerCase())?.id ?? null, [eventTypes]);
   const offerInterviewLink = useCallback((ids: string[]) => {
     if (ids.length > 0) setDialog({ kind: 'interview', eventIds: ids });

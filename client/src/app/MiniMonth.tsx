@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays, expandOccurrences } from '@todo/shared';
 import { calendarUrl, isCalendarView } from '../features/calendar/calendarModel';
 import { cx } from '../lib/cx';
+import { fullDate } from '../lib/dates';
 import { monthGrid, shiftMonth } from '../lib/monthGrid';
 import { IconButton } from '../ui/Button';
 import { useApp } from './AppContext';
@@ -11,11 +12,7 @@ import { useApp } from './AppContext';
 const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-/**
- * A small month for jumping to a date. A dot marks days that have an event or an open task. A click
- * takes the calendar there: on the calendar page it keeps the view you're in; from anywhere else it
- * opens that day.
- */
+/** A small month for jumping to a date. */
 export function MiniMonth({ onNavigate }: { onNavigate?: () => void }) {
   const { tasks, events, today } = useApp();
   const navigate = useNavigate();
@@ -70,7 +67,7 @@ export function MiniMonth({ onNavigate }: { onNavigate?: () => void }) {
             <button
               key={c.date}
               type="button"
-              aria-label={`${new Date(`${c.date}T12:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${hasItems ? ', has events or open tasks' : ''}`}
+              aria-label={`${fullDate(c.date)}${hasItems ? ', has events or open tasks' : ''}`}
               aria-current={isToday ? 'date' : undefined}
               aria-pressed={isSelected}
               onClick={() => {

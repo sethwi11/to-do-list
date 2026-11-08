@@ -5,11 +5,7 @@ export function msUntilNextMinute(now: Date): number {
   return 60_000 - (now.getSeconds() * 1000 + now.getMilliseconds());
 }
 
-/**
- * The current time, refreshed each time the clock turns over a minute. A countdown or "now" line
- * only needs minute accuracy, so it wakes once a minute, exactly on the minute, rather than ticking every second.
- * (If the computer sleeps, the next wake-up simply happens late and the time jumps to the right value.)
- */
+/** The current time, refreshed each time the clock turns over a minute. */
 export function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {

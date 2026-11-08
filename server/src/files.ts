@@ -1,10 +1,4 @@
-/*
- * What files may be uploaded, and how each is described when served back.
- *
- * The type is decided HERE, from the file's extension and its first few bytes, never from what the
- * browser claims. Whatever is stored is served with the type chosen below, so a file can't pose as
- * something else. SVG and HTML are deliberately absent: they can carry scripts.
- */
+// What files may be uploaded, and how each is described when served back.
 
 export interface FileKind {
   mime: string;

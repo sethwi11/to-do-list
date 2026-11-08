@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react';
 import type { Application, Calendar, CalendarColor, Clash, Course, CreateTaskInput, Event, EventOccurrence, EventType, Semester, Span, Task, TimeBlock, UpdateCalendarInput, UpdateTaskInput } from '@todo/shared';
-import type { ApplicationActions } from './useApplicationActions';
-import type { CourseActions } from './useCourseActions';
-import type { EventActions } from './useEventActions';
-import type { TimeBlockActions } from './useTimeBlockActions';
+import type { ApplicationActions } from '../actions/useApplicationActions';
+import type { CourseActions } from '../actions/useCourseActions';
+import type { EventActions } from '../actions/useEventActions';
+import type { TimeBlockActions } from '../actions/useTimeBlockActions';
 
 /** Starting values for a new task, e.g. "due today" when added from the Today page. */
 export type TaskDefaults = Partial<Pick<CreateTaskInput, 'dueDate' | 'calendarId' | 'priority' | 'applicationId'>>;

@@ -19,10 +19,7 @@ const SECTIONS = [
   ['pages', 'Pages'],
 ];
 
-/**
- * The style guide: every design token and every component, rendered from the real code.
- * It is the reference the rest of the app is restyled against.
- */
+/** The style guide: every design token and every component, rendered from the real code. */
 export default function StyleGuide() {
   const { settings, update } = useSettings();
   const { toast, show, dismiss } = useToast();

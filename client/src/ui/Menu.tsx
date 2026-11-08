@@ -29,12 +29,7 @@ interface MenuProps {
   className?: string;
 }
 
-/**
- * A dropdown menu with the keyboard behavior people expect from one:
- * Enter/Space/ArrowDown on the button opens it and focuses the first item; arrows, Home,
- * and End move between items; Escape closes it and puts focus back on the button; Tab
- * or a click anywhere else closes it. Unavailable items stay visible but can't be chosen.
- */
+/** A dropdown menu with the usual keyboard behavior (Enter/Space/ArrowDown open it; arrows, Home, End move; Escape closes and refocuses the button). */
 export function Menu({ trigger, items, align = 'start', side = 'bottom', className }: MenuProps) {
   const [open, setOpen] = useState(false);
   const id = useId();

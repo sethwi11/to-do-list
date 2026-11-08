@@ -32,11 +32,7 @@ import type { Db } from '../db/connection';
 import { HttpError } from '../errors';
 import { SqliteEntityRepository } from './SqliteEntityRepository';
 
-/*
- * One small configuration per table. Each `build` says what a brand-new row
- * looks like: which fields default to what, and which are filled in by the
- * server (ids, timestamps). Everything else is handled by the generic classes.
- */
+// One small configuration per table.
 
 export const createCalendarRepository = (db: Db) =>
   new SqliteEntityRepository<Calendar, CreateCalendarInput, UpdateCalendarInput>(db, {
@@ -64,10 +60,7 @@ const TIME_COLUMNS = { start: 'start_at', end: 'end_at' } as const;
 const endAfterStart = (v: { start: string; end: string }) => (v.end > v.start ? null : 'The end must be after the start');
 
 class SqliteEventRepository extends SqliteEntityRepository<Event, CreateEventInput, UpdateEventInput> {
-  /**
-   * Write several rows and delete others as one unit: if any row is rejected, nothing changes.
-   * A row that was soft-deleted comes back to life when it is written again (that is how undo works).
-   */
+  /** Write several rows and delete others as one unit: if any row is rejected, nothing changes. */
   async applyBatch({ put, remove }: EventBatchInput): Promise<{ put: Event[]; removed: string[] }> {
     return this.db.transaction(() => {
       for (const row of put) {

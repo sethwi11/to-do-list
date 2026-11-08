@@ -1,9 +1,6 @@
 import { addDays, addMinutes, combine, datePart, dayOfWeek, minutesBetween, timePart, type EventRecurrence } from '@todo/shared';
 
-/*
- * The edit form's values, and the conversions between them and what is stored. Kept apart from
- * the component so the fiddly parts (all-day end dates, repeat rules) can be tested.
- */
+// The edit form's values, and the conversions between them and what is stored.
 
 export type Repeat = 'none' | EventRecurrence['freq'];
 
@@ -66,11 +63,7 @@ export function toRepeatFields(rule: EventRecurrence | null, startDate: string):
   return { repeat: rule.freq, weekdays: rule.byWeekday ?? [dayOfWeek(startDate)], until: rule.until ?? '' };
 }
 
-/**
- * Repeat fields -> a stored rule (or null for "never"). `exdates` (removed dates) carry over from
- * the existing rule. A weekly repeat on just the start date's weekday is stored without a weekday
- * list, so it keeps following the start date if that moves.
- */
+/** Repeat fields -> a stored rule (or null for "never"). */
 export function fromRepeatFields(f: RepeatFields, startDate: string, exdates: string[] = []): EventRecurrence | null {
   if (f.repeat === 'none') return null;
   const own = f.weekdays.length === 1 && f.weekdays[0] === dayOfWeek(startDate);

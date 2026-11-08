@@ -1,13 +1,9 @@
 import { addDays } from './dateMath';
 import { addMinutes, combine, datePart, minutesBetween } from './dateTime';
 import type { BlockLike } from './conflicts';
-import type { Task } from './task';
+import type { Task } from './models/tasks';
 
-/*
- * Time blocking: reserving a slot on the calendar to work on a to-do, separate from the day it is due.
- * A to-do can have several blocks, and deleting a block never deletes the to-do. The rules for how long a
- * block is, where it ends, and how much time is set aside for a to-do live here, apart from the screens.
- */
+// Time blocking: reserving a slot on the calendar to work on a to-do, separate from the day it is due.
 
 /** How long a block is when the to-do has no estimate. */
 export const DEFAULT_BLOCK_MINUTES = 60;
@@ -17,10 +13,7 @@ export const BLOCK_LENGTHS = [15, 30, 45, 60, 90, 120, 180, 240] as const;
 /** A new block for a to-do is as long as the to-do's estimate, or an hour. */
 export const blockMinutesFor = (task: Pick<Task, 'estimatedMinutes'>): number => task.estimatedMinutes ?? DEFAULT_BLOCK_MINUTES;
 
-/**
- * A block that starts at `start` and lasts `minutes`, kept within that day: one that would run past midnight ends at midnight
- * instead (a block belongs to a single day, like a to-do's slot does).
- */
+/** A block that starts at `start` and lasts `minutes`, kept within that day: one that would run past midnight ends at midnight instead (a block belongs to a single day, like a to-do's slot does). */
 export function blockSpan(start: string, minutes: number): { start: string; end: string } {
   const midnight = combine(addDays(datePart(start), 1));
   const end = addMinutes(start, Math.max(1, minutes));

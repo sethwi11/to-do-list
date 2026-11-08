@@ -18,10 +18,7 @@ export interface Selection {
 
 const isString = (v: unknown): v is string => typeof v === 'string';
 
-/**
- * The little card that appears when you drag out a time (or click a day): type a title, press
- * Enter, done. "More options" opens the full form with the same values filled in.
- */
+/** The little card that appears when you drag out a time (or click a day): type a title, press Enter, done. */
 export function QuickCreate({ selection, onClose }: { selection: Selection; onClose: () => void }) {
   const { calendars, clashesFor, createEvent, openDialog } = useApp();
   const [lastCalendar, setLastCalendar] = usePersistedState('voice-todo.calendar.lastUsed', '', isString);

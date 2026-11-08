@@ -1,9 +1,4 @@
-/*
- * WCAG contrast math, and the list of color pairs the design relies on.
- * The style guide displays these live (reading the real CSS values), and
- * tokens.test.ts fails if a pair drops below its minimum, so a color change
- * that breaks accessibility is caught instead of shipping.
- */
+// WCAG contrast math, and the list of color pairs the design relies on.
 
 export const hexToRgb = (hex: string): [number, number, number] => {
   const h = hex.replace('#', '');
@@ -66,17 +61,11 @@ export const CONTRAST_PAIRS: ContrastPair[] = [
   mark('warning', 'paper', 'Medium-priority bar'),
 ];
 
-/**
- * Pairs that are knowingly below their minimum, with the reason. Each is a color
- * you specified that is used as a *supplementary* mark next to a text label (or
- * paired with a shape difference), never as the only carrier of meaning. The test
- * demands this list match reality exactly, so a new failure can't slip in unnoticed.
- */
+/** Pairs that are knowingly below their minimum, with the reason. */
 export const KNOWN_EXCEPTIONS: Record<string, string> = {
   'light cal-sage / paper': 'Sage is 2.8:1. A supplementary mark next to the calendar name; blocks also carry a title.',
   'light cal-ochre / paper': 'Ochre is 2.7:1. A supplementary mark next to the calendar name; blocks also carry a title.',
   'light warning / paper': 'Ochre is 2.7:1. The medium-priority bar is also half the height of the high-priority bar, so shape carries the meaning too.',
 };
 
-/** Not checked: faint ink (disabled controls only, which WCAG exempts) and hairlines (decorative separators). */
-export const UNCHECKED_TOKENS = ['ink-faint', 'hairline', 'rule'];
+// Not checked on purpose: faint ink (disabled controls only, which WCAG exempts) and hairline/rule (decorative separators).

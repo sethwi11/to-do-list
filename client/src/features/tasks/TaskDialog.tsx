@@ -8,7 +8,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { Field, Input, Label, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
 import { uploadAndLink } from '../attachments/useAttachments';
-import { AttachmentList } from '../files/AttachmentList';
+import { AttachmentList } from '../attachments/AttachmentList';
 
 const RECURRENCE_LABEL: Record<Recurrence, string> = {
   none: 'Never',

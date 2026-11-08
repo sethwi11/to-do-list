@@ -1,11 +1,7 @@
 import { useEffect } from 'react';
 import type { Settings } from './useSettings';
 
-/**
- * Applies the theme by toggling a `dark` class on <html> (Tailwind's dark:
- * variant is configured to follow that class in index.css). "system" follows
- * the OS setting live, including when it switches at sunset.
- */
+/** Applies the theme by toggling a `dark` class on <html> (Tailwind's dark: variant is configured to follow that class in index.css). */
 export function useTheme(theme: Settings['theme']) {
   useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');

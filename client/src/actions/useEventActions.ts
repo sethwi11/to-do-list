@@ -36,21 +36,13 @@ export interface EventActions {
   createEvents: (inputs: CreateEventInput[]) => Promise<(Applied & { ids: string[] }) | null>;
   /** `options.note` is added to the toast (e.g. "Overlaps with ..."). */
   createEvent: (input: CreateEventInput, options?: { note?: string }) => Promise<boolean>;
-  /**
-   * Change one occurrence. If it belongs to a repeating event, asks which events the change
-   * applies to first. Resolves to false if that was cancelled or the server refused (so a
-   * drag can snap back).
-   */
+  /** Change one occurrence. */
   editEvent: (occurrence: EventOccurrence, changes: EventChanges, options?: { verb?: Exclude<ScopeVerb, 'Delete'>; message?: string; note?: string; scope?: EditScope }) => Promise<boolean>;
   /** `scope` skips the "which events?" question when the caller already knows (cancelling one class meeting). */
   deleteEvent: (occurrence: EventOccurrence, options?: { scope?: EditScope; message?: string }) => Promise<boolean>;
 }
 
-/**
- * Everything that changes events. Each action builds a plan (a few rows to write and delete,
- * from the shared tested code), sends it as one batch, and shows a toast whose Undo sends
- * the inverse batch.
- */
+/** Everything that changes events. */
 export function useEventActions(showToast: (message: string, onUndo?: () => void, onCommit?: () => void) => void, confirmFiles: ConfirmFiles) {
   const qc = useQueryClient();
   const eventsQuery = useEventsQuery();

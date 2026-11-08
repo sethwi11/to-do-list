@@ -8,11 +8,7 @@ export const templateHooks = createEntityHooks<Template, CreateTemplateInput, Up
 
 const SETTINGS_KEY = ['settings'] as const;
 
-/**
- * The settings that belong to your data (the offer goal and its date, the focus timer, ...), kept on the server so they
- * follow your data. Per-device preferences such as the theme live in the browser instead (see useSettings).
- * Until the server answers, the defaults stand in.
- */
+/** The settings that belong to your data (the offer goal and its date, the focus timer, ...), kept on the server so they follow your data. */
 export function useAppSettings() {
   const qc = useQueryClient();
   const query = useQuery({ queryKey: SETTINGS_KEY, queryFn: settingsApi.get });

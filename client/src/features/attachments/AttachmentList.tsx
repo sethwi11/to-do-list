@@ -4,7 +4,7 @@ import { useApp } from '../../app/AppContext';
 import type { AttachmentWithUse, Owner } from '../../api/attachments';
 import { ACCEPT, fileProblem, formatBytes } from '../../lib/files/fileTypes';
 import { cx } from '../../lib/cx';
-import { detach, uploadAndLink, useOwnerAttachments, useRefreshAttachments } from '../attachments/useAttachments';
+import { detach, uploadAndLink, useOwnerAttachments, useRefreshAttachments } from './useAttachments';
 import { AttachmentPreview } from './AttachmentPreview';
 
 interface AttachmentListProps {
@@ -19,10 +19,7 @@ interface AttachmentListProps {
 
 const iconFor = (mime: string) => (mime.startsWith('image/') ? ImageIcon : FileText);
 
-/**
- * The files on an item. Click one to see it; with `editable`, add more or remove some. On an item that exists,
- * adding uploads at once. On a new item the files wait in `pending` and are uploaded when it's saved.
- */
+/** The files on an item. */
 export function AttachmentList({ owner, editable = false, pending = [], onPendingChange, className }: AttachmentListProps) {
   const { showToast } = useApp();
   const { data: files = [] } = useOwnerAttachments(owner);

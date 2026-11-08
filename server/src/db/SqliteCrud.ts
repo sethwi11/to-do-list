@@ -5,23 +5,7 @@ import type { Db } from './connection';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyStatement = Database.Statement<any[], any>;
 
-/*
- * A small, generic data-access class: the shared plumbing for every table.
- *
- * Without it, each of the ~12 tables would need its own copy of the same four
- * queries plus the same row <-> object translation. Instead each table gets
- * a few lines of configuration, and the translation rules live here once:
- *
- *   - camelCase object keys <-> snake_case columns (dueDate <-> due_date),
- *     with an override map for columns named differently (start <-> start_at,
- *     because `end` is a reserved word in SQL);
- *   - JSON columns (lists and objects stored as text) are parsed/stringified;
- *   - boolean columns are stored as 0/1.
- *
- * Column names are read from the table itself (PRAGMA table_info), and any key
- * that isn't one of them throws. Values are always passed as bound
- * parameters, never pasted into the SQL, so request data can't change a query.
- */
+// A small, generic data-access class: the shared plumbing for every table.
 
 export interface CrudOptions {
   table: string;
@@ -39,7 +23,6 @@ export interface CrudOptions {
 
 type Row = Record<string, unknown>;
 
-const toSnake = (s: string) => s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 const toCamel = (s: string) => s.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 
 export class SqliteCrud<T extends { id: string }> {

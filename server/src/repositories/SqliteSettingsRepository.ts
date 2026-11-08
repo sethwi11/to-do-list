@@ -8,11 +8,7 @@ export interface SettingsRepository {
 
 const KEY = 'app';
 
-/**
- * Settings are stored as one JSON document under one key. Reading merges it
- * over the defaults, so a setting added in a future version just appears with
- * its default instead of needing a migration.
- */
+/** Settings are stored as one JSON document under one key. */
 export class SqliteSettingsRepository implements SettingsRepository {
   constructor(private readonly db: Db) {}
 

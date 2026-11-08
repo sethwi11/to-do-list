@@ -4,19 +4,7 @@ import type { BatchPlan } from './eventSeries';
 import type { Course, ExcludedRange, Semester } from './models/courses';
 import type { Event, EventRecurrence } from './models/events';
 
-/*
- * Turning a course ("COMP 365, Mon/Wed/Fri 10:00-11:15") and its semester into calendar events.
- *
- * A course does NOT become a few hundred events. It becomes ONE repeating event (the same kind a person
- * makes with "Repeat: every week"): weekly on the meeting days, until the semester ends, with the
- * break dates taken out. So editing the course edits one row, and cancelling or moving a single
- * meeting works like it does for any repeating event.
- *
- * The one subtlety is the removed dates. Some come from the semester (Thanksgiving week), and are
- * recomputed whenever the course or semester changes. Others are meetings the person cancelled by hand, which
- * must survive such a change. Telling them apart: a removed date that falls inside one of the semester's
- * break ranges (as they were before the change) is a break; any other is a cancellation.
- */
+// Turning a course ("COMP 365, Mon/Wed/Fri 10:00-11:15") and its semester into calendar events.
 
 /** Marks events made from a course, so they can be found again (and are never confused with ones the person made). */
 export const CLASS_SOURCE = 'class-schedule' as const;
@@ -121,10 +109,7 @@ export interface SchedulePlanInput {
   ctx: ClassContext;
 }
 
-/**
- * Rows to write so a course's classes match the course and semester as they are now. Creates the series the first time;
- * afterwards updates it in place, keeping meetings the person cancelled and any single meeting they changed.
- */
+/** Rows to write so a course's classes match the course and semester as they are now. */
 export function planCourseSchedule({ course, semester, previousSemester, events, ctx }: SchedulePlanInput): BatchPlan {
   const existing = findClassSeries(events, course.id);
   const first = firstMeetingDate(semester.startDate, course.meetingDays);

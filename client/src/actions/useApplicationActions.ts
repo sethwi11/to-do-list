@@ -79,10 +79,7 @@ interface Deps {
   restoreTask: (id: string) => Promise<void>;
 }
 
-/**
- * Everything that changes applications. An application is saved first; the to-dos that follow from it (the "Apply to ..."
- * reminder, a follow-up, interview prep) are made second. Every action with an Undo toast takes those with it.
- */
+/** Everything that changes applications. */
 export function useApplicationActions({ showToast, confirmFiles, applyEventPlan, calendars, today, addTasks, updateTask, deleteTask, restoreTask }: Deps): ApplicationActions {
   const qc = useQueryClient();
   const createApp = applicationHooks.useCreate();
@@ -95,10 +92,7 @@ export function useApplicationActions({ showToast, confirmFiles, applyEventPlan,
   /** Tasks the tracker makes go on the "Applications" calendar (found by name; if it was renamed they have none). */
   const appsCalendarId = useMemo(() => calendars.find((c) => c.name.toLowerCase() === 'applications')?.id ?? null, [calendars]);
 
-  /**
-   * Bring the "Apply to ..." to-do in line with this application (see planDeadlineReminder).
-   * Resolves to what was said about it (for the toast) and how to take it all back.
-   */
+  /** Bring the "Apply to ..." to-do in line with this application (see planDeadlineReminder). */
   const syncReminder = useCallback(
     async (app: Application): Promise<{ note: string; undo: () => Promise<void> }> => {
       const plan = planDeadlineReminder(app, currentTasks(), today, appsCalendarId);
@@ -145,8 +139,7 @@ export function useApplicationActions({ showToast, confirmFiles, applyEventPlan,
         showToast(`Couldn’t save the application: ${messageOf(err)}`);
         return null;
       }
-      // The reminder depends on the status, deadline and name. If none of those changed, leave it alone: someone who deleted the
-      // reminder on purpose shouldn't see it come back every time they fix a typo in the notes.
+      // The reminder depends on the status, deadline and name.
       const affectsReminder = !existing || existing.status !== saved.status || existing.deadline !== saved.deadline || existing.company !== saved.company || existing.role !== saved.role;
       const reminder = affectsReminder ? await syncReminder(saved) : { note: '', undo: async () => undefined };
       showToast(

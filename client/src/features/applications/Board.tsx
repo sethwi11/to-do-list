@@ -34,14 +34,7 @@ interface BoardProps {
 const COLUMN_PREFIX = 'col:';
 const isColumn = (id: UniqueIdentifier) => String(id).startsWith(COLUMN_PREFIX);
 
-/**
- * The kanban board: a column per status, cards you drag between them. Dropping a card in another column is a status
- * change (the server writes it into the timeline); dropping it elsewhere in its own column just reorders it.
- *
- * Mouse and touch can grab a card anywhere (touch needs a short press, so scrolling the board still works); keyboard
- * and screen reader users use the grip beside each card (focus it, Space to pick up, arrows to move, Space to drop). The
- * detail page and the table have a plain status menu as well.
- */
+/** The kanban board: a column per status, cards you drag between them. */
 export function Board({ applications, color, calendarName, followUpIds, onMove }: BoardProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -78,8 +71,7 @@ export function Board({ applications, color, calendarName, followUpIds, onMove }
     const status = statusOf(over?.id);
     if (!app || !over || !status || over.id === dragged.id) return;
 
-    // Dropped on a column (its empty space or header): the end of it. Dropped on a card: above it or below it,
-    // depending on which half of that card the dragged card's middle is over.
+    // Dropped on a column (its empty space or header): the end of it.
     let beforeId: string | null = null;
     if (!isColumn(over.id)) {
       const others = columns[status].filter((a) => a.id !== app.id);

@@ -15,10 +15,7 @@ export function anchorOf(el: Element): PopoverAnchor {
   return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
 }
 
-/**
- * Where the top-left corner of a `width` x `height` panel goes: beside the anchor (to its right if
- * there's room, else its left), lined up with its top, and always kept fully on screen.
- */
+/** Where the top-left corner of a `width` x `height` panel goes: beside the anchor (to its right if there's room, else its left), lined up with its top, and always kept fully on screen. */
 export function placePopover(anchor: PopoverAnchor, width: number, height: number, viewport: { width: number; height: number }) {
   const box = isRect(anchor) ? anchor : { left: anchor.x, right: anchor.x, top: anchor.y, bottom: anchor.y };
   let left = box.right + GAP;
@@ -40,11 +37,7 @@ interface PopoverProps {
   className?: string;
 }
 
-/**
- * A small floating panel attached to something on the page. On a phone it becomes a sheet at the
- * bottom of the screen instead, since there is no room beside a finger. Escape or a press outside
- * closes it, and focus goes in when it opens and back where it came from when it closes.
- */
+/** A small floating panel attached to something on the page. */
 export function Popover({ anchor, label, onClose, children, className }: PopoverProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);

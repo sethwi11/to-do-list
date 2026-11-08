@@ -19,11 +19,7 @@ export interface FilesToConfirm {
   ownerId: string;
 }
 
-/**
- * Deleting an event or to-do that has files only used by it: ask whether to delete the files too.
- * Resolves to `{ proceed: false }` if they cancel. Otherwise `proceed: true`, and, if they chose to delete the files,
- * a `commit` to run once the Undo window has closed (deleting a file can't be undone, so it waits for that).
- */
+/** Deleting an event or to-do that has files only used by it: ask whether to delete the files too. */
 export function useFileDeletionPrompt() {
   const qc = useQueryClient();
   const resolver = useRef<((choice: FilesChoice | null) => void) | null>(null);

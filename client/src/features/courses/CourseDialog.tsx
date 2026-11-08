@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { CALENDAR_COLORS, classMeetingDates, type CalendarColor, type Course } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
+import { shortDate } from '../../lib/dates';
 import { Button } from '../../ui/Button';
 import { ColorPicker } from '../../ui/ColorPicker';
 import { Field, Input, Select, Textarea } from '../../ui/fields';
@@ -121,7 +122,7 @@ function CourseForm({ course, semesterId }: { course: Course | null; semesterId?
     if (saved) closeDialog('course');
   }
 
-  const fmt = (d?: string) => (d ? new Date(`${d}T12:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '');
+  const fmt = (d?: string) => (d ? shortDate(d) : '');
 
   return (
     <form id="course-form" onSubmit={submit} className="space-y-4">

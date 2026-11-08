@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PdfViewer } from '../files/PdfViewer';
+import { PdfViewer } from '../attachments/PdfViewer';
 import type { Card } from './cards';
 import type { FileEntry } from './useImportSession';
 
@@ -13,8 +13,7 @@ interface SourcePreviewProps {
 
 /** The file the cards came from: the picture, the PDF at the right page, or the text with the date marked. */
 export function SourcePreview({ entry, focus, page, onPage }: SourcePreviewProps) {
-  // The picture's temporary address is made and released together, inside the effect: making it while drawing and releasing it
-  // in cleanup breaks whenever React re-runs the effect (it does, on purpose, in development), because the address is gone by then.
+  // Make and release the object URL inside the same effect: React re-runs effects in development, which breaks a URL made during render.
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   useEffect(() => {
     if (entry.kind !== 'image') {

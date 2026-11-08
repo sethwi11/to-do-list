@@ -1,10 +1,4 @@
-/*
- * Date helpers that work with *local* calendar dates ("YYYY-MM-DD").
- *
- * Pitfall to avoid: `new Date('2026-10-24')` is parsed as UTC midnight, so in
- * a US timezone it displays as Oct 23. These helpers build dates from their
- * year/month/day parts in local time instead.
- */
+// Date helpers that work with *local* calendar dates ("YYYY-MM-DD").
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -22,6 +16,16 @@ export function parseLocalISODate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y!, m! - 1, d!);
 }
+
+const show = (iso: string, options: Intl.DateTimeFormatOptions) => parseLocalISODate(iso).toLocaleDateString(undefined, options);
+/** "Nov 4" */
+export const shortDate = (iso: string) => show(iso, { month: 'short', day: 'numeric' });
+/** "Mon, Nov 9": for lists of specific days, where "Monday" alone can't say which one. */
+export const plainDate = (iso: string) => show(iso, { weekday: 'short', month: 'short', day: 'numeric' });
+/** "Nov 4, 2026" */
+export const longDate = (iso: string) => show(iso, { month: 'short', day: 'numeric', year: 'numeric' });
+/** "Monday, November 9" */
+export const fullDate = (iso: string) => show(iso, { weekday: 'long', month: 'long', day: 'numeric' });
 
 /** Whole calendar days from `from` to `to` (negative if `to` is earlier). */
 export function daysBetween(from: string, to: string): number {

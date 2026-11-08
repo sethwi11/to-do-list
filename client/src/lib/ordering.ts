@@ -9,16 +9,7 @@ export type MoveResult =
   /** Gaps are exhausted: renumber every task in this global order. */
   | { kind: 'rebalance'; orderedIds: string[] };
 
-/**
- * Computes a new sortOrder when `movedId` is dropped between `before` and
- * `after` (its new neighbors in the visible list; either may be missing at
- * the ends).
- *
- * Normally that's the midpoint, which means updating ONE row instead of
- * renumbering the whole list. Each midpoint halves the gap, so after about 40
- * moves into the same spot the floats run out of precision. Then we fall back
- * to renumbering every task once.
- */
+/** Computes a new sortOrder when `movedId` is dropped between `before` and `after` (its new neighbors in the visible list; either may be missing at the ends). */
 export function computeMove(
   allTasks: Task[],
   movedId: string,

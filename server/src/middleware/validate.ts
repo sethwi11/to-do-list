@@ -1,11 +1,7 @@
 import type { RequestHandler } from 'express';
 import type { z } from 'zod';
 
-/**
- * Validates req.body against a zod schema. On success, req.body is replaced
- * with the *parsed* value (trimmed strings, unknown keys stripped), so route
- * handlers only ever see clean data. On failure, responds 400 with details.
- */
+/** Validates req.body against a zod schema. */
 export function validateBody(schema: z.ZodType): RequestHandler {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);

@@ -21,11 +21,7 @@ export interface EntityRepoConfig<T extends { id: string }, C extends { id?: str
   check?(next: T): string | null;
 }
 
-/**
- * A complete repository for any table, driven by configuration: this is what
- * most of the app's tables use. Anything with special behavior (task
- * recurrence, application status history) extends or replaces it.
- */
+/** A complete repository for any table, driven by configuration: this is what most of the app's tables use. */
 export class SqliteEntityRepository<T extends { id: string }, C extends { id?: string | undefined }, U extends object>
   extends SqliteCrud<T>
   implements RestorableRepository<T, C, U>
@@ -46,8 +42,7 @@ export class SqliteEntityRepository<T extends { id: string }, C extends { id?: s
   }
 
   async create(input: C): Promise<T> {
-    // A client may choose the id (so a create made offline can be replayed
-    // safely). If we've already seen it, return what we have instead of failing.
+    // A client may choose the id (so a create made offline can be replayed safely).
     if (input.id) {
       const existing = this.getSync(input.id);
       if (existing) return existing;

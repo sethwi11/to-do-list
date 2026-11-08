@@ -4,20 +4,7 @@ import { addMinutes, combine } from './dateTime';
 import { findLink, guessEventType, type ExtractedItem } from './eventExtractor';
 import type { EventRecurrence } from './models/events';
 
-/*
- * Importing a .ics calendar file (Google Calendar, Outlook, Canvas, Apple Calendar...).
- *
- * Unlike a flyer, an .ics file says exactly what and when, so nothing here is guessed. The work is
- * translation: the file speaks in real instants and timezones, the planner in "floating" local times,
- * and the file's repeat rules are richer than the planner's.
- *
- *   - Times are converted to the wall clock of the computer doing the import, so a 2 PM Eastern meeting
- *     imported in Pacific time shows as 11 AM (which is when you would be there).
- *   - A repeat rule the planner can store (daily, weekdays, weekly on chosen days, monthly, with an end or
- *     a count, minus excluded dates) becomes one repeating event.
- *   - One it can't ("every 2 weeks", "the first Monday") is written out as separate events, the next
- *     year of them, and the person is told.
- */
+// Importing a .ics calendar file (Google Calendar, Outlook, Canvas, Apple Calendar...).
 
 /** How far ahead a repeat that can't be stored is written out. */
 const EXPAND_DAYS = 365;
@@ -96,10 +83,7 @@ function mapRule(rule: ICAL.Recur, firstStart: ICAL.Time, startDate: string): Ev
   return { freq, byWeekday, until, exdates: [] };
 }
 
-/**
- * Read a calendar file's text. Throws an Error with a message fit to show if it isn't a calendar.
- * `now` decides what counts as already over.
- */
+/** Read a calendar file's text. */
 export function importIcs(text: string, { now }: { now: Date }): IcsResult {
   let root: ICAL.Component;
   try {

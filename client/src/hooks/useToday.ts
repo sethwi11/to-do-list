@@ -7,10 +7,7 @@ export function msUntilNextMidnight(now: Date): number {
   return next.getTime() - now.getTime();
 }
 
-/**
- * Today's local date, updated when midnight passes, so an app left open overnight
- * rolls over to the new day by itself (Today, Overdue, and every "due today" check follow).
- */
+/** Today's local date, updated when midnight passes, so an app left open overnight rolls over to the new day by itself (Today, Overdue, and every "due today" check follow). */
 export function useToday(): string {
   const [today, setToday] = useState(() => todayLocalISO());
   useEffect(() => {

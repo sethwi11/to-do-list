@@ -1,6 +1,5 @@
 import { buildEvent, type EventType, type ExtractedItem } from '@todo/shared';
 import { describe, expect, it } from 'vitest';
-import { buildBlank } from '../calendar/testHelpers';
 import { flagRepeats, makeCards, SYLLABUS_REMINDERS, toEventInput, toTaskInput, type CardContext } from './cards';
 
 const types: EventType[] = [

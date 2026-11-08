@@ -11,10 +11,7 @@ import { formatWhen } from '../calendar/format';
 const NEW = '__new';
 const EARLY = ['Wishlist', 'Applied', 'Online Assessment'];
 
-/**
- * Asked right after an Interview event is made (however it was made): which application is it for, and should the
- * "Interview prep" checklist be added as to-dos? Several interviews made at once (from one import) are asked one at a time.
- */
+/** Asked right after an Interview event is made (however it was made): which application is it for, and should the "Interview prep" checklist be added as to-dos? */
 export function InterviewDialog() {
   const { dialog, openDialog, closeDialog, events } = useApp();
   // Loaded here, as soon as the app starts, so the checklist is already known when the question appears.

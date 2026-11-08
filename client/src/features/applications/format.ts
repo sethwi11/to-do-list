@@ -1,11 +1,3 @@
-import { parseLocalISODate } from '../../lib/dates';
-
-/** "Nov 4": a plain date for lists and ranges (the friendly "Today" / "Tomorrow" reads oddly beside a label like "Applied"). */
-export const shortDate = (date: string) => parseLocalISODate(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-
-/** "Nov 4, 2026" */
-export const longDate = (date: string) => parseLocalISODate(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-
 /** "today", "1 day ago", "16 days ago", "3 weeks ago" */
 export function ago(days: number): string {
   if (days <= 0) return 'today';

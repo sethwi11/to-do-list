@@ -7,19 +7,7 @@ interface EntityApi<T, C, U> {
   remove(id: string): Promise<void>;
 }
 
-/**
- * Hooks for any kind of data that follows the standard list/create/update/delete shape.
- *
- * How the mutations behave, and why:
- *   - create:  gets its id from the browser (crypto.randomUUID) and adds the server's
- *              answer to the cache. A browser-made id means a create that is
- *              retried later (when offline sync arrives) can't make duplicates.
- *   - update / delete: OPTIMISTIC. The screen changes immediately, the request runs in
- *              the background, and if it fails the change is rolled back. Checking a box
- *              should feel instant; the server almost always agrees.
- *   - after any mutation settles, the list is refetched, so the cache always ends up
- *              matching the server even if two changes raced.
- */
+/** Hooks for any kind of data that follows the standard list/create/update/delete shape. */
 export function createEntityHooks<T extends { id: string }, C extends { id?: string | undefined }, U extends object>(
   name: string,
   api: EntityApi<T, C, U>,

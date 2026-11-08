@@ -11,11 +11,7 @@ function describeCount(conflicts: Clash[]): string {
   return conflicts.length === 1 ? `another ${noun[0]}` : `${conflicts.length} other ${noun[1]}`;
 }
 
-/**
- * A warning that a time overlaps other events or time blocks. It warns and nothing more: saving is never blocked.
- * The wrapper is always on the page (just empty when there is no clash), because a live region
- * only announces changes to something that already exists.
- */
+/** A warning that a time overlaps other events or time blocks. */
 export function ConflictNotice({ conflicts }: { conflicts: Clash[] }) {
   return (
     <div role="status" aria-live="polite">

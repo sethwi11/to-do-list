@@ -17,6 +17,7 @@ import {
   type UpdateTaskInput,
 } from '@todo/shared';
 import { ApiError } from '../api/client';
+import { plainDate } from '../lib/dates';
 import { attachmentsApi } from '../api/attachments';
 import { coursesApi } from '../api/entities';
 import { keys } from '../data/queryClient';
@@ -42,8 +43,6 @@ export interface CourseActions {
 
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Unexpected error');
 const fieldsOf = ({ id: _i, createdAt: _c, updatedAt: _u, ...fields }: Course): CourseFields => fields;
-/** "Mon, Nov 9" (the friendly "Monday" is ambiguous in a message about a specific class). */
-const plain = (date: string) => new Date(`${date}T12:00`).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const sameRanges = (a: Semester['excludedRanges'], b: Semester['excludedRanges']) => JSON.stringify(a) === JSON.stringify(b);
 
 interface Deps {
@@ -55,11 +54,7 @@ interface Deps {
   updateTask: (id: string, changes: UpdateTaskInput) => Promise<Task | null>;
 }
 
-/**
- * Everything that changes courses and semesters. A course is saved first and its class meetings generated
- * from it second (they need its id), as one batch of events. If that second step fails the course is still
- * there, and "Rebuild classes" on its page tries again.
- */
+/** Everything that changes courses and semesters. */
 export function useCourseActions({ showToast, confirmFiles, applyEventPlan, eventTypes, tasks, updateTask }: Deps): CourseActions {
   const qc = useQueryClient();
   const createCourse = courseHooks.useCreate();
@@ -172,7 +167,7 @@ export function useCourseActions({ showToast, confirmFiles, applyEventPlan, even
       if (!series) return false;
       const applied = await applyEventPlan(planRestoreMeeting(series, date, new Date().toISOString()));
       if (!applied) return false;
-      showToast(`Restored the class on ${plain(date)}`, () => void applied.undo());
+      showToast(`Restored the class on ${plainDate(date)}`, () => void applied.undo());
       return true;
     },
     [currentEvents, applyEventPlan, showToast],

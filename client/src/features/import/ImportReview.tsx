@@ -41,10 +41,7 @@ function Reading({ entries, stage }: { entries: FileEntry[]; stage: string }) {
   );
 }
 
-/**
- * The review: what was found in the files, on the right, each editable; the file itself on the left, jumping to
- * wherever the card you're on came from. Nothing reaches the calendar until Add is pressed.
- */
+/** The review: what was found in the files, on the right, each editable; the file itself on the left, jumping to wherever the card you're on came from. */
 export function ImportReview({ importer, onManual }: { importer: Importer; onManual: (files: File[]) => void }) {
   const { calendars, eventTypes } = useApp();
   const { session, cancel, setSyllabus, setCourse, updateCard, setAllIncluded, save } = importer;

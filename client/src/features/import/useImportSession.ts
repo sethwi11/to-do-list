@@ -3,11 +3,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Course, CreateTaskInput, Event, EventType, IcsResult, Task } from '@todo/shared';
 import { attachmentsApi } from '../../api/attachments';
 import type { ImportOptions } from '../../app/AppContext';
-import type { EventActions } from '../../app/useEventActions';
+import type { EventActions } from '../../actions/useEventActions';
 import { fileProblem, kindOf, type FileKind } from '../../lib/files/fileTypes';
 import { createOcr } from '../../lib/files/ocr';
 import { pageAt, readFileText } from '../../lib/files/readers';
-import { fromTimeFields, normalizeLink, timeProblem } from '../events/eventForm';
+import { normalizeLink, timeProblem } from '../events/eventForm';
 import { flagRepeats, makeCards, toEventInput, toTaskInput, type Card } from './cards';
 
 export interface FileEntry {
@@ -75,11 +75,7 @@ export function cardProblem(card: Card): string | null {
   return null;
 }
 
-/**
- * Everything about adding events from files, in order: read each file (OCR, PDF, Word, text, calendar),
- * find what's in it, let the person review and edit, then save. Nothing is saved, and no file is uploaded,
- * until "Add" is pressed.
- */
+/** Everything about adding events from files, in order: read each file (OCR, PDF, Word, text, calendar), find what's in it, let the person review and edit, then save. */
 export function useImportSession(deps: ImportDeps) {
   const qc = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
@@ -276,5 +272,3 @@ export function useImportSession(deps: ImportDeps) {
   return { session, start, cancel, setSyllabus, setCourse, updateCard, setAllIncluded, save };
 }
 
-/** Handy for the review: how the card's dates read in the form. */
-export const cardSpan = (card: Card) => fromTimeFields(card.time);

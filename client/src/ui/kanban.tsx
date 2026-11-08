@@ -3,10 +3,7 @@ import type { CalendarColor } from '@todo/shared';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
 
-/**
- * A minimal application card: company, role, date applied in mono, and the calendar's color square.
- * `company` can be a link, and `extra` adds a line below (a deadline, a cue).
- */
+/** A minimal application card: company, role, date applied in mono, and the calendar's color square. */
 export function KanbanCard({
   company,
   role,
@@ -44,10 +41,7 @@ export function KanbanCard({
   );
 }
 
-/**
- * A column of cards. Columns are separated by vertical hairlines, not boxes. Seven fit on a laptop screen; on a narrower
- * one the board scrolls sideways, and the width is chosen so a column is left half in view (a hint that there's more).
- */
+/** A column of cards. */
 export function KanbanColumn({ title, count, children, className }: { title: string; count: number; children: ReactNode; className?: string }) {
   return (
     <section aria-label={title} className={cx('min-w-[9.5rem] flex-1 border-l border-hairline px-3 first:border-l-0 first:pl-0', className)}>

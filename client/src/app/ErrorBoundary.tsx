@@ -5,11 +5,7 @@ interface State {
   failed: boolean;
 }
 
-/**
- * If something on a page throws while drawing, show a message instead of a blank screen.
- * Only the page area is replaced: the sidebar stays, so there's somewhere to go.
- * (React only supports this as a class component.)
- */
+/** If something on a page throws while drawing, show a message instead of a blank screen. */
 export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   override state: State = { failed: false };
 

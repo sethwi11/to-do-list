@@ -1,12 +1,6 @@
 import { addDays } from './dateMath';
 
-/*
- * Arithmetic on "floating" local datetimes ("YYYY-MM-DDTHH:mm").
- *
- * Like dateMath.ts, this treats the numbers as a calendar calculator: no timezone and
- * no daylight saving. "10:00 plus 90 minutes" is 11:30 even on the day clocks change,
- * which is what a paper planner would say. (A real instant would be an hour off.)
- */
+// Arithmetic on "floating" local datetimes ("YYYY-MM-DDTHH:mm").
 
 const MS_PER_MINUTE = 60_000;
 

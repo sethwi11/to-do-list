@@ -34,21 +34,7 @@ export interface BackupSources {
 /** Per-table counts of what an import did. */
 export type ImportSummary = Record<string, { added: number; updated: number }>;
 
-/**
- * Export/import of everything as one JSON document.
- *
- * Import MERGES rather than replacing: rows are upserted by id (so importing
- * the same file twice is harmless) and nothing you have now is deleted. That
- * makes import safe to experiment with.
- *
- * A few kinds of rows exist on every install with *different ids* (a calendar
- * called "School", the built-in templates), so those are matched by name
- * instead. Otherwise importing into a fresh install would duplicate them.
- *
- * It uses the repositories' synchronous methods because a better-sqlite3
- * transaction must finish synchronously: the whole import either happens or
- * it doesn't.
- */
+/** Export/import of everything as one JSON document. */
 export class BackupRepository {
   constructor(
     private readonly db: Db,

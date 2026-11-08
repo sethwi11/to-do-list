@@ -2,21 +2,7 @@ import { addDays, dayOfWeek, lastDayOfMonth } from './dateMath';
 import { addMinutes, combine, datePart, daysBetween, minutesBetween, timePart } from './dateTime';
 import type { CreateEventInput, Event, EventRecurrence } from './models/events';
 
-/*
- * Repeating events.
- *
- * A repeating event is stored ONCE (the "series": a first start, a duration, and a rule).
- * The individual dates are worked out when they're needed, for whatever range is on screen.
- * Two kinds of exception hang off a series:
- *
- *   - a REMOVED date is listed in the rule's `exdates` ("no class on Nov 11");
- *   - a CHANGED date (that day's class moved to 2 pm) is its own small event, an "override",
- *     which points at its series (`recurringEventId`) and says which slot it replaces
- *     (`originalStart`). The series skips any slot that has an override.
- *
- * Everything here is a pure function of its inputs: no database, no clock, no randomness
- * (a clock and an id generator are passed in), so it is cheap to test thoroughly.
- */
+// Repeating events.
 
 export type EditScope = 'this' | 'following' | 'all';
 
@@ -98,11 +84,7 @@ function expandSeries(series: Event, from: string, to: string, replaced: Set<str
   return out;
 }
 
-/**
- * Every occurrence that overlaps [rangeStart, rangeEnd), sorted by start. Range ends may be
- * dates ("2026-11-01") or datetimes. One-off events and overrides come through as themselves;
- * a series contributes one occurrence per matching date, minus removed and overridden dates.
- */
+/** Every occurrence that overlaps [rangeStart, rangeEnd), sorted by start. */
 export function expandOccurrences(events: Event[], rangeStart: string, rangeEnd: string): EventOccurrence[] {
   const from = asDateTime(rangeStart);
   const to = asDateTime(rangeEnd);
@@ -145,10 +127,7 @@ export function expandOccurrences(events: Event[], rangeStart: string, rangeEnd:
 // Editing and deleting
 // ---------------------------------------------------------------------------------------------
 
-/**
- * Any editable field of an event. For a repeating event, `start` and `end` are the new times of
- * the occurrence being edited, not of the series: the series is moved by the same amount.
- */
+/** Any editable field of an event. */
 export type EventChanges = Partial<Omit<Event, 'id' | 'createdAt' | 'updatedAt' | 'recurringEventId' | 'originalStart'>>;
 
 /** Rows to write (inserted, or replaced if the id exists) and ids to delete, applied together or not at all. */
@@ -224,11 +203,7 @@ function shiftRule(rule: EventRecurrence, days: number): EventRecurrence {
   };
 }
 
-/**
- * The series fields after the edit, for "all" and "this and following".
- * `anchor` is where the (new) series would start before the edit; it moves by however far
- * the edited occurrence moved, and keeps its length unless the edit changed it.
- */
+/** The series fields after the edit, for "all" and "this and following". */
 function changedSeries(base: Event, anchor: string, ctx: PlanContext, changes: EventChanges, rule: EventRecurrence | null) {
   const occ = ctx.occurrence;
   const times = newTimes(occ, changes);
@@ -255,10 +230,7 @@ function carryOverrides(overrides: Event[], seriesId: string, shiftedDays: numbe
   }));
 }
 
-/**
- * Turn "change this occurrence like so, for this / this and following / all" into rows to write.
- * Moving, resizing, and the edit dialog all go through here.
- */
+/** Turn "change this occurrence like so, for this / this and following / all" into rows to write. */
 export function planEventEdit(ctx: PlanContext & { changes: EventChanges }): BatchPlan {
   const { occurrence: occ, changes, now } = ctx;
   const times = newTimes(occ, changes);
@@ -346,10 +318,7 @@ export function planEventDelete(ctx: PlanContext): BatchPlan {
   return { put: [truncated], remove: later.map((o) => o.id) };
 }
 
-/**
- * What it takes to undo `plan`: put back the rows it replaced or deleted, remove the rows it created.
- * `before` is every event row as it was before the plan ran.
- */
+/** What it takes to undo `plan`: put back the rows it replaced or deleted, remove the rows it created. */
 export function invertPlan(plan: BatchPlan, before: Event[]): BatchPlan {
   const byId = new Map(before.map((e) => [e.id, e]));
   const restore = [...plan.put.map((e) => e.id), ...plan.remove].flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));

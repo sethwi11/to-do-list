@@ -2,20 +2,9 @@ import { addDays, dayOfWeek } from './dateMath';
 import { daysBetween } from './dateTime';
 import { APPLICATION_STATUSES, type Application, type ApplicationStatus } from './models/applications';
 import type { Template } from './models/templates';
-import type { CreateTaskInput, Task, UpdateTaskInput } from './task';
+import type { CreateTaskInput, Task, UpdateTaskInput } from './models/tasks';
 
-/*
- * The internship tracker's logic, kept free of screens so it can be tested on its own:
- * the stats, the goal, the "time to follow up?" rule, the reminder that follows a wishlist deadline,
- * the prep to-dos for an interview, and the ordering of cards on the board.
- *
- * Words used here:
- *   "applied"     you sent it (it left the wishlist for a real stage), even if it later ended in a rejection
- *   "responded"   the company answered: an assessment, an interview, an offer, or a rejection
- *   "interviewed" it reached Interviewing (or went straight to an offer)
- * All of them are read from the status history, not just the current status, so a rejection after an interview
- * still counts as an interview.
- */
+// The internship tracker's logic, kept free of screens so it can be tested on its own: the stats, the goal, the "time to follow up?" rule, the reminder that follows a wishlist deadline, the prep to-dos for an interview, and the ordering of cards on the board.
 
 /** Statuses that mean the application was actually sent and is still going, or ended well. */
 export const APPLIED_STAGES: readonly ApplicationStatus[] = ['Applied', 'Online Assessment', 'Interviewing', 'Offer'];
@@ -148,11 +137,7 @@ export interface FollowUpSuggestion {
   days: number;
 }
 
-/**
- * Applications that have sat in Applied for FOLLOW_UP_AFTER_DAYS or more with no change, and that you haven't
- * already answered the suggestion for. Answering (accepting or dismissing) is judged against the latest
- * status change, so a dismissed suggestion stays away until the application moves and sits for another stretch.
- */
+/** Applications that have sat in Applied for FOLLOW_UP_AFTER_DAYS or more with no change, and that you haven't already answered the suggestion for. */
 export function followUpSuggestions(apps: readonly Application[], today: string): FollowUpSuggestion[] {
   const out: FollowUpSuggestion[] = [];
   for (const application of apps) {
@@ -193,12 +178,7 @@ export interface ReminderPlan {
 
 export const deadlineReminderTitle = (app: Pick<Application, 'company' | 'role'>) => `Apply to ${app.company} (${app.role})`.slice(0, 200);
 
-/**
- * Keeps one "Apply to ..." to-do in step with a wishlist application's deadline: due on the deadline, with a reminder
- * three days before (the same way a syllabus deadline gets its reminders). It exists only while the application is
- * still on the wishlist and has a deadline: moving it on ticks the to-do off, and clearing the deadline removes it.
- * A to-do you have already ticked off yourself is never recreated, and a deadline that has already passed makes none.
- */
+/** Keeps one "Apply to ..." to-do in step with a wishlist application's deadline: due on the deadline, with a reminder three days before (the same way a syllabus deadline gets its reminders). */
 export function planDeadlineReminder(app: Application, tasks: readonly Task[], today: string, calendarId: string | null): ReminderPlan {
   const mine = tasks.filter((t) => t.applicationId === app.id && t.source === 'application-deadline');
   const open = mine.filter((t) => t.status === 'todo');
@@ -245,10 +225,7 @@ export function dateAppliedAfterMove(app: Pick<Application, 'dateApplied'>, stat
 
 // ---- matching an interview to an application ------------------------------
 
-/**
- * The open application whose company is named in `text` ("Stripe interview with Sam" -> Stripe), when exactly one is.
- * Two roles at the same company, or no match, give null: better to ask than to guess wrong.
- */
+/** The open application whose company is named in `text` ("Stripe interview with Sam" -> Stripe), when exactly one is. */
 export function guessApplication(text: string, apps: readonly Application[]): Application | null {
   const haystack = text.toLowerCase();
   const hits = apps.filter((a) => isOpen(a.status) && a.company.trim().length >= 3 && haystack.includes(a.company.trim().toLowerCase()));
@@ -263,11 +240,7 @@ export interface PrepPlan {
   movedToToday: number;
 }
 
-/**
- * A template applied to an event: each item becomes a to-do due `offsetDays` from the event's date (negative = before).
- * An item whose day has already passed (the interview is tomorrow, the template says three days ahead) is due
- * today instead, rather than showing up overdue the moment it's made.
- */
+/** A template applied to an event: each item becomes a to-do due `offsetDays` from the event's date (negative = before). */
 export function prepTasksForEvent(
   template: Pick<Template, 'items'>,
   event: { title: string; start: string },
@@ -356,11 +329,7 @@ export interface MovePlan {
   renumber: { id: string; sortOrder: number }[] | null;
 }
 
-/**
- * Where a card lands when dropped into `status`, just before the card `beforeId` (or at the end of the column if null).
- * The card gets a number between its new neighbors, so one row changes rather than the whole column; if repeated drops have
- * squeezed the gap to nothing, the column is renumbered once.
- */
+/** Where a card lands when dropped into `status`, just before the card `beforeId` (or at the end of the column if null). */
 export function planApplicationMove(apps: readonly Application[], movedId: string, status: ApplicationStatus, beforeId: string | null): MovePlan {
   const column = apps.filter((a) => a.status === status && a.id !== movedId).sort((a, b) => a.sortOrder - b.sortOrder);
   const found = beforeId === null ? -1 : column.findIndex((a) => a.id === beforeId);

@@ -3,16 +3,7 @@ import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
 import { Checkbox } from './Checkbox';
 
-/*
- * The three things that appear on the calendar, each recognizable at a glance:
- *   EventBlock     - a highlighter stripe: soft tint fill, solid 3px left edge
- *   TodoBlock      - a dashed outline, no fill, with a checkbox
- *   TimeBlockBlock - a hatched fill: time reserved to work on a task
- *
- * Each takes its calendar's color name and sets --c / --c-soft (see calendarVars), so one
- * component serves every calendar. The calendar's name is on the element as an accessible
- * label, since color alone shouldn't be the only way to tell calendars apart.
- */
+// The calendar's three kinds of block: EventBlock (tinted stripe), TodoBlock (dashed outline + checkbox), TimeBlockBlock (hatched: time set aside for a to-do).
 
 interface BlockBase {
   title: string;

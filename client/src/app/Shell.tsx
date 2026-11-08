@@ -14,11 +14,7 @@ import { SidebarContent } from './Sidebar';
 
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 
-/**
- * The frame around every page: the sidebar on the left (a 56px rail if collapsed), and the
- * page itself on the right. Under 768px the sidebar becomes a slide-out drawer opened from a top
- * bar, and "New" becomes a square tomato button in the bottom-right corner.
- */
+/** The frame around every page: the sidebar on the left (a 56px rail if collapsed), and the page itself on the right. */
 export function Shell() {
   const app = useApp();
   const { settings } = useSettings();

@@ -7,11 +7,7 @@ import type { TaskRepository } from '../repositories/TaskRepository';
 
 const ReorderSchema = z.object({ ids: z.array(z.uuid()).min(1).max(5000) });
 
-/*
- * Routes are created by functions that take their repository as an argument
- * (dependency injection). Production passes the SQLite repo, and tests can
- * pass one backed by an in-memory database.
- */
+// Routes are created by functions that take their repository as an argument (dependency injection).
 export function tasksRouter(tasks: TaskRepository): Router {
   const router = Router();
   const notFound = { error: 'NotFound', message: 'Task not found' };
@@ -56,8 +52,7 @@ export function tasksRouter(tasks: TaskRepository): Router {
     res.status(204).end();
   });
 
-  // Undo for delete. A separate action rather than a PATCH, because a deleted
-  // task isn't visible to the normal endpoints.
+  // Undo for delete.
   router.post('/:id/restore', async (req, res) => {
     const task = await tasks.restore(req.params.id);
     if (!task) {

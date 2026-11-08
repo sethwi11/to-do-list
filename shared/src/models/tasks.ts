@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { hasFields, LocalDateSchema, LocalTimeSchema, NO_FIELDS_MESSAGE } from './localTime';
+import { hasFields, LocalDateSchema, LocalTimeSchema, NO_FIELDS_MESSAGE } from '../localTime';
 
 /*
  * Single source of truth for the data model.

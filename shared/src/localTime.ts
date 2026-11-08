@@ -1,20 +1,8 @@
 import { z } from 'zod';
 
-/*
- * Date and time primitives shared by every model.
- *
- * Everything the user schedules is "floating" local time: the wall-clock
- * numbers you'd write on a paper planner, with no timezone attached.
- * "Class at 10:00 every Tuesday" must stay 10:00 when daylight saving
- * changes, which a UTC timestamp can't do. Moments the *computer* records
- * (createdAt, a focus session's start) are real instants and stay ISO UTC.
- */
+// Date and time primitives shared by every model.
 
-/**
- * A calendar date in the user's local timezone, e.g. "2026-10-24".
- * Deliberately NOT a timestamp: "due Friday" is a day on the calendar,
- * not an instant, so it must not shift when converted between timezones.
- */
+/** A calendar date in the user's local timezone ("2026-11-04"), with no time or timezone attached. */
 export const LocalDateSchema = z.iso.date();
 
 /** 24-hour local wall-clock time, "HH:mm". */

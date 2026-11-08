@@ -157,11 +157,22 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 - **Deleting an application asks first** and can't be undone: it removes the application, its timeline and its notes (and offers to delete files only it uses). Its to-dos and events stay, no longer linked to it. To keep a record, move it to Withdrawn or Rejected instead.
 - **One small schema change** (version 4) adds the column that remembers your follow-up answer. As with every upgrade, the server saves a full backup of your database first.
 
-## The app shell
+## Where things live (client)
 
-- `client/src/app/`: the frame around every page. `Shell` (sidebar on desktop, drawer and + button on a phone), `AppProvider` (the tasks and calendars plus everything you can do to them, the dialogs, and the undo toast), `PageHeader`, `QuickAdd`, `MiniMonth`, `NewMenu`.
-- `client/src/pages/`: one file per page (`TodayPage`, `TasksPage`). Routes are set in `main.tsx`; `/styleguide` sits outside the shell.
-- `client/src/features/`: the parts a page is built from, grouped by subject (`tasks/`, `calendars/`, `settings/`).
+| Folder | What's in it |
+| --- | --- |
+| `app/` | The frame around every page: `Shell`, `Sidebar`, `AppProvider` (shared data, dialogs, toast), `PageHeader`, `QuickAdd`, `MiniMonth`, `NewMenu` |
+| `actions/` | Everything that changes data, with Undo: `useEventActions`, `useCourseActions`, `useApplicationActions`, `useTimeBlockActions` |
+| `data/` | Server data (TanStack Query): one hook per kind of data, and the shared cache |
+| `api/` | The fetch calls behind those hooks |
+| `pages/` | One file per page; routes are in `main.tsx` (`/styleguide` sits outside the shell) |
+| `features/` | The parts pages are built from, by subject: `calendar/`, `tasks/`, `today/`, `courses/`, `applications/`, `import/`, `attachments/`, `events/`, `settings/` |
+| `ui/` | Design-system components (buttons, fields, dialog, popover, blocks, task row...) |
+| `lib/`, `hooks/`, `styles/` | Small helpers, React hooks, and the design tokens |
+
+Pure logic and every data model live in `shared/` (models in `shared/src/models/`), so the server and the client share them and they're tested without a browser.
+
+- **The address bar is the state.** What the Tasks page shows (`/tasks?view=...&calendar=...&date=...`) lives in the URL, so a sidebar link, a mini-month day, and the browser's back button all just work.
 - **The address bar is the state.** What the Tasks page shows (`/tasks?view=...&calendar=...&date=...`) lives in the URL, so a sidebar link, a mini-month day, and the browser's back button all just work.
 - **One dialog at a time.** Task, calendar, settings and shortcuts dialogs are all driven by a single piece of state in `AppProvider`, so opening one from inside another can't stack them.
 

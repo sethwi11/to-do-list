@@ -10,8 +10,7 @@ export interface Settings {
 const DEFAULTS: Settings = { theme: 'system', notifications: false };
 const KEY = 'voice-todo.settings';
 
-// Settings are per-device preferences, so localStorage (not the server) is the
-// right home. Every access is wrapped: storage can throw in private windows.
+// Settings are per-device preferences, so localStorage (not the server) is the right home.
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
@@ -31,11 +30,7 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
-/**
- * One copy of the settings for the whole app. (A hook with its own state would give
- * every component that used it a separate copy, and a theme toggle in the header and one in
- * the settings dialog would disagree.) The provider also applies the theme to the page.
- */
+/** One copy of the settings for the whole app. */
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(load);
   useTheme(settings.theme);

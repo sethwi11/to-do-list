@@ -1,14 +1,7 @@
 import { expandOccurrences, type EventOccurrence } from './eventSeries';
 import type { Event, TimeBlock } from './models/events';
 
-/*
- * Schedule conflicts: two things you can't both be at.
- *
- * The rule is deliberately plain. Two timed events conflict if they overlap by at least a minute
- * (one ending at 11:00 and the next starting at 11:00 is fine). All-day events never conflict: they
- * mark a day ("Career fair") rather than claim an hour. Conflicts are only ever WARNED about; nothing
- * here (or in the screens that use it) stops you from saving.
- */
+// Schedule conflicts: two things you can't both be at.
 
 /** A stretch of time to check. `end` is exclusive; for an all-day span it is the midnight after the last day. */
 export interface Span {
@@ -17,11 +10,7 @@ export interface Span {
   allDay: boolean;
 }
 
-/**
- * The ids to leave out when checking an occurrence against everything else: the event's own row,
- * and its series (so a class never "conflicts" with the other dates of itself, or with the series
- * it is being moved out of).
- */
+/** The ids to leave out when checking an occurrence against everything else: the event's own row, and its series (so a class never "conflicts" with the other dates of itself, or with the series it is being moved out of). */
 export function selfIds(occurrence: EventOccurrence): Set<string> {
   return new Set([occurrence.event.id, ...(occurrence.seriesId ? [occurrence.seriesId] : [])]);
 }
@@ -34,10 +23,7 @@ export function findConflicts(events: Event[], span: Span, ignore: ReadonlySet<s
   return expandOccurrences(events, span.start, span.end).filter((o) => !o.allDay && !isIgnored(o, ignore) && o.start < span.end && o.end > span.start);
 }
 
-/**
- * For a list of occurrences (a day's schedule, say): which of them overlap which others.
- * Only occurrences that overlap something appear in the result.
- */
+/** For a list of occurrences (a day's schedule, say): which of them overlap which others. */
 export function conflictMap(occurrences: EventOccurrence[]): Map<string, EventOccurrence[]> {
   const timed = occurrences.filter((o) => !o.allDay);
   const out = new Map<string, EventOccurrence[]>();
@@ -50,10 +36,7 @@ export function conflictMap(occurrences: EventOccurrence[]): Map<string, EventOc
 
 // ---- time blocks count as busy time too ------------------------------------
 
-/**
- * One thing a time overlaps, whether it's an event or a time block (time you set aside to work on a to-do). The warning
- * screens only need a name and a time, so both are reduced to this.
- */
+/** One thing a time overlaps, whether it's an event or a time block (time you set aside to work on a to-do). */
 export interface Clash {
   key: string;
   title: string;
@@ -67,10 +50,7 @@ export const clashOfOccurrence = (o: EventOccurrence): Clash => ({ key: o.key, t
 /** The part of a time block that matters here. */
 export type BlockLike = Pick<TimeBlock, 'id' | 'taskId' | 'start' | 'end'>;
 
-/**
- * The time blocks that overlap `span`. `titleOf` gives the name of a block's to-do (undefined for one that has been deleted:
- * its blocks are hidden everywhere, so they can't clash with anything either).
- */
+/** The time blocks that overlap `span`. */
 export function findBlockClashes(blocks: readonly BlockLike[], titleOf: (taskId: string) => string | undefined, span: Span, ignore: ReadonlySet<string> = new Set()): Clash[] {
   if (span.allDay || span.end <= span.start) return [];
   const out: Clash[] = [];

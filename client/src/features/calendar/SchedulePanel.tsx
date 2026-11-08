@@ -9,11 +9,7 @@ import { cx } from '../../lib/cx';
 import { IconButton } from '../../ui/Button';
 import { Input } from '../../ui/fields';
 
-/**
- * Your open to-dos, beside the Week and Day calendar. Drag one onto a time slot to set aside time to work on it (its
- * estimate, or an hour). The button on each is the plain alternative: a form for the day, time and length, which works
- * from the keyboard. To-dos that already have time set aside drop to the bottom, since they're the least in need of it.
- */
+/** Your open to-dos, beside the Week and Day calendar. */
 export function SchedulePanel() {
   const { tasks, calendarsById, scheduledMinutesByTask, today, openDialog } = useApp();
   const [query, setQuery] = useState('');
@@ -29,8 +25,7 @@ export function SchedulePanel() {
       });
   }, [tasks, query, scheduledMinutesByTask]);
 
-  // FullCalendar's own way of dragging something from outside it onto the grid. It reads the title and length from the
-  // element, and (with create: false) only tells the calendar where it was dropped: the page makes the time block.
+  // FullCalendar's own way of dragging something from outside it onto the grid.
   useEffect(() => {
     const el = list.current;
     if (!el) return;

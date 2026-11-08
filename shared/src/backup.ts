@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { CalendarSchema } from './calendarModel';
+import { CalendarSchema } from './models/calendars';
 import { DEFAULT_CALENDARS, toPaletteColor } from './palette';
-import { TaskSchema, TASK_SOURCES } from './task';
+import { TaskSchema, TASK_SOURCES } from './models/tasks';
 import { ApplicationSchema } from './models/applications';
 import { CourseSchema, SemesterSchema } from './models/courses';
 import { EventSchema, EventTypeSchema, TimeBlockSchema } from './models/events';
@@ -10,11 +10,7 @@ import { TemplateSchema } from './models/templates';
 
 export const BACKUP_VERSION = 2;
 
-/**
- * The JSON file format for export/import, versioned so a future format can
- * still read old files. Attachments' files are not included (only the app's
- * data is); they'd make the file huge, and they live in server/uploads.
- */
+/** The JSON file format for export/import, versioned so a future format can still read old files. */
 export const BackupSchema = z.object({
   app: z.literal('voice-todo'),
   version: z.literal(BACKUP_VERSION),
@@ -38,13 +34,7 @@ export type Backup = z.output<typeof BackupSchema>;
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 
-/**
- * Old lists -> calendars, by the same rules as the database upgrade (migration 3), so
- * restoring an old export gives the same colors and order as upgrading the database did:
- * "Fraternity" becomes "Kappa Alpha Psi"; the default calendars get their palette color
- * and position; your own calendars keep their relative order after them, with old color
- * names translated.
- */
+/** Old lists -> calendars, by the same rules as the database upgrade (migration 3), so restoring an old export gives the same colors and order as upgrading the database did: "Fraternity" becomes "Kappa Alpha Psi"; the default calendars get their palette color and position; your own calendars keep their relative order after them, with old color names translated. */
 function upgradeCalendars(categories: Record<string, unknown>[]) {
   const rank = (name: string) => DEFAULT_CALENDARS.findIndex((d) => d.name.toLowerCase() === name.toLowerCase());
   let custom = 0;
@@ -59,11 +49,7 @@ function upgradeCalendars(categories: Record<string, unknown>[]) {
     });
 }
 
-/**
- * Version 1 files (from the original to-do app) have "categories" and tasks
- * with a categoryId. Rewrite one into the version 2 shape so it can be
- * validated and imported like any other. Anything that isn't a v1 file is returned untouched.
- */
+/** Version 1 files (from the original to-do app) have "categories" and tasks with a categoryId. */
 export function upgradeBackup(raw: unknown): unknown {
   if (!isRecord(raw) || raw.version !== 1) return raw;
 

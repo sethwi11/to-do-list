@@ -4,24 +4,14 @@ import type { BlockLike } from './conflicts';
 import { expandOccurrences } from './eventSeries';
 import type { Event } from './models/events';
 import { formatMinutes } from './timeBlocks';
-import type { Priority, Task } from './task';
+import type { Priority, Task } from './models/tasks';
 
-/*
- * The workload heatmap: how heavy each day is.
- *
- *   load = hours of events + hours of time blocks + the to-dos due that day, weighted by priority
- *
- * A day's load is turned into one of four levels of shading. Everything that decides what counts as "heavy" is in
- * HEATMAP below, so changing your mind about it is a one-line edit.
- */
+// The workload heatmap: load = event hours + time block hours + to-dos due that day weighted by priority, shaded in four levels (see HEATMAP).
 
 export const HEATMAP = {
   /** What a to-do due on the day adds, as if it were this many hours of work. */
   taskWeight: { high: 3, medium: 2, low: 1 } satisfies Record<Priority, number>,
-  /**
-   * A day is at least "moderate" from this load, "busy" from this, and "packed" from this. Anything above 0 and below the first is "light".
-   * Roughly: 3 is a class and a couple of to-dos, 6 is a full day of classes, 9 is a day with no room to breathe.
-   */
+  /** A day is at least "moderate" from this load, "busy" from this, and "packed" from this. */
   moderateFrom: 3,
   busyFrom: 6,
   packedFrom: 9,
@@ -80,10 +70,7 @@ export interface WorkloadSources {
   tasks: readonly Pick<Task, 'dueDate' | 'priority' | 'status'>[];
 }
 
-/**
- * The load of every day in [start, end). All-day events count as an event but add no hours (a "Career fair" marker isn't
- * an hour of your day). Only open to-dos count: ticking one off lightens its day.
- */
+/** The load of every day in [start, end). */
 export function workloadByDay(start: string, end: string, src: WorkloadSources): Map<string, DayLoad> {
   const days = new Map(eachDate(start, end).map((d) => [d, emptyDay(d)]));
 

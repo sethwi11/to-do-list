@@ -28,8 +28,7 @@ interface TaskRow {
   next_occurrence_id: string | null;
 }
 
-// Gap between sortOrder values. Leaving room means a drag-and-drop move can
-// land *between* two tasks (at the midpoint) by updating only the moved row.
+// Gap between sortOrder values.
 export const SORT_GAP = 1024;
 
 function rowToTask(row: TaskRow): Task {
@@ -128,8 +127,7 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   async create(input: CreateTaskInput): Promise<Task> {
-    // A client may choose the id (so a create made offline can be replayed
-    // safely). If we've already seen it, return what we have instead of failing.
+    // A client may choose the id (so a create made offline can be replayed safely).
     if (input.id) {
       const existing = this.stmts.get.get(input.id);
       if (existing) return rowToTask(existing);
@@ -145,8 +143,7 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   async update(id: string, changes: UpdateTaskInput, ctx: RequestContext): Promise<Task | null> {
-    // Read-modify-write inside a transaction, so two concurrent PATCHes can't
-    // interleave, and creating/removing a recurrence is all-or-nothing.
+    // Read-modify-write inside a transaction, so two concurrent PATCHes can't interleave, and creating/removing a recurrence is all-or-nothing.
     return this.db.transaction((): Task | null => {
       const row = this.stmts.get.get(id);
       if (!row) return null;

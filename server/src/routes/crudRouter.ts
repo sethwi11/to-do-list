@@ -11,16 +11,7 @@ interface CrudRouterOptions {
   update: z.ZodType | null;
 }
 
-/**
- * The same five endpoints for every table, from one function:
- *
- *   GET    /        list           POST   /          create (201)
- *   GET    /:id     one            PATCH  /:id       change some fields
- *   DELETE /:id     delete (204)   POST   /:id/restore   undo a delete (only if the repository supports it)
- *
- * Every body is validated by zod before it reaches the repository, which then
- * only ever sees clean, known fields.
- */
+/** The same endpoints for every table: list, get, create (201), PATCH, delete (204), and restore when the repository supports undo. */
 export function crudRouter<T, C, U>(
   repo: CrudRepository<T, C, U> & Partial<Pick<RestorableRepository<T, C, U>, 'restore'>>,
   { label, create, update }: CrudRouterOptions,

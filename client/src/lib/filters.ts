@@ -57,8 +57,7 @@ export const SORT_MODES: { id: SortMode; label: string }[] = [
 
 const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
-// "YYYY-MM-DD" and "HH:mm" strings sort correctly as plain strings, which is
-// one more reason to store them in that format.
+// "YYYY-MM-DD" and "HH:mm" strings sort correctly as plain strings, which is one more reason to store them in that format.
 function compareNullableLast(a: string | null, b: string | null): number {
   if (a === b) return 0;
   if (a === null) return 1;
@@ -71,11 +70,7 @@ const byDue = (a: Task, b: Task) =>
 const byPriority = (a: Task, b: Task) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
 const byManual = (a: Task, b: Task) => a.sortOrder - b.sortOrder;
 
-/**
- * Comparators chained with `||`: the first one that returns non-zero decides,
- * and the later ones only break ties. Every mode ends with manual order, so the
- * result is always deterministic.
- */
+/** Comparators chained with `||`: the first one that returns non-zero decides, and the later ones only break ties. */
 export function sortTasks(tasks: Task[], mode: SortMode): Task[] {
   const compare = {
     due: (a: Task, b: Task) => byDue(a, b) || byPriority(a, b) || byManual(a, b),

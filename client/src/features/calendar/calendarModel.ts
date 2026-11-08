@@ -16,10 +16,7 @@ import {
 } from '@todo/shared';
 import { parseLocalISODate } from '../../lib/dates';
 
-/*
- * The calendar page's logic, apart from any drawing: which view and date the address bar
- * names, how to move between dates, and how events and to-dos become the list of things to show.
- */
+// The calendar page's logic, apart from any drawing: which view and date the address bar names, how to move between dates, and how events and to-dos become the list of things to show.
 
 export const CALENDAR_VIEWS = [
   { id: 'month', label: 'Month' },
@@ -93,10 +90,7 @@ export function viewTitle(view: CalendarViewId, date: string): string {
   }
 }
 
-/**
- * A range of dates comfortably covering what the view shows (a superset: extra days cost nothing),
- * as [first date, last date + 1]. Computed from the date alone so the first paint already has data.
- */
+/** A range of dates comfortably covering what the view shows (a superset: extra days cost nothing), as [first date, last date + 1]. */
 export function dataRange(date: string): [string, string] {
   const monthStart = date.slice(0, 8) + '01';
   return [addDays(monthStart, -14), addDays(monthStart, 62)];
@@ -214,10 +208,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export const localDateTime = (d: Date): string => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 export const localDate = (d: Date): string => localDateTime(d).slice(0, 10);
 
-/**
- * A moved or resized item's new start and end, as stored strings. FullCalendar leaves `end` empty for
- * an event with its default length, so fill it in (all-day: one day; timed: an hour).
- */
+/** A moved or resized item's new start and end, as stored strings. */
 export function spanFromFullCalendar(start: Date, end: Date | null, allDay: boolean): { start: string; end: string; allDay: boolean } {
   if (allDay) {
     const first = localDate(start);
@@ -227,10 +218,7 @@ export function spanFromFullCalendar(start: Date, end: Date | null, allDay: bool
   return { start: s, end: end ? localDateTime(end) : addMinutes(s, 60), allDay };
 }
 
-/**
- * What a selection on the grid means as a new event. A plain click selects a single 30-minute slot,
- * but a new event is more likely an hour; anything the person dragged out is kept as dragged.
- */
+/** What a selection on the grid means as a new event. */
 export function selectionToSpan(start: string, end: string, allDay: boolean): { start: string; end: string } {
   if (allDay || minutesBetween(start, end) > 30) return { start, end };
   return { start, end: addMinutes(start, 60) };
@@ -238,10 +226,7 @@ export function selectionToSpan(start: string, end: string, allDay: boolean): { 
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-/**
- * Where "New event" starts when nothing was dragged out. On a day other than today (you're looking at
- * it on the calendar) it's 9 AM that day; otherwise the next full hour, rolling to 9 AM tomorrow late at night.
- */
+/** Where "New event" starts when nothing was dragged out. */
 export function newEventSpan(lookingAt: string | null, now: Date): { start: string; end: string } {
   const today = localDate(now);
   if (lookingAt && lookingAt !== today) return { start: combine(lookingAt, '09:00'), end: combine(lookingAt, '10:00') };

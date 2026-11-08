@@ -13,10 +13,7 @@ export function EmptyState({ message, children, className }: { message: string; 
   );
 }
 
-/**
- * Placeholder rows while data loads: hairline-colored bars that slowly breathe (never a
- * spinner). A fading bar rather than a sweeping highlight keeps the design free of gradients.
- */
+/** Placeholder rows while data loads: hairline-colored bars that slowly breathe (never a spinner). */
 export function SkeletonRows({ count = 4, className }: { count?: number; className?: string }) {
   return (
     <div role="status" aria-busy="true" className={className}>

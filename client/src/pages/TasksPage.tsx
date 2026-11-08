@@ -23,11 +23,7 @@ const EMPTY_MESSAGE: Record<TaskTab, string> = {
   completed: 'Nothing completed yet.',
 };
 
-/**
- * Every task, with tabs (All, Upcoming, Overdue, Completed), search, filters, and sorting. What's
- * shown (the tab, a single calendar, a single day) is in the URL, so links from the sidebar and
- * the mini month land on the right list.
- */
+/** Every task, with tabs (All, Upcoming, Overdue, Completed), search, filters, and sorting. */
 export default function TasksPage() {
   const { tasks, calendars, calendarsById, today, loading, error, dismissError, reload, openDialog } = useApp();
   const [params] = useSearchParams();

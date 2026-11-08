@@ -2,11 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { QuickAddInput } from '../ui/fields';
 import { useApp, type TaskDefaults } from './AppContext';
 
-/**
- * The underlined box in every page header. Type a task and press Enter. Its due date and
- * calendar come from the page you're on (Today adds tasks due today; a calendar's list adds
- * to that calendar), so it stays a single line. The N shortcut jumps here.
- */
+/** The underlined box in every page header. */
 export function QuickAdd({ defaults, className }: { defaults?: TaskDefaults; className?: string }) {
   const { addTask } = useApp();
   const [value, setValue] = useState('');

@@ -14,11 +14,7 @@ interface PdfViewerProps {
   className?: string;
 }
 
-/**
- * A PDF drawn page by page with previous / next, using the same pdf.js that reads the text. A
- * custom viewer (rather than the browser's built-in one) so it looks and behaves the same everywhere,
- * and so the review can jump it to the page a date was found on.
- */
+/** A PDF drawn page by page with previous / next, using the same pdf.js that reads the text. */
 export function PdfViewer({ source, page, onPageChange, className }: PdfViewerProps) {
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [error, setError] = useState<string | null>(null);

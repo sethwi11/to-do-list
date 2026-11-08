@@ -23,16 +23,7 @@ import './index.css';
 // The calendar library is big, so its page loads only when you open it.
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 
-/*
- * Providers, outside in:
- *  - SettingsProvider: the saved settings, and it applies the theme to <html>. Outermost so
- *    even the style guide follows the chosen theme.
- *  - QueryClientProvider: server data cache.
- *  - BrowserRouter: the address bar drives which page shows.
- *  - AppProvider: tasks and calendars plus the actions on them, the dialogs, and the toast.
- *    It sits inside the router because its dialogs navigate.
- * The style guide lives outside the Shell so it has no sidebar.
- */
+// Providers, outside in: settings (applies the theme), the server-data cache, the router, then AppProvider (shared data, actions, dialogs, toast).
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <SettingsProvider>

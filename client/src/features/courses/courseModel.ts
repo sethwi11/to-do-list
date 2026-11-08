@@ -9,10 +9,7 @@ export function describeMeetingDays(days: readonly number[]): string {
   return set.map((d) => DAY_SHORT[d]).join(', ');
 }
 
-/**
- * The semester to show first: the one you're in now, else the one that starts soonest after today, else the most
- * recent one. Archived semesters are never chosen for you.
- */
+/** The semester to show first: the one you're in now, else the one that starts soonest after today, else the most recent one. */
 export function currentSemester(semesters: readonly Semester[], today: string): Semester | undefined {
   const live = semesters.filter((s) => !s.archived);
   return (
@@ -28,10 +25,7 @@ export interface SemesterDraft {
   endDate: string;
 }
 
-/**
- * A starting point for "New semester", so the form isn't blank: the usual Fall / Spring / Summer dates for
- * the time of year. They are only a suggestion; every date is editable.
- */
+/** A starting point for "New semester", so the form isn't blank: the usual Fall / Spring / Summer dates for the time of year. */
 export function suggestSemester(today: string): SemesterDraft {
   const year = Number(today.slice(0, 4));
   const month = Number(today.slice(5, 7));

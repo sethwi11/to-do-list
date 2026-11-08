@@ -1,9 +1,6 @@
 import { todayLocalISO } from '../lib/dates';
 
-/**
- * Error type for every failed API call. `status` is 0 when the server
- * couldn't be reached at all (it's down, or there's no network).
- */
+/** Error type for every failed API call. */
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -15,17 +12,13 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Thin fetch wrapper. It converts network failures and non-2xx responses into
- * ApiError, so UI code handles one error type with a readable message.
- */
+/** Thin fetch wrapper. */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
       ...init,
       // X-Client-Date tells the server what "today" is for *you* (used for recurrences).
-      // A file upload (FormData) must NOT be labelled JSON: the browser adds its own content type with the multipart boundary.
       headers: { ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }), 'X-Client-Date': todayLocalISO(), ...init?.headers },
     });
   } catch {

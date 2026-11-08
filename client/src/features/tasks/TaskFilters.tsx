@@ -16,10 +16,7 @@ interface Props {
   hideStatus?: boolean;
 }
 
-/**
- * Search is always visible; the other filters sit behind one "Filters" button (with a count
- * of the active ones), because they're used occasionally and four always-open menus are noise.
- */
+/** Search is always visible; the other filters sit behind one "Filters" button (with a count of the active ones), because they're used occasionally and four always-open menus are noise. */
 export function TaskFilters({ filters, onChange, sortMode, onSortChange, calendars, hideCalendar, hideStatus }: Props) {
   const [open, setOpen] = useState(false);
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) => onChange({ ...filters, [key]: value });

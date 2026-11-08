@@ -23,10 +23,7 @@ interface Deps {
   showToast: (message: string, onUndo?: () => void, onCommit?: () => void) => void;
 }
 
-/**
- * Everything that changes time blocks. Like the event actions: each one saves, then offers Undo in a toast.
- * Deleting a block is a soft delete (the server keeps the row), so Undo is a restore.
- */
+/** Everything that changes time blocks. */
 export function useTimeBlockActions({ showToast }: Deps): TimeBlockActions {
   const qc = useQueryClient();
   const create = timeBlockHooks.useCreate();

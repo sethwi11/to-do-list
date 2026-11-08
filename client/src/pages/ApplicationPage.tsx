@@ -4,12 +4,13 @@ import { CalendarPlus, ChevronLeft, ExternalLink, ListPlus, Mail, MapPin, Pencil
 import { addDays, APPLICATION_STATUSES, appliedDate, expandOccurrences, followUpSuggestions, INTERVIEW_EVENT_TYPE, localDateOf, type ApplicationStatus } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
-import { ago, hostOf, longDate } from '../features/applications/format';
+import { ago, hostOf } from '../features/applications/format';
+import { longDate } from '../lib/dates';
 import { StatusTimeline } from '../features/applications/StatusTimeline';
 import { newEventSpan, toEventItem, type CalendarItem } from '../features/calendar/calendarModel';
 import { formatWhen } from '../features/calendar/format';
 import { ItemDetail } from '../features/calendar/ItemDetail';
-import { AttachmentList } from '../features/files/AttachmentList';
+import { AttachmentList } from '../features/attachments/AttachmentList';
 import { CompletedSection, TaskList } from '../features/tasks/TaskList';
 import { sortByCompletedDesc, sortTasks } from '../lib/filters';
 import { Markdown } from '../lib/markdown';

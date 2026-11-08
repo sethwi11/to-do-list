@@ -1,11 +1,8 @@
 import { daysBetween, localDateOf, type Application } from '@todo/shared';
 import { cx } from '../../lib/cx';
-import { longDate } from './format';
+import { longDate } from '../../lib/dates';
 
-/**
- * Where an application has been: each status it has had, the day it changed, and how long it stayed. The server
- * writes this; there's nothing here to edit (a wrong click is fixed by moving it back, which the server tidies up).
- */
+/** Where an application has been: each status it has had, the day it changed, and how long it stayed. */
 export function StatusTimeline({ application, today }: { application: Application; today: string }) {
   const entries = application.statusHistory;
   return (

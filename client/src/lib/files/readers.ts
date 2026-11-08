@@ -26,11 +26,7 @@ export const SCANNED_PAGE_CHARS = 25;
 
 const nonSpace = (s: string) => s.replace(/\s+/g, '').length;
 
-/**
- * Get the text out of a file, whatever it is. Everything runs in this browser tab. Heavy libraries
- * (OCR, PDF, Word) are loaded only when a file needs them.
- * Throws an Error with a message fit to show.
- */
+/** Get the text out of a file, whatever it is. */
 export async function readFileText(file: File, ocr: Ocr, onProgress: (p: Progress) => void): Promise<ReadResult> {
   const problem = fileProblem(file);
   if (problem) throw new Error(problem);

@@ -1,5 +1,5 @@
 import { LOAD_LEVEL_NAMES, type DayLoad, describeLoad } from '@todo/shared';
-import { parseLocalISODate } from '../../lib/dates';
+import { fullDate } from '../../lib/dates';
 
 const LEVELS = [1, 2, 3, 4] as const;
 
@@ -20,7 +20,7 @@ export function HeatLegend() {
 
 /** A small card that follows the pointer over a day in the workload map: what makes that day heavy. */
 export function HeatTooltip({ load, x, y }: { load: DayLoad; x: number; y: number }) {
-  const day = parseLocalISODate(load.date).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const day = fullDate(load.date);
   // Kept on screen: flipped to the left of the pointer near the right edge, and above it near the bottom.
   const flipX = typeof window !== 'undefined' && x > window.innerWidth - 260;
   const flipY = typeof window !== 'undefined' && y > window.innerHeight - 120;

@@ -22,11 +22,7 @@ const FIRST_DIRECTION: Record<ApplicationSortKey, SortDirection> = { company: 'a
 /** A phone shows the table (dragging a card through seven columns is not a phone gesture); everything else shows the board. */
 const defaultView = (): View => (typeof matchMedia === 'function' && matchMedia('(max-width: 639px)').matches ? 'table' : 'board');
 
-/**
- * The internship tracker: your goal and numbers on top, anything that needs a follow-up, then every application as a board
- * (drag between columns) or a table (sort and filter). What you're looking at is in the address bar, so it survives a refresh,
- * and the links on the stage counts work.
- */
+/** The internship tracker: your goal and numbers on top, anything that needs a follow-up, then every application as a board (drag between columns) or a table (sort and filter). */
 export default function ApplicationsPage() {
   const app = useApp();
   const { applications, applicationsLoading, calendars, today, openDialog } = app;

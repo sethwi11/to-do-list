@@ -7,10 +7,7 @@ import { Field, Input, Select } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
 import { ConflictNotice } from '../events/ConflictNotice';
 
-/**
- * Set time aside to work on a to-do, or change when an existing block is. This is the plain way to do what dragging a
- * to-do onto the calendar does, so it works from the keyboard and on a phone.
- */
+/** Set time aside to work on a to-do, or change when an existing block is. */
 export function ScheduleDialog() {
   const { dialog, closeDialog, tasks, timeBlocks, removeTimeBlock } = useApp();
   const open = dialog?.kind === 'schedule';

@@ -8,10 +8,10 @@ import { toEventItem, type CalendarItem } from '../features/calendar/calendarMod
 import { formatTimeRange, formatWhen } from '../features/calendar/format';
 import { ItemDetail } from '../features/calendar/ItemDetail';
 import { describeMeetingDays } from '../features/courses/courseModel';
-import { AttachmentList } from '../features/files/AttachmentList';
+import { AttachmentList } from '../features/attachments/AttachmentList';
 import { CompletedSection, TaskList } from '../features/tasks/TaskList';
 import { calendarVars } from '../lib/calendarColors';
-import { parseLocalISODate } from '../lib/dates';
+import { plainDate } from '../lib/dates';
 import { sortByCompletedDesc, sortTasks } from '../lib/filters';
 import { Button } from '../ui/Button';
 import { SectionLabel } from '../ui/fields';
@@ -21,8 +21,6 @@ import { EmptyState } from '../ui/states';
 
 const UPCOMING_MEETINGS = 6;
 
-/** "Mon, Nov 9": a list of classes needs real dates, since "Monday" can't say which one. */
-const plainDate = (date: string) => parseLocalISODate(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
 /** One course: its next classes (each can be cancelled or moved), its to-dos and other dates, its files, and its notes. */
 export default function CoursePage() {

@@ -29,11 +29,7 @@ import { eventsBatchRouter } from './routes/events';
 import { settingsRouter } from './routes/settings';
 import { tasksRouter } from './routes/tasks';
 
-/**
- * Builds the Express app without starting it. Keeping "build" separate from
- * "listen" lets tests drive the app in-process with supertest (no real port,
- * no real database file).
- */
+/** Builds the Express app without starting it. */
 export function createApp(repos: Repositories, options: { uploadsDir: string }) {
   const app = express();
 

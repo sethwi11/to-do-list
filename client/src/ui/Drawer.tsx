@@ -10,11 +10,7 @@ interface DrawerProps {
   className?: string;
 }
 
-/**
- * A panel that slides in from the left (the phone version of the sidebar), built on the
- * browser's <dialog> like Dialog: focus is trapped inside, Escape closes it, the page behind
- * is inert, and a tap on the dimmed area closes it.
- */
+/** The phone sidebar: slides in from the left, built on <dialog> like Dialog (focus trapped, Escape and a tap outside close it). */
 export function Drawer({ open, onClose, label, children, className }: DrawerProps) {
   const ref = useRef<HTMLDialogElement>(null);
 

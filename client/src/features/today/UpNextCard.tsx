@@ -1,4 +1,4 @@
-import { datePart, minutesBetween, timePart, type EventOccurrence } from '@todo/shared';
+import { datePart, minutesBetween, timePart } from '@todo/shared';
 import { ExternalLink, MapPin } from 'lucide-react';
 import { calendarVars } from '../../lib/calendarColors';
 import { formatCountdown, formatDueDate, formatTime } from '../../lib/dates';
@@ -12,12 +12,7 @@ interface UpNextCardProps {
   onOpen: (anchor: HTMLElement) => void;
 }
 
-/**
- * The next thing on the schedule: its title, a countdown, and where / how to get there.
- * This card is the one place in the app with a box around it (a strong 1px rule, no shadow),
- * because it is the one thing on the page worth stopping for. The countdown is live: the page's
- * clock turns over each minute, and so does this.
- */
+/** The next thing on the schedule: its title, a countdown, and where / how to get there. */
 export function UpNextCard({ item, now, today, onOpen }: UpNextCardProps) {
   const { occurrence } = item;
   const event = occurrence.event;

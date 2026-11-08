@@ -54,11 +54,7 @@ export interface CardContext {
   pageOf?: (charIndex: number) => number | null;
 }
 
-/**
- * Turn what was found into cards to review. Nothing is dropped; things that are doubtful are shown with a
- * badge and left unchecked: low confidence, already past, or like something already on the calendar.
- * In a syllabus, deadlines start out as to-dos with reminders, since "due Oct 14" is something to do, not somewhere to be.
- */
+/** Turn what was found into cards to review. */
 export function makeCards(items: ExtractedItem[], ctx: CardContext): Card[] {
   const typeIdByName = new Map(ctx.eventTypes.map((t) => [t.name, t.id]));
   return items.map((item) => {
@@ -129,10 +125,7 @@ export function toTaskInput(card: Card, { courseId }: Extras): CreateTaskInput {
   };
 }
 
-/**
- * The same thing found in more than one place (a flyer attached as a picture AND a PDF): the later copies are flagged and
- * left unchecked, so you don't add it twice. Works across files, in the order they're listed.
- */
+/** The same thing found in more than one place (a flyer attached as a picture AND a PDF): the later copies are flagged and left unchecked, so you don't add it twice. */
 export function flagRepeats(cards: Card[]): Card[] {
   return cards.map((card, i) => {
     if (card.duplicateOf) return card;

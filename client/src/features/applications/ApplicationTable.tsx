@@ -3,7 +3,8 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { appliedDate, APPLICATION_STATUSES, daysInStatus, type Application, type ApplicationSortKey, type ApplicationStatus, type SortDirection } from '@todo/shared';
 import { cx } from '../../lib/cx';
 import { Select } from '../../ui/fields';
-import { ago, shortDate } from './format';
+import { ago } from './format';
+import { shortDate } from '../../lib/dates';
 
 interface TableProps {
   applications: Application[];
@@ -25,10 +26,7 @@ const COLUMNS: { key: ApplicationSortKey; label: string; className?: string }[] 
   { key: 'updated', label: 'Last change', className: 'max-lg:hidden' },
 ];
 
-/**
- * Every application as a sortable table (a phone gets company, role and status; wider screens add the dates). Click a heading to sort (again to reverse). Each row has a status menu, which
- * is also the plain, keyboard-and-phone-friendly way to move an application along (the board's drag does the same thing).
- */
+/** Every application as a sortable table (a phone gets company, role and status; wider screens add the dates). */
 export function ApplicationTable({ applications, today, sort, direction, onSort, onStatus, empty }: TableProps) {
   if (applications.length === 0) return <p className="py-10 font-display text-title text-ink-muted italic">{empty}</p>;
   return (

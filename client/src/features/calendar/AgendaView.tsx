@@ -2,7 +2,7 @@ import { addDays, timePart } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { calendarVars } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
-import { formatTime, parseLocalISODate } from '../../lib/dates';
+import { formatTime, fullDate, parseLocalISODate } from '../../lib/dates';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { anchorOf, type PopoverAnchor } from '../../ui/Popover';
@@ -28,10 +28,7 @@ interface AgendaViewProps {
   onCreate: () => void;
 }
 
-/**
- * The week as a list: only the days that have something on them (and today), each with its items in
- * order. The same data as the grid, laid out to be read top to bottom, which suits a phone.
- */
+/** The week as a list: only the days that have something on them (and today), each with its items in order. */
 export function AgendaView({ date, items, onOpenItem, onCreate }: AgendaViewProps) {
   const { today, toggleTask } = useApp();
   const start = weekStart(date);
@@ -56,7 +53,7 @@ export function AgendaView({ date, items, onOpenItem, onCreate }: AgendaViewProp
           // A printed planner page: the date set large on the left, that day's items listed beside it.
           <section
             key={d}
-            aria-label={day.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}
+            aria-label={fullDate(d)}
             className="grid grid-cols-[3.25rem_minmax(0,1fr)] gap-x-3 border-t border-rule pt-3 pb-6 sm:grid-cols-[5rem_minmax(0,1fr)] sm:gap-x-5"
           >
             <h2 className="flex flex-col items-start leading-none">

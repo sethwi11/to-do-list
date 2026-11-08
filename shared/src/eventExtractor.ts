@@ -3,17 +3,7 @@ import { addDays, dayOfWeek } from './dateMath';
 import { addMinutes, combine } from './dateTime';
 import { DEFAULT_EVENT_TYPES, type EventRecurrence } from './models/events';
 
-/*
- * Finding events in text: an interview confirmation, a syllabus, a flyer.
- *
- * chrono-node finds the dates and times ("Tuesday at 2:30", "Nov 4 - Nov 6", "next Friday").
- * Everything else here decides what each date is ABOUT: a title taken from nearby lines, a type
- * guessed from keywords, a location, a link, and a confidence score. It is heuristics, not magic, so the
- * results are only ever suggestions for a person to review.
- *
- * ---- Tuning ----
- * The word lists just below are meant to be edited. Add a word, run the tests, and see what changes.
- */
+// Finding events in text: an interview confirmation, a syllabus, a flyer. chrono-node finds the dates and times ("Tuesday at 2:30", "Nov 4 - Nov 6", "next Friday").
 
 type EventTypeName = (typeof DEFAULT_EVENT_TYPES)[number];
 
@@ -91,10 +81,7 @@ export interface ExtractedItem {
 export interface ExtractOptions {
   /** "Today", for relative dates ("next Friday") and for judging what is past. */
   now: Date;
-  /**
-   * A syllabus lists dates already behind you ("Sep 3") as well as ahead, so a date with no year is read as
-   * the one in the current year, not the next one. Elsewhere ("Friday, Jan 9" on a flyer) it is read as the next one.
-   */
+  /** A syllabus lists dates already behind you ("Sep 3") as well as ahead, so a date with no year is read as the one in the current year, not the next one. */
   syllabus?: boolean;
 }
 
@@ -142,10 +129,7 @@ function stamp(c: chrono.ParsedComponents, now: Date): Stamp {
   return { date, time: c.isCertain('hour') ? `${pad(c.get('hour') ?? 0)}:${pad(c.get('minute') ?? 0)}` : null };
 }
 
-/**
- * "Friday, Jan 9" with no year: the year is whichever makes Jan 9 a Friday (nearest to now). chrono
- * picks a year without checking the weekday it was told, which is wrong whenever the two disagree.
- */
+/** "Friday, Jan 9" with no year: the year is whichever makes Jan 9 a Friday (nearest to now). chrono picks a year without checking the weekday it was told, which is wrong whenever the two disagree. */
 function fixYearByWeekday(c: chrono.ParsedComponents, date: string, now: Date): string {
   if (c.isCertain('year') || !c.isCertain('weekday') || !c.isCertain('day')) return date;
   const want = c.get('weekday');
@@ -190,11 +174,7 @@ function lineOf(lines: Line[], index: number): number {
   return lo;
 }
 
-/**
- * chrono reports "Date: Nov 9" and "Time: 2:30 PM" on separate lines as two results. Give each lone time to the
- * nearest date within two lines (the same line first, then the line above, then below) that doesn't have a time yet.
- * A time that belongs to no date at all is dropped.
- */
+/** chrono reports "Date: Nov 9" and "Time: 2:30 PM" on separate lines as two results. */
 function joinDatesAndTimes(hits: DateHit[], lines: Line[]): DateHit[] {
   const isDated = (h: DateHit) => h.result.start.isCertain('day') || h.result.start.isCertain('weekday') || h.result.start.isCertain('month');
   const dated = hits.filter(isDated);
@@ -311,23 +291,17 @@ export function guessEventType(title: string, snippet: string): EventTypeName | 
 
 // ---- the main function ------------------------------------------------------------------------
 
-/**
- * Find the events in `text`. Every date becomes a candidate; nothing is dropped for being unlikely, only
- * scored low, so the review can show it and let the person decide.
- */
+/** Find the events in `text`. */
 export function extractEvents(rawText: string, { now, syllabus = false }: ExtractOptions): ExtractedItem[] {
   const text = rawText.replace(/\r\n?/g, '\n').replace(/[\u00a0\u2007\u202f]/g, ' ');
   const lines = splitLines(text);
   const nowText = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
-  // An email's own header lines ("Sent: Wednesday, November 4...") have dates that are not events. Blank them for
-  // chrono (same length, so every position still lines up with the original text).
+  // An email's own header lines ("Sent: Wednesday, November 4...") have dates that are not events.
   const blank = (m: string) => ' '.repeat(m.length);
   const searchable = text.replace(/^[ \t]*(?:sent|received|from|to|cc|bcc)[ \t]*:.*$/gim, blank).replace(NUMBERED_LABEL_RE, blank);
 
-  // A date with no year is read as the next one coming (right for a flyer: "Jan 9" in November means next January). But a
-  // document with several dates is a schedule, with dates behind you as well as ahead, so there it means this year's.
-  // The person can say so with "syllabus"; otherwise it's guessed from how many dates there are.
+  // A date with no year is read as the next one coming (right for a flyer: "Jan 9" in November means next January).
   const looksLikeASchedule = syllabus || chrono.parse(searchable, now, { forwardDate: false }).filter((r) => !isNoise(r)).length > SCHEDULE_DATES;
 
   const allHits: DateHit[] = chrono
@@ -360,8 +334,7 @@ export function extractEvents(rawText: string, { now, syllabus = false }: Extrac
     let last = hit.line;
     while (last < lines.length - 1 && lines[last + 1]!.paragraph === para && !dateLines.has(last + 1)) last++;
 
-    // A link or a place is often in the paragraph just AFTER the date ("Join Zoom: ..."), so look a little further for those,
-    // still stopping at the next date.
+    // A link or a place is often in the paragraph just AFTER the date ("Join Zoom: ..."), so look a little further for those, still stopping at the next date.
     let reach = last;
     while (reach < lines.length - 1 && reach - hit.line < 8 && !dateLines.has(reach + 1)) reach++;
     const detailWindow = lines.slice(first, reach + 1).map((l) => l.text);

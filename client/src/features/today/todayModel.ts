@@ -1,9 +1,6 @@
 import { addDays, conflictMap, expandOccurrences, type Event, type EventOccurrence, type Task, type TimeBlock } from '@todo/shared';
 
-/*
- * The logic behind the Today page, apart from any drawing. "now" is always a local datetime
- * string ("2026-11-04T14:30"), passed in, so every function is a plain input -> output and testable.
- */
+// The logic behind the Today page, apart from any drawing.
 
 export const isTimed = (o: EventOccurrence) => !o.allDay;
 
@@ -13,10 +10,7 @@ export const isInProgress = (o: EventOccurrence, now: string) => isTimed(o) && o
 /** How far ahead the "Up next" card looks when nothing else is left today. */
 export const UP_NEXT_DAYS = 14;
 
-/**
- * The next timed event to start after `now`, today or in the next two weeks. All-day events are
- * skipped: "Career fair" is a marker on the day, not something you're about to walk into.
- */
+/** The next timed event to start after `now`, today or in the next two weeks. */
 export function nextUpcoming(events: Event[], now: string): EventOccurrence | undefined {
   const today = now.slice(0, 10);
   return expandOccurrences(events, today, addDays(today, UP_NEXT_DAYS)).find((o) => isTimed(o) && o.start > now);
@@ -74,11 +68,7 @@ export function blocksOnDay(blocks: readonly TimeBlock[], tasks: readonly Task[]
     .sort((a, b) => a.block.start.localeCompare(b.block.start));
 }
 
-/**
- * Today's schedule in order: all-day events first, then timed events and time blocks together, by start time (an event first
- * if one starts when a block does). A marker for the current time sits before the first thing still to come (or after the last
- * one, once they are all done), and is left out if there is nothing timed to place it among.
- */
+/** Today's schedule in order: all-day events first, then timed events and time blocks together, by start time (an event first if one starts when a block does). */
 export function timelineRows(todays: EventOccurrence[], now: string, blocks: readonly DayBlock[] = []): TimelineRow[] {
   const clashes = conflictMap(todays);
   const stateOf = (o: EventOccurrence): TimelineState => (o.allDay ? 'all-day' : o.end <= now ? 'past' : o.start <= now ? 'now' : 'upcoming');

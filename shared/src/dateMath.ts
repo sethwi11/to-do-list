@@ -1,11 +1,4 @@
-/*
- * Calendar arithmetic on "YYYY-MM-DD" strings.
- *
- * These are pure date-only calculations with no timezone involved. Internally
- * we use the Date object's *UTC* methods purely as a calendar calculator: UTC
- * has no daylight-saving jumps, so "add 1 day" is always exactly one day.
- * The result never gets interpreted as an instant in time.
- */
+// Calendar arithmetic on "YYYY-MM-DD" strings.
 
 function toUTC(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
@@ -22,10 +15,7 @@ export function addDays(iso: string, days: number): string {
   return fromUTC(d);
 }
 
-/**
- * Same day-of-month N months later, clamped to the month's last day
- * (Jan 31 + 1 month = Feb 28, not Mar 3 like naive Date math gives).
- */
+/** Same day-of-month N months later, clamped to the month's last day (Jan 31 + 1 month = Feb 28, not Mar 3 like naive Date math gives). */
 export function addMonths(iso: string, months: number): string {
   const d = toUTC(iso);
   const day = d.getUTCDate();
@@ -56,11 +46,7 @@ export function lastDayOfMonth(iso: string): string {
   return addDays(addMonths(iso.slice(0, 8) + '01', 1), -1);
 }
 
-/**
- * ISO 8601 week number (weeks start on Monday; week 1 is the week containing the
- * year's first Thursday). Late-December dates can belong to week 1 of the next year,
- * and early-January dates to week 52 or 53 of the last.
- */
+/** ISO 8601 week number (weeks start on Monday; week 1 is the week containing the year's first Thursday). */
 export function isoWeekNumber(iso: string): number {
   const d = toUTC(iso);
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7) + 3); // this week's Thursday decides the year

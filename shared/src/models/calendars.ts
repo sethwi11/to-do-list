@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { CalendarColorSchema } from './palette';
-import { hasFields, NO_FIELDS_MESSAGE } from './localTime';
+import { CalendarColorSchema } from '../palette';
+import { hasFields, NO_FIELDS_MESSAGE } from '../localTime';
 
 /**
  * A calendar is a color-coded area of life (School, ACM, Personal...).

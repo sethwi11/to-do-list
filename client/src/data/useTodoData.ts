@@ -2,23 +2,14 @@ import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Calendar, CreateCalendarInput, CreateTaskInput, Task, UpdateCalendarInput, UpdateTaskInput } from '@todo/shared';
 import { ApiError } from '../api/client';
-import { calendarHooks } from '../data/useCalendars';
-import { keys } from '../data/queryClient';
-import { useTaskMutations, useTasksQuery } from '../data/useTasks';
+import { calendarHooks } from './useCalendars';
+import { keys } from './queryClient';
+import { useTaskMutations, useTasksQuery } from './useTasks';
 
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Unexpected error');
 const NONE: never[] = [];
 
-/**
- * The current screen's view of the data: tasks and calendars plus the actions on
- * them, with the same shape it had before TanStack Query arrived. The caching,
- * optimistic updates, and rollback now live in src/data/; this file only adapts
- * them (each action resolves to the saved row, or null/false if it failed and
- * has been rolled back, with the reason shown in the error banner).
- *
- * The planner screens being built next will use the hooks in src/data/ directly,
- * and this adapter goes away once the task screens move over.
- */
+/** The current screen's view of the data: tasks and calendars plus the actions on them, with the same shape it had before TanStack Query arrived. */
 export function useTodoData() {
   const qc = useQueryClient();
   const tasksQuery = useTasksQuery();
@@ -28,8 +19,7 @@ export function useTodoData() {
   const updateCal = calendarHooks.useUpdate();
   const deleteCal = calendarHooks.useDelete();
 
-  // A failed action shows in the banner until dismissed. A failed *load* does too, but is
-  // dismissed by remembering that specific error object, so a new failure shows again.
+  // A failed action shows in the banner until dismissed.
   const [actionError, setActionError] = useState<string | null>(null);
   const [dismissedLoadError, setDismissedLoadError] = useState<unknown>(null);
   const loadError = tasksQuery.error ?? calendarsQuery.error;

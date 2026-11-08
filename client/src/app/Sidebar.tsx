@@ -25,12 +25,7 @@ const navClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =
     isActive ? 'bg-accent-soft font-medium text-ink' : 'text-ink hover:bg-accent-soft',
   );
 
-/**
- * The sidebar, styled like a notebook spine: surface color with a strong rule down its edge.
- * From the top: the app name, the New button, navigation, a month for jumping to a date, the
- * calendars, and Settings at the very bottom. The same component fills the 56px rail and the
- * phone's slide-out drawer.
- */
+/** The sidebar, styled like a notebook spine: surface color with a strong rule down its edge. */
 export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigate }: SidebarProps) {
   const { calendars, tasks, applications, today, openDialog, hiddenCalendarIds, toggleCalendarHidden } = useApp();
   const location = useLocation();

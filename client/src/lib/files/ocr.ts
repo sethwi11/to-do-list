@@ -1,11 +1,6 @@
 import type { Worker } from 'tesseract.js';
 
-/*
- * Reading text out of pictures, entirely inside this browser tab. The worker script, the engine and the
- * English language data are all served from this app's own address (see selfHostedOcr in vite.config.ts), so no
- * picture, and nothing about it, ever leaves the computer. The first use downloads about 6 MB of language
- * data from the app itself and keeps it in the browser's storage afterwards.
- */
+// Reading text out of pictures, entirely inside this browser tab.
 
 export interface Ocr {
   /** Resolves to the text found. `onProgress` is called with 0..1 while it works. */
@@ -50,10 +45,7 @@ export function createOcr(): Ocr {
 
 /** Photos can be 12 megapixels; reading text from one that big is slow and no more accurate than from a 2600-pixel one. */
 const MAX_SIDE = 2600;
-/**
- * The other way round: small text in a small picture (a low-resolution screenshot) is hard for OCR, which wants letters about
- * 20+ pixels tall. Enlarging it first, smoothly, helps a lot. Never more than 3x.
- */
+/** The other way round: small text in a small picture (a low-resolution screenshot) is hard for OCR, which wants letters about 20+ pixels tall. */
 const MIN_SIDE = 1800;
 const MAX_ENLARGE = 3;
 
@@ -65,11 +57,7 @@ export function ocrScale(width: number, height: number): number {
   return 1;
 }
 
-/**
- * Open an image as something the OCR can read. Going through the browser's own image decoder also
- * turns HEIC photos into pixels where the browser supports them (Safari does; most others don't), and
- * gives a clear message where it can't.
- */
+/** Open an image as something the OCR can read. */
 export async function imageToCanvas(file: File): Promise<HTMLCanvasElement> {
   let bitmap: ImageBitmap;
   try {
