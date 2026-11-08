@@ -2,6 +2,8 @@
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
+export const WEEKDAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 /** Formats a Date as a local "YYYY-MM-DD" string. */
 export function toLocalISODate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -51,10 +53,10 @@ export function formatDueDate(dueDate: string, today: string = todayLocalISO()):
   });
 }
 
-/** "14:30" -> "2:30 PM" in the user's locale. */
+/** "14:30" -> "2:30 PM": always 12-hour, whatever the device's region uses. */
 export function formatTime(hhmm: string): string {
   const [h, m] = hhmm.split(':').map(Number);
-  return new Date(2000, 0, 1, h, m).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return new Date(2000, 0, 1, h, m).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 /** "2h 15m", "45m", "1d 3h": a live countdown label. Returns "now" once the time has arrived. */

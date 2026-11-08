@@ -12,8 +12,13 @@ import type {
   CreateTemplateInput,
   CreateTimeBlockInput,
   CreateWeeklyReviewInput,
+  CreateWeekTemplateInput,
+  CreateRoutineBlockInput,
+  RoutineBlock,
+  UpdateRoutineBlockInput,
+  UpdateWeekTemplateInput,
+  WeekTemplate,
   Event,
-  EventBatchInput,
   EventType,
   FocusSession,
   Semester,
@@ -42,6 +47,8 @@ import {
   createTemplateRepository,
   createTimeBlockRepository,
   createWeeklyReviewRepository,
+  createRoutineBlockRepository,
+  createWeekTemplateRepository,
 } from './entities';
 import { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import { SqliteAttachmentRepository } from './SqliteAttachmentRepository';
@@ -50,14 +57,14 @@ import { SqliteTaskRepository } from './SqliteTaskRepository';
 import type { TaskRepository } from './TaskRepository';
 import type { CrudRepository, RestorableRepository } from './types';
 
+type Batchable<T> = { applyBatch(batch: { put: T[]; remove: string[] }): Promise<{ put: T[]; removed: string[] }> };
+
 /** Everything the HTTP layer needs, typed as interfaces so routes never see SQLite. */
 export interface Repositories {
   tasks: TaskRepository;
   calendars: CrudRepository<Calendar, CreateCalendarInput, UpdateCalendarInput>;
   eventTypes: CrudRepository<EventType, CreateEventTypeInput, UpdateEventTypeInput>;
-  events: RestorableRepository<Event, CreateEventInput, UpdateEventInput> & {
-    applyBatch(batch: EventBatchInput): Promise<{ put: Event[]; removed: string[] }>;
-  };
+  events: RestorableRepository<Event, CreateEventInput, UpdateEventInput> & Batchable<Event>;
   timeBlocks: RestorableRepository<TimeBlock, CreateTimeBlockInput, UpdateTimeBlockInput>;
   semesters: CrudRepository<Semester, CreateSemesterInput, UpdateSemesterInput>;
   courses: CrudRepository<Course, CreateCourseInput, UpdateCourseInput>;
@@ -65,6 +72,8 @@ export interface Repositories {
   templates: CrudRepository<Template, CreateTemplateInput, UpdateTemplateInput>;
   focusSessions: CrudRepository<FocusSession, CreateFocusSessionInput, never>;
   weeklyReviews: CrudRepository<WeeklyReview, CreateWeeklyReviewInput, UpdateWeeklyReviewInput>;
+  weekTemplates: RestorableRepository<WeekTemplate, CreateWeekTemplateInput, UpdateWeekTemplateInput>;
+  routineBlocks: RestorableRepository<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput> & Batchable<RoutineBlock>;
   settings: SettingsRepository;
   attachments: SqliteAttachmentRepository;
   backup: BackupRepository;
@@ -84,6 +93,8 @@ export function createRepositories(db: Db): Repositories {
     templates: createTemplateRepository(db),
     focusSessions: createFocusSessionRepository(db),
     weeklyReviews: createWeeklyReviewRepository(db),
+    weekTemplates: createWeekTemplateRepository(db),
+    routineBlocks: createRoutineBlockRepository(db),
     settings: new SqliteSettingsRepository(db),
   };
   return { ...concrete, attachments: new SqliteAttachmentRepository(db), backup: new BackupRepository(db, concrete) };

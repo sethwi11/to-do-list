@@ -78,4 +78,16 @@ export class SqliteEntityRepository<T extends { id: string }, C extends { id?: s
   async restore(id: string): Promise<T | null> {
     return this.restoreSync(id) ? this.getSync(id) : null;
   }
+
+  /** Write several rows and delete others as one unit: if any row is rejected, nothing changes. */
+  async applyBatch({ put, remove }: { put: T[]; remove: string[] }): Promise<{ put: T[]; removed: string[] }> {
+    return this.db.transaction(() => {
+      for (const row of put) {
+        const problem = this.config.check?.(row);
+        if (problem) throw new HttpError(400, problem);
+        this.upsertSync(row);
+      }
+      return { put, removed: remove.filter((id) => this.removeSync(id)) };
+    })();
+  }
 }

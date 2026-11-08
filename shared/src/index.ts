@@ -19,4 +19,7 @@ export * from './models/applications';
 export * from './applications';
 export * from './models/templates';
 export * from './models/misc';
+export * from './models/routine';
+export * from './planDay';
+export * from './quotes';
 export * from './backup';

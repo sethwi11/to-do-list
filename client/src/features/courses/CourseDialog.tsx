@@ -8,10 +8,9 @@ import { Button } from '../../ui/Button';
 import { ColorPicker } from '../../ui/ColorPicker';
 import { Field, Input, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
+import { WeekdayPicker } from '../../ui/WeekdayPicker';
 import { describeMeetingDays } from './courseModel';
 
-const WEEKDAY_INITIAL = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-const WEEKDAY_NAME = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /** Add a class, or change one. Saving builds (or rebuilds) all of its meetings for the semester. */
 export function CourseDialog() {
@@ -175,23 +174,7 @@ function CourseForm({ course, semesterId }: { course: Course | null; semesterId?
 
       <fieldset aria-describedby={errors.days ? 'course-days-error' : undefined}>
         <legend className="mb-1.5 text-label text-ink-muted uppercase">Meets on</legend>
-        <div className="flex gap-1">
-          {WEEKDAY_INITIAL.map((initial, day) => {
-            const on = days.includes(day);
-            return (
-              <button
-                key={day}
-                type="button"
-                aria-pressed={on}
-                aria-label={WEEKDAY_NAME[day]}
-                onClick={() => toggleDay(day)}
-                className={cx('grid size-9 place-items-center rounded-control border text-body transition-colors duration-150 ease-out', on ? 'border-ink bg-ink text-paper' : 'border-rule text-ink hover:border-ink-muted')}
-              >
-                {initial}
-              </button>
-            );
-          })}
-        </div>
+        <WeekdayPicker value={days} onChange={setDays} />
         {errors.days && (
           <p id="course-days-error" role="alert" className="mt-1.5 text-meta text-danger">
             {errors.days}

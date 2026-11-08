@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CALENDAR_COLORS } from '@todo/shared';
+import { STRONG_MIX } from '../lib/calendarColors';
 import { contrastRatio, CONTRAST_PAIRS, KNOWN_EXCEPTIONS } from './contrast';
 
 // Read the real stylesheet, so these tests check the colors the app actually ships.
@@ -86,6 +87,19 @@ describe('contrast (WCAG)', () => {
     expect(ratio('light', 'ink-muted', 'paper')).toBeGreaterThanOrEqual(4.5);
     expect(ratio('dark', 'ink-muted', 'paper')).toBeGreaterThanOrEqual(4.5);
     expect(ratio('light', 'accent-ink', 'paper')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('ink text is readable on every category\'s solid fill, in both modes', () => {
+    const mix = (a: string, b: string, pct: number) => {
+      const [x, y] = [a, b].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)));
+      return `#${x!.map((v, i) => Math.round(v * (pct / 100) + y![i]! * (1 - pct / 100)).toString(16).padStart(2, '0')).join('')}`;
+    };
+    for (const mode of ['light', 'dark'] as const) {
+      for (const name of CALENDAR_COLORS) {
+        const fill = mix(modes[mode][`cal-${name}`]!, modes[mode].paper!, STRONG_MIX);
+        expect(contrastRatio(modes[mode].ink!, fill), `${mode} ${name}`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
   });
 
   it('knows the honey fill is too faint for text on the page (why accent-ink exists)', () => {

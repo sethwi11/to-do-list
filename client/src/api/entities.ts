@@ -13,6 +13,13 @@ import type {
   CreateTemplateInput,
   CreateTimeBlockInput,
   CreateWeeklyReviewInput,
+  CreateRoutineBlockInput,
+  CreateWeekTemplateInput,
+  RoutineBlock,
+  RoutineBlockBatchInput,
+  UpdateRoutineBlockInput,
+  UpdateWeekTemplateInput,
+  WeekTemplate,
   Event,
   EventBatchInput,
   EventType,
@@ -50,6 +57,12 @@ export const applicationsApi = createCrudApi<Application, CreateApplicationInput
 export const templatesApi = createCrudApi<Template, CreateTemplateInput, UpdateTemplateInput>('/templates');
 export const focusSessionsApi = createCrudApi<FocusSession, CreateFocusSessionInput, never>('/focus-sessions');
 export const weeklyReviewsApi = createCrudApi<WeeklyReview, CreateWeeklyReviewInput, UpdateWeeklyReviewInput>('/weekly-reviews');
+
+export const weekTemplatesApi = createCrudApi<WeekTemplate, CreateWeekTemplateInput, UpdateWeekTemplateInput>('/week-templates');
+export const routineBlocksApi = {
+  ...createCrudApi<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput>('/routine-blocks'),
+  batch: (plan: RoutineBlockBatchInput) => apiFetch<{ put: RoutineBlock[]; removed: string[] }>('/routine-blocks/batch', { method: 'POST', body: JSON.stringify(plan) }),
+};
 
 export const settingsApi = {
   get: () => apiFetch<AppSettings>('/settings'),

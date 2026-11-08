@@ -11,8 +11,13 @@ import {
   type CreateTemplateInput,
   type CreateTimeBlockInput,
   type CreateWeeklyReviewInput,
+  type CreateWeekTemplateInput,
+  type CreateRoutineBlockInput,
+  type RoutineBlock,
+  type UpdateRoutineBlockInput,
+  type UpdateWeekTemplateInput,
+  type WeekTemplate,
   type Event,
-  type EventBatchInput,
   type EventType,
   type FocusSession,
   type Semester,
@@ -59,22 +64,8 @@ export const createEventTypeRepository = (db: Db) =>
 const TIME_COLUMNS = { start: 'start_at', end: 'end_at' } as const;
 const endAfterStart = (v: { start: string; end: string }) => (v.end > v.start ? null : 'The end must be after the start');
 
-class SqliteEventRepository extends SqliteEntityRepository<Event, CreateEventInput, UpdateEventInput> {
-  /** Write several rows and delete others as one unit: if any row is rejected, nothing changes. */
-  async applyBatch({ put, remove }: EventBatchInput): Promise<{ put: Event[]; removed: string[] }> {
-    return this.db.transaction(() => {
-      for (const row of put) {
-        const problem = this.config.check?.(row);
-        if (problem) throw new HttpError(400, problem);
-        this.upsertSync(row);
-      }
-      return { put, removed: remove.filter((id) => this.removeSync(id)) };
-    })();
-  }
-}
-
 export const createEventRepository = (db: Db) =>
-  new SqliteEventRepository(db, {
+  new SqliteEntityRepository<Event, CreateEventInput, UpdateEventInput>(db, {
     table: 'events',
     orderBy: 'start_at, created_at',
     json: ['recurrence'],
@@ -189,6 +180,45 @@ export const createWeeklyReviewRepository = (db: Db) =>
     build: (i, { id, now }) => ({ id, weekStart: i.weekStart, notes: i.notes, createdAt: now, updatedAt: now }),
   });
 
+export const createWeekTemplateRepository = (db: Db) =>
+  new SqliteEntityRepository<WeekTemplate, CreateWeekTemplateInput, UpdateWeekTemplateInput>(db, {
+    table: 'week_templates',
+    orderBy: 'effective_from DESC, created_at',
+    json: ['days', 'meetingWindows'],
+    softDelete: true,
+    check: (v) => (v.effectiveTo === null || v.effectiveTo >= v.effectiveFrom ? null : 'The end date must be on or after the start date'),
+    build: (i, { id, now }) => ({ id, name: i.name, effectiveFrom: i.effectiveFrom, effectiveTo: i.effectiveTo ?? null, days: i.days ?? [], meetingWindows: i.meetingWindows ?? [], createdAt: now, updatedAt: now }),
+  });
+
+export const createRoutineBlockRepository = (db: Db) =>
+  new SqliteEntityRepository<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput>(db, {
+    table: 'routine_blocks',
+    orderBy: 'weekday, start_time',
+    bool: ['focus', 'notify', 'schoolDaysOnly'],
+    columns: { start: 'start_time', end: 'end_time' },
+    softDelete: true,
+    check: (v) => (v.start !== v.end ? null : 'The block must end at a different time than it starts'),
+    build: (i, { id, now }) => ({
+      id,
+      templateId: i.templateId,
+      weekday: i.weekday,
+      start: i.start,
+      end: i.end,
+      title: i.title,
+      calendarId: i.calendarId ?? null,
+      altTitle: i.altTitle ?? null,
+      altCalendarId: i.altCalendarId ?? null,
+      priority: i.priority ?? 'normal',
+      focus: i.focus ?? false,
+      soundtrack: i.soundtrack ?? null,
+      notify: i.notify ?? true,
+      schoolDaysOnly: i.schoolDaysOnly ?? false,
+      notes: i.notes ?? null,
+      createdAt: now,
+      updatedAt: now,
+    }),
+  });
+
 export type CalendarRepo = ReturnType<typeof createCalendarRepository>;
 export type EventTypeRepo = ReturnType<typeof createEventTypeRepository>;
 export type EventRepo = ReturnType<typeof createEventRepository>;
@@ -198,3 +228,5 @@ export type CourseRepo = ReturnType<typeof createCourseRepository>;
 export type TemplateRepo = ReturnType<typeof createTemplateRepository>;
 export type FocusSessionRepo = ReturnType<typeof createFocusSessionRepository>;
 export type WeeklyReviewRepo = ReturnType<typeof createWeeklyReviewRepository>;
+export type WeekTemplateRepo = ReturnType<typeof createWeekTemplateRepository>;
+export type RoutineBlockRepo = ReturnType<typeof createRoutineBlockRepository>;

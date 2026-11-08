@@ -310,6 +310,46 @@ const migrations: Migration[] = [
   (db) => {
     db.exec(`ALTER TABLE applications ADD COLUMN follow_up_handled_at TEXT;`);
   },
+
+  // v5: the weekly routine. Two new tables; nothing existing changes.
+  (db) => {
+    db.exec(`
+      CREATE TABLE week_templates (
+        id              TEXT PRIMARY KEY,
+        name            TEXT NOT NULL,
+        effective_from  TEXT NOT NULL,             -- 'YYYY-MM-DD'
+        effective_to    TEXT,                      -- null = no end
+        days            TEXT NOT NULL DEFAULT '[]', -- JSON: [{ weekday, wake, bed }]
+        meeting_windows TEXT NOT NULL DEFAULT '[]', -- JSON: [{ weekday, start, end }]
+        created_at      TEXT NOT NULL,
+        updated_at      TEXT NOT NULL,
+        deleted_at      TEXT
+      );
+
+      CREATE TABLE routine_blocks (
+        id               TEXT PRIMARY KEY,
+        template_id      TEXT NOT NULL REFERENCES week_templates(id) ON DELETE CASCADE,
+        weekday          INTEGER NOT NULL CHECK (weekday BETWEEN 0 AND 6),
+        start_time       TEXT NOT NULL,            -- 'HH:mm'
+        end_time         TEXT NOT NULL,            -- at or before start_time = ends after midnight
+        title            TEXT NOT NULL,
+        calendar_id      TEXT REFERENCES calendars(id) ON DELETE SET NULL,
+        alt_title        TEXT,
+        alt_calendar_id  TEXT REFERENCES calendars(id) ON DELETE SET NULL,
+        priority         TEXT NOT NULL CHECK (priority IN ('commitment','high','normal','free')),
+        focus            INTEGER NOT NULL DEFAULT 0,
+        soundtrack       TEXT,
+        notify           INTEGER NOT NULL DEFAULT 1,
+        school_days_only INTEGER NOT NULL DEFAULT 0,
+        notes            TEXT,
+        created_at       TEXT NOT NULL,
+        updated_at       TEXT NOT NULL,
+        deleted_at       TEXT
+      );
+
+      CREATE INDEX idx_routine_blocks_template ON routine_blocks(template_id, weekday);
+    `);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

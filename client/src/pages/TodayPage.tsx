@@ -1,40 +1,82 @@
-import { useMemo, useState } from 'react';
-import { addDays, expandOccurrences, isoWeekNumber } from '@todo/shared';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { addDays, addMinutes, combine, expandOccurrences, isoWeekNumber, LocalDateTimeSchema, planDay, planningDate, quoteFor, type PlanItem } from '@todo/shared';
+import { useRoutine } from '../actions/useRoutineActions';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
+import { useAppSettings } from '../data/useApplications';
 import { localDateTime, toBlockItem, toEventItem, type CalendarItem } from '../features/calendar/calendarModel';
 import { ItemDetail } from '../features/calendar/ItemDetail';
-import { Timeline } from '../features/today/Timeline';
-import { blocksOnDay, nextUpcoming, summarize, timelineRows } from '../features/today/todayModel';
-import { UpNextCard } from '../features/today/UpNextCard';
+import { Agenda, Legend } from '../features/today/Agenda';
+import { DayBar, MorningHeader } from '../features/today/MorningHeader';
+import { NowCard, type UpNext } from '../features/today/NowCard';
+import { currentItem, greeting, nextItem, nextUpcoming, summarize } from '../features/today/todayModel';
 import { StatsBlock } from '../features/tasks/StatsBlock';
 import { CompletedSection, TaskList } from '../features/tasks/TaskList';
 import { useNow } from '../hooks/useNow';
-import { anchorOf, type PopoverAnchor } from '../ui/Popover';
-import { parseLocalISODate } from '../lib/dates';
+import { fullDate, parseLocalISODate } from '../lib/dates';
 import { sortByCompletedDesc, sortTasks } from '../lib/filters';
 import { computeStats } from '../lib/stats';
 import { Button } from '../ui/Button';
+import { EventBlock } from '../ui/blocks';
 import { SectionLabel } from '../ui/fields';
+import { anchorOf, type PopoverAnchor } from '../ui/Popover';
 import { EmptyState, ErrorBanner, SkeletonRows } from '../ui/states';
 
-const Num = ({ children, tone }: { children: number; tone?: 'danger' }) => (
-  <span className={`font-mono tabular-nums ${tone === 'danger' ? 'text-danger' : 'text-ink'}`}>{children}</span>
-);
+const SEEN_KEY = 'planner.morningSeen';
+const readSeen = () => {
+  try {
+    return localStorage.getItem(SEEN_KEY);
+  } catch {
+    return null;
+  }
+};
 
-/** Today: the day's schedule as a timeline, what's next, and the to-dos that need doing (overdue first). */
+const Num = ({ children, tone }: { children: number; tone?: 'danger' }) => <span className={`font-mono tabular-nums ${tone === 'danger' ? 'text-danger' : 'text-ink'}`}>{children}</span>;
+
+/** Today: the planned day as an agenda, what's happening now, and the to-dos that need doing. `?now=2026-11-11T06:00` shows it as of that moment. */
 export default function TodayPage() {
   const app = useApp();
-  const { tasks, events, timeBlocks, calendarsById, today, loading, eventsLoading, error, dismissError, reload, openDialog, toggleTask } = app;
-  const now = useNow();
-  const nowText = localDateTime(now);
+  const { tasks, events, timeBlocks, calendars, calendarsById, semesters, today, loading, eventsLoading, error, dismissError, reload, openDialog } = app;
+  const routine = useRoutine();
+  const { settings } = useAppSettings();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const clock = useNow();
+  const fake = params.get('now');
+  const now = fake && LocalDateTimeSchema.safeParse(fake).success ? fake : localDateTime(clock);
   const [detail, setDetail] = useState<{ item: CalendarItem; anchor: PopoverAnchor } | null>(null);
 
-  const todays = useMemo(() => expandOccurrences(events, today, addDays(today, 1)), [events, today]);
-  const todaysBlocks = useMemo(() => blocksOnDay(timeBlocks, tasks, today), [timeBlocks, tasks, today]);
-  const rows = useMemo(() => timelineRows(todays, nowText, todaysBlocks), [todays, nowText, todaysBlocks]);
-  const next = useMemo(() => nextUpcoming(events, nowText), [events, nowText]);
-  const summary = useMemo(() => summarize(todays, tasks, today, todaysBlocks.length), [todays, tasks, today, todaysBlocks]);
+  const date = planningDate(routine.templates, now);
+  const plan = useMemo(
+    () => planDay({ templates: routine.templates, blocks: routine.blocks, semesters, events, timeBlocks, tasks, calendars }, date),
+    [routine.templates, routine.blocks, semesters, events, timeBlocks, tasks, calendars, date],
+  );
+  const occurrences = useMemo(() => expandOccurrences(events, combine(date), plan.bed > combine(addDays(date, 1)) ? plan.bed : combine(addDays(date, 1))), [events, date, plan.bed]);
+  const summary = useMemo(() => summarize(occurrences, tasks, today, plan.items.filter((i) => i.kind === 'task').length), [occurrences, tasks, today, plan.items]);
+
+  const current = currentItem(plan.items, now);
+  // After the day's last item: tomorrow's first, then the next event in the coming two weeks.
+  const later = useMemo(() => {
+    const soon = nextItem(plan.items, now);
+    if (soon) return soon;
+    const tomorrow = planDay({ templates: routine.templates, blocks: routine.blocks, semesters, events, timeBlocks, tasks, calendars }, addDays(date, 1));
+    return nextItem(tomorrow.items, now);
+  }, [plan.items, now, routine.templates, routine.blocks, semesters, events, timeBlocks, tasks, calendars, date]);
+  const upcoming = useMemo(() => (later ? undefined : nextUpcoming(events, now)), [later, events, now]);
+  const next: UpNext | undefined = later ?? (upcoming && { title: upcoming.event.title, start: upcoming.start, color: toEventItem(upcoming, calendarsById).color });
+
+  // Before noon, and the first time the app opens each day, Today greets you (not during last night's late hours).
+  const hour = Number(now.slice(11, 13));
+  const [firstOpen] = useState(() => readSeen() !== date);
+  useEffect(() => {
+    try {
+      localStorage.setItem(SEEN_KEY, date);
+    } catch {
+      // Private mode: the greeting just follows the clock.
+    }
+  }, [date]);
+  const morning = date === now.slice(0, 10) && (hour < 12 || firstOpen);
 
   const { overdue, dueToday, doneToday } = useMemo(() => {
     const open = tasks.filter((t) => t.status === 'todo');
@@ -46,25 +88,36 @@ export default function TodayPage() {
   }, [tasks, today]);
   const stats = useMemo(() => computeStats(tasks, today), [tasks, today]);
 
-  const date = parseLocalISODate(today);
-  const itemFor = (o: Parameters<typeof toEventItem>[0]) => toEventItem(o, calendarsById);
+  function open(item: PlanItem, el: HTMLElement) {
+    if (item.kind === 'routine') return navigate(`/week?block=${item.sourceId}`);
+    if (item.kind === 'task') {
+      const block = timeBlocks.find((b) => b.id === item.sourceId);
+      const task = block && tasks.find((t) => t.id === block.taskId);
+      if (block && task) setDetail({ item: toBlockItem(block, task, calendarsById), anchor: anchorOf(el) });
+      return;
+    }
+    const occurrence = occurrences.find((o) => o.key === item.sourceId);
+    if (occurrence) setDetail({ item: toEventItem(occurrence, calendarsById), anchor: anchorOf(el) });
+  }
+
+  const day = parseLocalISODate(date);
+  const weekday = day.toLocaleDateString(undefined, { weekday: 'long' });
+  const quote = quoteFor(date, settings.quotes);
 
   return (
     <div className="@container max-w-[1100px]">
-      <PageHeader
-        title={date.toLocaleDateString(undefined, { weekday: 'long' })}
-        subtitle={date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })}
-        aside={`WK ${isoWeekNumber(today)}`}
-        quickAddDefaults={{ dueDate: today }}
-      />
+      <PageHeader title={morning ? greeting(hour) : weekday} subtitle={morning ? fullDate(date) : day.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })} aside={`WK ${isoWeekNumber(date)}`} quickAddDefaults={{ dueDate: today }}>
+        {morning ? <MorningHeader plan={plan} now={now} quote={quote} /> : <DayBar plan={plan} now={now} className="mt-5" />}
+      </PageHeader>
 
       {error && <ErrorBanner message={error} onRetry={() => void reload()} onDismiss={dismissError} />}
 
-      {loading || eventsLoading ? (
+      {loading || eventsLoading || routine.loading ? (
         <SkeletonRows count={5} />
       ) : (
         <>
           <p className="mb-8 text-meta text-ink-muted">
+            {date !== now.slice(0, 10) && <span className="text-ink">{weekday} night, until bedtime · </span>}
             <Num>{summary.events}</Num> {summary.events === 1 ? 'event' : 'events'}
             {summary.blocks > 0 && (
               <>
@@ -88,36 +141,50 @@ export default function TodayPage() {
             )}
           </p>
 
-          {next && <UpNextCard item={itemFor(next)} now={now} today={today} onOpen={(el) => setDetail({ item: itemFor(next), anchor: anchorOf(el) })} />}
-
-          <div className="grid gap-10 @3xl:grid-cols-2 @3xl:gap-14">
-            <section aria-label="Schedule">
-              <SectionLabel count={todays.length + todaysBlocks.length} className="mb-3">
-                Schedule
-              </SectionLabel>
-              {rows.length > 0 ? (
-                <Timeline
-                  rows={rows}
-                  now={now}
-                  today={today}
-                  itemFor={itemFor}
-                  onOpen={(item, el) => setDetail({ item, anchor: anchorOf(el) })}
-                  blockFor={(block, task) => toBlockItem(block, task, calendarsById)}
-                  onOpenBlock={(item, el) => setDetail({ item, anchor: anchorOf(el) })}
-                  onToggleTask={(task) => void toggleTask(task)}
-                />
+          <div className="grid gap-10 @3xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @3xl:gap-14">
+            <section aria-label="Agenda" className="@3xl:order-1 order-2">
+              <SectionLabel className="mb-3">Agenda</SectionLabel>
+              {plan.allDay.length > 0 && (
+                <ul className="mb-3 space-y-1">
+                  {plan.allDay.map((o) => {
+                    const item = toEventItem(o, calendarsById);
+                    return (
+                      <li key={o.key}>
+                        <button type="button" className="block w-full text-left" onClick={(e) => setDetail({ item, anchor: anchorOf(e.currentTarget) })}>
+                          <EventBlock title={o.event.title} time="All day" color={item.color} calendarName={item.calendarName} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {plan.items.length > 0 ? (
+                <>
+                  <Legend items={plan.items} />
+                  <div className="mt-5">
+                    <Agenda plan={plan} now={now} onOpen={open} />
+                  </div>
+                </>
               ) : (
-                <EmptyState message="Nothing scheduled today.">
-                  <Button variant="ghost" onClick={() => openDialog({ kind: 'event', mode: 'new', defaults: { start: `${today}T09:00`, end: `${today}T10:00` } })}>
-                    Add an event
-                  </Button>
+                <EmptyState message={routine.templates.length > 0 ? 'Nothing planned for this day.' : 'Set up your week to see your day here.'}>
+                  {routine.templates.length > 0 ? (
+                    <Button variant="ghost" onClick={() => openDialog({ kind: 'event', mode: 'new', defaults: { start: combine(date, '09:00'), end: addMinutes(combine(date, '09:00'), 60) } })}>
+                      Add an event
+                    </Button>
+                  ) : (
+                    <Button variant="ghost" onClick={() => navigate('/week')}>
+                      Open Week
+                    </Button>
+                  )}
                 </EmptyState>
               )}
             </section>
 
-            <div>
+            <div className="order-1 space-y-8 @3xl:order-2">
+              <NowCard current={current} next={next} now={now} today={today} onOpen={open} />
+
               {overdue.length > 0 && (
-                <section className="mb-8">
+                <section>
                   <SectionLabel count={overdue.length} className="mb-2">
                     Overdue
                   </SectionLabel>

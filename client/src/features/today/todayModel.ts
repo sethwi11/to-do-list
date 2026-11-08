@@ -1,19 +1,14 @@
-import { addDays, conflictMap, expandOccurrences, type Event, type EventOccurrence, type Task, type TimeBlock } from '@todo/shared';
+import { addDays, combine, conflictMap, expandOccurrences, minutesBetween, type DayPlan, type Event, type EventOccurrence, type PlanItem, type PlanKind, type Task } from '@todo/shared';
 
 // The logic behind the Today page, apart from any drawing.
 
-export const isTimed = (o: EventOccurrence) => !o.allDay;
-
-/** A timed event that has started and not yet finished. */
-export const isInProgress = (o: EventOccurrence, now: string) => isTimed(o) && o.start <= now && now < o.end;
-
-/** How far ahead the "Up next" card looks when nothing else is left today. */
+/** How far ahead the Now card looks for what's next when today is finished. */
 export const UP_NEXT_DAYS = 14;
 
 /** The next timed event to start after `now`, today or in the next two weeks. */
 export function nextUpcoming(events: Event[], now: string): EventOccurrence | undefined {
   const today = now.slice(0, 10);
-  return expandOccurrences(events, today, addDays(today, UP_NEXT_DAYS)).find((o) => isTimed(o) && o.start > now);
+  return expandOccurrences(events, today, addDays(today, UP_NEXT_DAYS)).find((o) => !o.allDay && o.start > now);
 }
 
 export interface Summary {
@@ -41,46 +36,60 @@ export function summarize(todays: EventOccurrence[], tasks: Task[], today: strin
   };
 }
 
-export type TimelineState = 'all-day' | 'past' | 'now' | 'upcoming';
+const STRENGTH: Record<PlanKind, number> = { class: 0, event: 0, task: 1, routine: 2, open: 3 };
 
-/** A time block with the to-do it is for. */
-export interface DayBlock {
-  block: TimeBlock;
-  task: Task;
+/** What's under way at `now`: a class or event over the routine, free and open time last. */
+export function currentItem(items: readonly PlanItem[], now: string): PlanItem | undefined {
+  const free = (i: PlanItem) => Number(i.priority === 'free');
+  return items.filter((i) => i.start <= now && now < i.end).sort((a, b) => STRENGTH[a.kind] - STRENGTH[b.kind] || free(a) - free(b))[0];
 }
 
-export type TimelineRow =
-  | { kind: 'event'; occurrence: EventOccurrence; state: TimelineState; clashes: EventOccurrence[] }
-  | { kind: 'block'; block: TimeBlock; task: Task; state: TimelineState }
-  | { kind: 'now-line' };
+/** The next thing to start after `now`, skipping open time. */
+export const nextItem = (items: readonly PlanItem[], now: string) => items.find((i) => i.kind !== 'open' && i.start > now);
 
-/** The time blocks that touch a given day (a block belongs to one day, but may end at its midnight), with their to-dos, earliest first. */
-export function blocksOnDay(blocks: readonly TimeBlock[], tasks: readonly Task[], date: string): DayBlock[] {
-  const start = `${date}T00:00`;
-  const end = `${addDays(date, 1)}T00:00`;
-  const byId = new Map(tasks.map((t) => [t.id, t]));
-  return blocks
-    .filter((b) => b.start < end && b.end > start)
-    .flatMap((block) => {
-      const task = byId.get(block.taskId);
-      return task ? [{ block, task }] : [];
-    })
-    .sort((a, b) => a.block.start.localeCompare(b.block.start));
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+
+/** Up to `n` open to-dos in a category: soonest due first (undated last), then by priority. */
+export function todosFor(tasks: readonly Task[], calendarId: string | null, n = 3): Task[] {
+  if (!calendarId) return [];
+  return tasks
+    .filter((t) => t.status === 'todo' && t.calendarId === calendarId)
+    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
+    .slice(0, n);
 }
 
-/** Today's schedule in order: all-day events first, then timed events and time blocks together, by start time (an event first if one starts when a block does). */
-export function timelineRows(todays: EventOccurrence[], now: string, blocks: readonly DayBlock[] = []): TimelineRow[] {
-  const clashes = conflictMap(todays);
-  const stateOf = (o: EventOccurrence): TimelineState => (o.allDay ? 'all-day' : o.end <= now ? 'past' : o.start <= now ? 'now' : 'upcoming');
-  const row = (o: EventOccurrence): TimelineRow => ({ kind: 'event', occurrence: o, state: stateOf(o), clashes: clashes.get(o.key) ?? [] });
-  const blockRow = ({ block, task }: DayBlock): TimelineRow => ({ kind: 'block', block, task, state: block.end <= now ? 'past' : block.start <= now ? 'now' : 'upcoming' });
-  const startOf = (r: TimelineRow) => (r.kind === 'event' ? r.occurrence.start : r.kind === 'block' ? r.block.start : '');
-
-  const allDay = todays.filter((o) => o.allDay).map(row);
-  const timed = [...todays.filter(isTimed).map(row), ...blocks.map(blockRow)].sort((a, b) => startOf(a).localeCompare(startOf(b)) || Number(a.kind === 'block') - Number(b.kind === 'block'));
-  if (timed.length === 0) return allDay;
-
-  const firstToCome = timed.findIndex((r) => r.kind !== 'now-line' && r.state === 'upcoming');
-  const at = firstToCome === -1 ? timed.length : firstToCome;
-  return [...allDay, ...timed.slice(0, at), { kind: 'now-line' }, ...timed.slice(at)];
+/** Overlapping items sit side by side: each gets a lane, and the number of lanes its overlapping group needs. */
+export function layoutLanes(sorted: readonly PlanItem[]): Map<string, { lane: number; lanes: number }> {
+  const out = new Map<string, { lane: number; lanes: number }>();
+  let group: { key: string; lane: number }[] = [];
+  const laneEnds: string[] = [];
+  let groupEnd = '';
+  const flush = () => {
+    const lanes = Math.max(...group.map((g) => g.lane)) + 1;
+    for (const g of group) out.set(g.key, { lane: g.lane, lanes });
+    group = [];
+    laneEnds.length = 0;
+  };
+  for (const item of sorted) {
+    if (group.length > 0 && item.start >= groupEnd) flush();
+    let lane = laneEnds.findIndex((end) => end <= item.start);
+    if (lane === -1) lane = laneEnds.length;
+    laneEnds[lane] = item.end;
+    group.push({ key: item.key, lane });
+    if (group.length === 1 || item.end > groupEnd) groupEnd = item.end;
+  }
+  if (group.length > 0) flush();
+  return out;
 }
+
+/** Minutes from the date's midnight. */
+export const minutesInto = (date: string, dt: string) => minutesBetween(combine(date), dt);
+
+/** The hours the agenda shows, in minutes from midnight: 6 AM to 10 PM, stretched to whole hours around anything earlier or later. */
+export function agendaRange(plan: Pick<DayPlan, 'date' | 'items'>): { from: number; to: number } {
+  const starts = plan.items.map((i) => minutesInto(plan.date, i.start));
+  const ends = plan.items.map((i) => minutesInto(plan.date, i.end));
+  return { from: Math.max(0, Math.floor(Math.min(360, ...starts) / 60) * 60), to: Math.ceil(Math.max(1320, ...ends) / 60) * 60 };
+}
+
+export const greeting = (hour: number) => (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');

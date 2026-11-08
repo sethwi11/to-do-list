@@ -5,6 +5,10 @@ import {
   CreateCourseInputSchema,
   CreateEventInputSchema,
   CreateEventTypeInputSchema,
+  CreateRoutineBlockInputSchema,
+  CreateWeekTemplateInputSchema,
+  EventBatchInputSchema,
+  RoutineBlockBatchInputSchema,
   CreateFocusSessionInputSchema,
   CreateSemesterInputSchema,
   CreateTemplateInputSchema,
@@ -15,6 +19,8 @@ import {
   UpdateCourseInputSchema,
   UpdateEventInputSchema,
   UpdateEventTypeInputSchema,
+  UpdateRoutineBlockInputSchema,
+  UpdateWeekTemplateInputSchema,
   UpdateSemesterInputSchema,
   UpdateTemplateInputSchema,
   UpdateTimeBlockInputSchema,
@@ -25,7 +31,7 @@ import type { Repositories } from './repositories';
 import { attachmentsRouter } from './routes/attachments';
 import { backupRouter } from './routes/backup';
 import { crudRouter } from './routes/crudRouter';
-import { eventsBatchRouter } from './routes/events';
+import { batchRouter } from './routes/batch';
 import { settingsRouter } from './routes/settings';
 import { tasksRouter } from './routes/tasks';
 
@@ -44,7 +50,7 @@ export function createApp(repos: Repositories, options: { uploadsDir: string }) 
   app.use('/api/tasks', tasksRouter(repos.tasks));
   app.use('/api/calendars', crudRouter(repos.calendars, { label: 'Calendar', create: CreateCalendarInputSchema, update: UpdateCalendarInputSchema }));
   app.use('/api/event-types', crudRouter(repos.eventTypes, { label: 'Event type', create: CreateEventTypeInputSchema, update: UpdateEventTypeInputSchema }));
-  app.use('/api/events', eventsBatchRouter(repos.events));
+  app.use('/api/events', batchRouter(repos.events, EventBatchInputSchema));
   app.use('/api/events', crudRouter(repos.events, { label: 'Event', create: CreateEventInputSchema, update: UpdateEventInputSchema }));
   app.use('/api/time-blocks', crudRouter(repos.timeBlocks, { label: 'Time block', create: CreateTimeBlockInputSchema, update: UpdateTimeBlockInputSchema }));
   app.use('/api/semesters', crudRouter(repos.semesters, { label: 'Semester', create: CreateSemesterInputSchema, update: UpdateSemesterInputSchema }));
@@ -53,6 +59,9 @@ export function createApp(repos: Repositories, options: { uploadsDir: string }) 
   app.use('/api/templates', crudRouter(repos.templates, { label: 'Template', create: CreateTemplateInputSchema, update: UpdateTemplateInputSchema }));
   app.use('/api/focus-sessions', crudRouter(repos.focusSessions, { label: 'Focus session', create: CreateFocusSessionInputSchema, update: null }));
   app.use('/api/weekly-reviews', crudRouter(repos.weeklyReviews, { label: 'Weekly review', create: CreateWeeklyReviewInputSchema, update: UpdateWeeklyReviewInputSchema }));
+  app.use('/api/week-templates', crudRouter(repos.weekTemplates, { label: 'Week template', create: CreateWeekTemplateInputSchema, update: UpdateWeekTemplateInputSchema }));
+  app.use('/api/routine-blocks', batchRouter(repos.routineBlocks, RoutineBlockBatchInputSchema));
+  app.use('/api/routine-blocks', crudRouter(repos.routineBlocks, { label: 'Routine block', create: CreateRoutineBlockInputSchema, update: UpdateRoutineBlockInputSchema }));
   app.use('/api/attachments', attachmentsRouter(repos.attachments, options.uploadsDir));
   app.use('/api/settings', settingsRouter(repos.settings));
   app.use('/api/backup', backupRouter(repos.backup));

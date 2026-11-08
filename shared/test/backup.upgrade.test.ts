@@ -37,7 +37,7 @@ const v1 = {
 };
 
 describe('upgradeBackup', () => {
-  it('turns a version 1 file into a valid version 2 backup without losing tasks', () => {
+  it('turns a version 1 file into a valid current backup without losing tasks', () => {
     const parsed = BackupSchema.parse(upgradeBackup(v1));
     expect(parsed.version).toBe(2);
     // Same colors and order the database upgrade produces: defaults by their palette color, your own after them.

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { hasFields, LocalDateSchema, NO_FIELDS_MESSAGE } from '../localTime';
+import { DEFAULT_QUOTES, QuoteSchema } from '../quotes';
 
 // ---- focus sessions -----------------------------------------------------
 
@@ -54,6 +55,8 @@ export const AppSettingsSchema = z.object({
   offerTargetDate: LocalDateSchema,
   focus: FocusSettingsSchema,
   sundayReviewReminder: z.boolean(),
+  /** The morning view shows one a day. */
+  quotes: z.array(QuoteSchema).max(500),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -62,6 +65,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   offerTargetDate: '2027-05-01',
   focus: { focusMinutes: 25, breakMinutes: 5, longBreakMinutes: 15, longBreakEvery: 4, sound: true, notify: true },
   sundayReviewReminder: false,
+  quotes: DEFAULT_QUOTES,
 };
 
 export const UpdateSettingsInputSchema = AppSettingsSchema.partial()

@@ -185,7 +185,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
         snapDuration="00:15:00"
         eventMinHeight={24}
         allDayText="All day"
-        slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: true, meridiem: 'short' }}
+        slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: true, meridiem: 'short', hour12: true }}
         selectable
         selectMirror
         unselectAuto={false}

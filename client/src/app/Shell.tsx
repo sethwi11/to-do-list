@@ -22,7 +22,7 @@ export function Shell() {
   const location = useLocation();
   const [collapsed, setCollapsed] = usePersistedState('voice-todo.sidebarCollapsed', false, isBoolean);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const fullHeight = location.pathname === '/calendar';
+  const fullHeight = location.pathname === '/calendar' || location.pathname === '/week';
 
   useDueNotifications(app.tasks, settings.notifications);
 

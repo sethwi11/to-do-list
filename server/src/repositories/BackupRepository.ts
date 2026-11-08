@@ -1,4 +1,4 @@
-import { BACKUP_VERSION, type Backup } from '@todo/shared';
+import { BACKUP_VERSION, mergeSettings, type Backup } from '@todo/shared';
 import type { Db } from '../db/connection';
 import type {
   CalendarRepo,
@@ -10,6 +10,8 @@ import type {
   TemplateRepo,
   TimeBlockRepo,
   WeeklyReviewRepo,
+  RoutineBlockRepo,
+  WeekTemplateRepo,
 } from './entities';
 import type { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import type { SqliteSettingsRepository } from './SqliteSettingsRepository';
@@ -28,6 +30,8 @@ export interface BackupSources {
   templates: TemplateRepo;
   focusSessions: FocusSessionRepo;
   weeklyReviews: WeeklyReviewRepo;
+  weekTemplates: WeekTemplateRepo;
+  routineBlocks: RoutineBlockRepo;
   settings: SqliteSettingsRepository;
 }
 
@@ -58,6 +62,8 @@ export class BackupRepository {
       templates: r.templates.listSync(),
       focusSessions: r.focusSessions.listSync(),
       weeklyReviews: r.weeklyReviews.listSync(),
+      weekTemplates: r.weekTemplates.listSync(),
+      routineBlocks: r.routineBlocks.listSync(),
       settings: r.settings.getSync(),
     };
   }
@@ -127,8 +133,13 @@ export class BackupRepository {
         count('weeklyReviews', r.weeklyReviews.upsertSync(same ? { ...w, id: same.id } : w));
       }
 
+      for (const t of backup.weekTemplates) count('weekTemplates', r.weekTemplates.upsertSync(t));
+      for (const b of backup.routineBlocks) {
+        count('routineBlocks', r.routineBlocks.upsertSync({ ...b, calendarId: mapCalendar(b.calendarId), altCalendarId: mapCalendar(b.altCalendarId) }));
+      }
+
       if (backup.settings) {
-        r.settings.setSync(backup.settings);
+        r.settings.setSync(mergeSettings(r.settings.getSync(), backup.settings));
         count('settings', true);
       }
     })();

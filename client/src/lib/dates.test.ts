@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { daysBetween, formatCountdown, formatDueDate, parseLocalISODate, todayLocalISO } from './dates';
+import { daysBetween, formatCountdown, formatDueDate, formatTime, parseLocalISODate, todayLocalISO } from './dates';
 
 describe('local date helpers', () => {
   it('formats today using local date parts, not UTC', () => {
@@ -37,5 +37,13 @@ describe('formatCountdown', () => {
     expect(formatCountdown(3 * 60 * min)).toBe('3h');
     expect(formatCountdown(27 * 60 * min)).toBe('1d 3h');
     expect(formatCountdown(48 * 60 * min)).toBe('2d');
+  });
+});
+
+describe('formatTime', () => {
+  it('always shows 12-hour time with AM/PM', () => {
+    expect(formatTime('14:30')).toBe('2:30 PM');
+    expect(formatTime('00:00')).toBe('12:00 AM');
+    expect(formatTime('12:05')).toBe('12:05 PM');
   });
 });
