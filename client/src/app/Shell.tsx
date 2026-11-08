@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Menu as MenuIcon } from 'lucide-react';
 import { useDueNotifications } from '../hooks/useDueNotifications';
@@ -65,7 +65,9 @@ export function Shell() {
         >
           {/* Keyed by address, so leaving a page that crashed clears the message. */}
           <ErrorBoundary key={location.pathname}>
-            <Outlet />
+            <Suspense fallback={<p className="font-display text-title text-ink-muted italic">Loading…</p>}>
+              <Outlet />
+            </Suspense>
           </ErrorBoundary>
         </main>
       </div>

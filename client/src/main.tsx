@@ -10,18 +10,18 @@ import { AppProvider } from './app/AppProvider';
 import { Shell } from './app/Shell';
 import { queryClient } from './data/queryClient';
 import { SettingsProvider } from './hooks/useSettings';
-import ApplicationPage from './pages/ApplicationPage';
-import ApplicationsPage from './pages/ApplicationsPage';
-import CoursePage from './pages/CoursePage';
-import CoursesPage from './pages/CoursesPage';
 import NotFoundPage from './pages/NotFoundPage';
-import StyleGuide from './pages/StyleGuide';
 import TasksPage from './pages/TasksPage';
 import TodayPage from './pages/TodayPage';
 import './index.css';
 
-// The calendar library is big, so its page loads only when you open it.
+// Pages other than Today and Tasks load when first opened, so the app starts faster.
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const ApplicationsPage = lazy(() => import('./pages/ApplicationsPage'));
+const ApplicationPage = lazy(() => import('./pages/ApplicationPage'));
+const CoursesPage = lazy(() => import('./pages/CoursesPage'));
+const CoursePage = lazy(() => import('./pages/CoursePage'));
+const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 
 // Providers, outside in: settings (applies the theme), the server-data cache, the router, then AppProvider (shared data, actions, dialogs, toast).
 createRoot(document.getElementById('root')!).render(
@@ -30,7 +30,7 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
-            <Route path="/styleguide" element={<StyleGuide />} />
+            <Route path="/styleguide" element={<Suspense><StyleGuide /></Suspense>} />
             <Route
               element={
                 <AppProvider>
@@ -39,14 +39,7 @@ createRoot(document.getElementById('root')!).render(
               }
             >
               <Route index element={<TodayPage />} />
-              <Route
-                path="calendar"
-                element={
-                  <Suspense fallback={<p className="font-display text-title text-ink-muted italic">Loading the calendar…</p>}>
-                    <CalendarPage />
-                  </Suspense>
-                }
-              />
+              <Route path="calendar" element={<CalendarPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="applications" element={<ApplicationsPage />} />
               <Route path="applications/:id" element={<ApplicationPage />} />
