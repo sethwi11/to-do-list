@@ -20,3 +20,6 @@ server/data/
 .vscode/
 .idea/
 *.log
+
+# private planning notes, seed data and anything personal (never commit)
+.private/

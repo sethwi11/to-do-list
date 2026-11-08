@@ -1,6 +1,6 @@
 # Planner
 
-A personal planner built from a to-do app: tasks today, with a calendar, courses, an internship tracker, time blocking, and a weekly review being added phase by phase. **It runs entirely on your computer. No accounts, no API keys, no paid services.**
+A personal planner built from a to-do app: tasks, a calendar, courses, an internship tracker and time blocking today, with a weekly routine, reminders, focus mode, money tracking and a weekly review being added phase by phase (see the roadmap). **It runs entirely on your computer. No accounts, no API keys, no paid services.**
 
 > Work in progress. The full README (every feature, supported file types, shortcuts, installing on your phone) arrives in the last phase.
 
@@ -23,6 +23,21 @@ A personal planner built from a to-do app: tasks today, with a calendar, courses
 - Undo for delete, complete, and every calendar change; keyboard shortcuts (press `?`); dark mode; JSON export and import
 - Works on a phone-width screen: the sidebar becomes a drawer, the calendar opens on the Agenda, and a + button replaces the New menu
 - Data foundation for everything coming next: templates, focus sessions, weekly reviews
+
+## Roadmap
+
+Built one phase at a time; each is reviewed before it's merged.
+
+| Phase | What it adds |
+| --- | --- |
+| 10 | **Weekly routine and the Today agenda.** A week template of routine blocks (with wake and bed times, and dates it applies to), one function that plans each day from the routine, classes, events and time blocks, a color-coded Today agenda with a Now card, a morning view, and 12-hour times everywhere |
+| 11 | **When plans change.** Events take over the routine blocks they overlap, by clear priority rules; bumped time is tracked and can be made up; one-day skip / move / replace; "find a time" |
+| 12 | **Pop-ups and reminders.** Start and stop notifications for each block, and delivery of the reminders the app already stores (to-dos, events, application deadlines); the app keeps running in the background |
+| 13 | **Focus mode, streaks and the daily check-in.** The Pomodoro focus timer, click-to-play soundtracks, streaks, and a one-minute end-of-day check-in |
+| 14 | **Money.** A monthly spending budget, savings goals, and investments entered by hand (tracking only: no bank connection, no live prices, no advice) |
+| 15 | **Goals and the weekly review.** Goals and milestones, badges earned from real data, a weekly scoreboard, and a weekly review that ends with a summary to copy |
+
+**Later:** voice quick-add, a command palette and the full set of keyboard shortcuts; phone access as an installable app (with a login first, since the API has none); `.ics` export; a templates screen; a real estate deal calculator; live prices, if a free source with no key exists.
 
 ## Setup
 
