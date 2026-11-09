@@ -1,4 +1,4 @@
-import { datePart, planningDate, popupsForDay, type PlanSources, type Popup } from '@todo/shared';
+import { addDays, datePart, planningDate, popupsForDay, type PlanSources, type Popup } from '@todo/shared';
 import type { Repositories } from './repositories';
 
 /** Sends one pop-up (a native notification in the running app; a fake in tests). */
@@ -34,7 +34,8 @@ export function createPopupScheduler(r: Repositories, send: SendPopup, now: () =
     const app = await r.settings.get();
     const minute = now();
     const src = await planSources(r);
-    const dates = [...new Set([planningDate(src.templates, minute), datePart(minute)])];
+    // Yesterday too: a bedtime after midnight is yesterday's, and its minute is the first of the new day's planning.
+    const dates = [...new Set([addDays(datePart(minute), -1), planningDate(src.templates, minute), datePart(minute)])];
     const due = dates.flatMap((d) => popupsForDay(src, d, app.popups, app.sundayReviewReminder)).filter((p) => p.at === minute && p.keys.some((k) => !sent.has(k)));
     for (const p of due) {
       p.keys.forEach((k) => sent.add(k));

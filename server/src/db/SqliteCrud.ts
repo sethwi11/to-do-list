@@ -137,6 +137,8 @@ export class SqliteCrud<T extends { id: string }> {
 
   /** Undo a soft delete. Returns false if there's no deleted row with this id. */
   restoreSync(id: string): boolean {
+    // A table that deletes for good has nothing to bring back.
+    if (!this.opts.softDelete) return false;
     return this.stmt(`UPDATE ${this.opts.table} SET deleted_at = NULL WHERE id = ? AND deleted_at IS NOT NULL`).run(id).changes > 0;
   }
 

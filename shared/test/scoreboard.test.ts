@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_BUDGET, openBumps, reviewSummary, scoreboard, weekRange, workloadByDay, type MoneyMove, type ScoreInputs, type Expense } from '../src';
+import { addDays, DEFAULT_BUDGET, defaultReviewWeek, goalStandings, openBumps, reviewSummary, scoreboard, weekRange, workloadByDay, type MoneyMove, type ScoreInputs, type Expense } from '../src';
 import { CALENDARS, CS, GYM, NOW, READING, REAL_ESTATE, SCHOOL, block, checkIn, gymBlocks, id, otherBlocks, override, sentOn, source, studyBlocks } from './week';
 
 const WEEK = '2026-11-02';
@@ -95,7 +95,7 @@ describe('the summary for Claude', () => {
   const names = new Map(CALENDARS.map((c) => [c.id, c.name]));
   // One task due Wednesday makes it the only day with anything planned.
   const nextWeek = [...workloadByDay('2026-11-09', '2026-11-16', { events: [], blocks: [], tasks: [{ dueDate: '2026-11-11', priority: 'high', status: 'todo' }] }).values()];
-  const base = { score, names, unmadeUp: openBumps(src, WEEK, '2026-11-08'), missedTasks: ['Call the landlord'], learned: [{ date: '2026-11-03', title: 'LeetCode', learned: 'Two pointers beat nested loops' }], nextWeek, priorities: ['Send 5 applications', 'Gym every day'], notes: '' };
+  const base = { score, names, unmadeUp: openBumps(src, WEEK, '2026-11-08'), missedTasks: ['Call the landlord'], learned: [{ date: '2026-11-03', title: 'LeetCode', learned: 'Two pointers beat nested loops' }], nextWeek, priorities: ['Send 5 applications', 'Gym every day'], goals: ['Internship offers: 3 of 10 (95 days left)', 'First property fund: $400 of $5,000'], notes: '' };
   const text = reviewSummary(base);
 
   it('is plain Markdown that ends where the questions go', () => {
@@ -110,6 +110,7 @@ describe('the summary for Claude', () => {
     expect(text).toContain('Gym days 4 · LeetCode sessions 2 · Applications sent 2');
     expect(text).toContain('Spent $15 ($15 of $1,000 this month) · saved $24 · invested $30');
     expect(text).toContain('- Study (Thu Nov 5, 2h)');
+    expect(text).toContain('## Where my goals stand\n- Internship offers: 3 of 10 (95 days left)\n- First property fund: $400 of $5,000\n');
     expect(text).toContain('- Call the landlord');
     expect(text).toContain('- Tue Nov 3, LeetCode: Two pointers beat nested loops');
     expect(text).toContain('1. Send 5 applications\n2. Gym every day');
@@ -117,11 +118,50 @@ describe('the summary for Claude', () => {
     expect(text).toContain('## Next week\n- Wed Nov 11: Moderate, 1 task due\n- Nothing planned: Mon Nov 9, Tue Nov 10, Thu Nov 12, Fri Nov 13, Sat Nov 14, Sun Nov 15\n');
   });
   it('leaves out sections with nothing in them', () => {
-    const quiet = reviewSummary({ ...base, unmadeUp: [], missedTasks: [], learned: [], nextWeek: [], priorities: [], notes: '' });
-    for (const heading of ['Not made up', 'Missed to-dos', 'Learned', 'Next week', 'My priorities', 'Notes']) expect(quiet).not.toContain(heading);
+    const quiet = reviewSummary({ ...base, unmadeUp: [], missedTasks: [], learned: [], nextWeek: [], priorities: [], goals: [], notes: '' });
+    for (const heading of ['Where my goals stand', 'Not made up', 'Missed to-dos', 'Learned', 'Next week', 'My priorities', 'Notes']) expect(quiet).not.toContain(heading);
     expect(quiet.endsWith('Questions for Claude:')).toBe(true);
   });
   it('adds your notes when there are some', () => {
     expect(reviewSummary({ ...base, notes: ' Tired after Thursday. ' })).toContain('## Notes\nTired after Thursday.');
+  });
+});
+
+describe('where each goal stands', () => {
+  const goal = (name: string, targetCents: number) => ({ id: id(), name, targetCents, sortOrder: 1, createdAt: NOW, updatedAt: NOW });
+  const milestone = (title: string, reachedOn: string | null) => ({ id: id(), title, targetDate: null, reachedOn, calendarIds: [], savingsGoalId: null, trackOffers: false, sortOrder: 1, createdAt: NOW, updatedAt: NOW });
+  const fund = goal('First property fund', 500_000);
+  const base = { applications: [], offerGoal: 10, offerTargetDate: '2027-02-12', goals: [], moves: [], milestones: [], today: '2026-11-09' };
+
+  it('says the offers, each savings goal, and which milestones are reached', () => {
+    const offers = [sentOn('2026-10-01'), sentOn('2026-10-02')].map((a) => ({ ...a, status: 'Offer', statusHistory: [{ status: 'Offer', date: '2026-11-01T12:00:00.000Z' }] }));
+    const moves = [{ id: id(), date: '2026-11-02', periodStart: null, toType: 'goal' as const, toId: fund.id, amountCents: 40_000, note: null, createdAt: NOW }];
+    const lines = goalStandings({ ...base, applications: offers as never, goals: [fund], moves, milestones: [milestone('Read the book', '2026-11-05'), milestone('Ship the project', null), milestone('Learn Rust', null)] });
+    expect(lines).toEqual([
+      'Internship offers: 2 of 10 (95 days left)',
+      'First property fund: $400 of $5,000',
+      'Milestones: 1 of 3 reached (still open: Ship the project; Learn Rust)',
+    ]);
+  });
+  it('still says the offers with nothing else set up, and when the target date has passed', () => {
+    expect(goalStandings(base)).toEqual(['Internship offers: 0 of 10 (95 days left)']);
+    expect(goalStandings({ ...base, offerTargetDate: '2026-11-01' })).toEqual(['Internship offers: 0 of 10 (target date has passed)']);
+  });
+});
+
+describe('the week the review opens on', () => {
+  const day = (date: string) => ({ date });
+  it('is this week once it has real check-ins, even on its first Sunday night', () => {
+    expect(defaultReviewWeek('2026-11-15', ['2026-11-09', '2026-11-10', '2026-11-12', '2026-11-14'].map(day))).toBe('2026-11-09'); // Sunday night: the week that is ending
+  });
+  it('is last week while this one has barely started (Monday morning, or one day in), when last week has check-ins', () => {
+    const lastWeek = ['2026-11-02', '2026-11-03', '2026-11-05'].map(day);
+    expect(defaultReviewWeek('2026-11-09', lastWeek)).toBe('2026-11-02');
+    expect(defaultReviewWeek('2026-11-10', [...lastWeek, day('2026-11-09')])).toBe('2026-11-02'); // only one day checked in so far
+    expect(defaultReviewWeek('2026-11-11', [...lastWeek, day('2026-11-09'), day('2026-11-10')])).toBe('2026-11-09'); // two days in: this week
+  });
+  it('stays on this week when there is nothing from last week to look back on', () => {
+    expect(defaultReviewWeek('2026-11-09', [])).toBe('2026-11-09');
+    expect(defaultReviewWeek('2026-11-09', [day(addDays('2026-11-09', -30))])).toBe('2026-11-09');
   });
 });

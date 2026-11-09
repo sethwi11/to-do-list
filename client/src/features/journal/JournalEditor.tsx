@@ -69,7 +69,7 @@ export function JournalEditor({ date, entry }: { date: string; entry: JournalEnt
       />
       <div className="mt-4">
         <span id="score-label" className="mb-1.5 block text-label text-ink-muted uppercase">How did the day go? 1 is rough, 10 is great</span>
-        <div role="radiogroup" aria-labelledby="score-label" className="inline-flex flex-wrap overflow-hidden rounded-control border border-rule">
+        <div role="radiogroup" aria-labelledby="score-label" className="grid grid-cols-5 gap-px overflow-hidden rounded-control border border-rule bg-rule sm:inline-flex sm:gap-0 sm:bg-transparent">
           {SCORES.map((n) => (
             <button
               key={n}
@@ -78,7 +78,7 @@ export function JournalEditor({ date, entry }: { date: string; entry: JournalEnt
               aria-checked={rating === n}
               // Tapping the chosen score again clears it.
               onClick={() => setRating(rating === n ? null : n)}
-              className={cx('h-9 min-w-10 border-l border-rule px-2 font-mono text-body transition-colors duration-150 first:border-l-0', rating === n ? 'bg-ink text-paper' : 'text-ink hover:bg-accent-soft')}
+              className={cx('h-9 min-w-10 px-2 font-mono text-body transition-colors duration-150 sm:border-l sm:border-rule sm:first:border-l-0', rating === n ? 'bg-ink text-paper' : 'bg-surface text-ink hover:bg-accent-soft')}
             >
               {n}
             </button>

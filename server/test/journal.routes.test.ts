@@ -81,3 +81,15 @@ describe('backing up the journal', () => {
     expect((await request(target).get('/api/journal')).body).toHaveLength(2);
   });
 });
+
+describe('restoring something that was never soft-deleted', () => {
+  it('says there is nothing to restore (404), for tables that delete for good and for ids that do not exist', async () => {
+    const { body: entry } = await api().post('/api/journal').send({ date: '2026-11-09' });
+    await api().delete(`/api/journal/${entry.id}`).expect(204);
+    await api().post(`/api/journal/${entry.id}/restore`).expect(404); // deleted for good: no Undo to give
+    for (const path of ['calendars', 'courses', 'check-ins', 'money-moves', 'weekly-reviews']) {
+      await api().post(`/api/${path}/00000000-0000-4000-8000-000000000000/restore`).expect(404);
+    }
+    await api().post('/api/expenses/00000000-0000-4000-8000-000000000000/restore').expect(404); // one that can be restored, but not this id
+  });
+});

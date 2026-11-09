@@ -86,7 +86,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [updateTask, showToast, today],
   );
 
-  const saveTask = useCallback((id: string, changes: UpdateTaskInput) => updateTask(id, changes), [updateTask]);
+  /** Saving a to-do from its dialog says so and can be undone, like every other change. */
+  const saveTask = useCallback(
+    async (id: string, changes: UpdateTaskInput) => {
+      const before = tasks.find((t) => t.id === id);
+      const saved = await updateTask(id, changes);
+      if (saved && before) {
+        const previous = Object.fromEntries(Object.keys(changes).map((k) => [k, before[k as keyof Task]])) as UpdateTaskInput;
+        showToast(`Saved “${saved.title}”`, () => void updateTask(id, previous));
+      }
+      return saved;
+    },
+    [tasks, updateTask, showToast],
+  );
 
   const removeTask = useCallback(
     async (task: Task) => {

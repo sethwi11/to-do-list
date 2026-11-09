@@ -4,6 +4,7 @@ import { addMinutes, combine, minutesBetween, timePart } from './dateTime';
 import { expandOccurrences } from './eventSeries';
 import { LocalDateTimeSchema } from './localTime';
 import { activeTemplate, dayBounds, planDay, type PlanItem, type PlanSources } from './planDay';
+import { soonestFirst } from './recurrence';
 
 // Pop-ups: one pure function turns a planned day into the notifications the server sends.
 
@@ -49,7 +50,8 @@ export function popupsForDay(src: PlanSources, date: string, settings: PopupSett
   if (!settings.enabled) return [];
   const plan = planDay(src, date);
   const dayStart = combine(date);
-  const dayEnd = plan.bed > combine(addDays(date, 1)) ? plan.bed : combine(addDays(date, 1));
+  // A bedtime after midnight belongs to this day, including the minute of bedtime itself (its bedtime pop-up and the last block's stop).
+  const dayEnd = plan.bed > combine(addDays(date, 1)) ? addMinutes(plan.bed, 1) : combine(addDays(date, 1));
   const muted = (calendarId: string | null) => calendarId !== null && settings.mutedCalendarIds.includes(calendarId);
   const blockOf = (item: PlanItem) => src.blocks.find((b) => b.id === item.sourceId);
   const wanted = (i: PlanItem) => i.kind !== 'open' && i.kind !== 'task' && !muted(i.calendarId) && (i.kind !== 'routine' || blockOf(i)?.notify !== false);
@@ -63,7 +65,7 @@ export function popupsForDay(src: PlanSources, date: string, settings: PopupSett
   const matching = (item: PlanItem) => {
     if (item.kind !== 'routine' || !(item.focus || blockOf(item)?.reschedulable)) return '';
     const ids = [item.calendarId, item.altCalendarId].filter((id): id is string => id !== null);
-    const open = src.tasks.filter((t) => t.status === 'todo' && t.calendarId !== null && ids.includes(t.calendarId));
+    const open = src.tasks.filter((t) => t.status === 'todo' && t.calendarId !== null && ids.includes(t.calendarId)).sort(soonestFirst);
     return open.length === 0 ? '' : ` · ${open[0]!.title}${open.length > 1 ? ` +${open.length - 1} more` : ''}`;
   };
 

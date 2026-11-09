@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react';
-import { addDays, LocalDateSchema, openBumps, reviewSummary, scoreboard, weekRange, workloadByDay, type Task, type WeeklyReview } from '@todo/shared';
+import { addDays, defaultReviewWeek, goalStandings, LocalDateSchema, openBumps, reviewSummary, scoreboard, weekRange, workloadByDay, type Task, type WeeklyReview } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
 import { useAppSettings } from '../data/useApplications';
 import { checkInHooks } from '../data/useCheckIns';
 import { keys } from '../data/queryClient';
-import { expenseHooks, moneyMoveHooks } from '../data/useMoney';
-import { weeklyReviewHooks } from '../data/usePath';
+import { expenseHooks, goalHooks, moneyMoveHooks } from '../data/useMoney';
+import { milestoneHooks, weeklyReviewHooks } from '../data/usePath';
 import { NextWeek } from '../features/review/NextWeek';
 import { ScoreboardView } from '../features/review/ScoreboardView';
 import { MissedList } from '../features/today/MissedList';
@@ -25,9 +25,10 @@ const SLOTS = [0, 1, 2] as const;
 export default function ReviewPage() {
   const { today } = useApp();
   const asked = useSearchParams()[0].get('week');
-  const weekStart = weekRange(asked && LocalDateSchema.safeParse(asked).success ? asked : today)[0];
   const reviews = weeklyReviewHooks.useList();
   const checkIns = checkInHooks.useList();
+  // Opens on last week while this one has barely started; a week picked with the arrows (or in the address) is always honored.
+  const weekStart = asked && LocalDateSchema.safeParse(asked).success ? weekRange(asked)[0] : defaultReviewWeek(today, checkIns.data ?? []);
   const expenses = expenseHooks.useList();
   const moves = moneyMoveHooks.useList();
   const { routine } = usePlanSources();
@@ -37,7 +38,7 @@ export default function ReviewPage() {
 }
 
 function ReviewBody({ weekStart, review }: { weekStart: string; review: WeeklyReview | undefined }) {
-  const { today, calendars, calendarsById, applications, events, timeBlocks, tasks, showToast } = useApp();
+  const { today, calendars, applications, events, timeBlocks, tasks, showToast } = useApp();
   const { src } = usePlanSources();
   const { settings } = useAppSettings();
   const now = useNowText();
@@ -46,6 +47,8 @@ function ReviewBody({ weekStart, review }: { weekStart: string; review: WeeklyRe
   const checkIns = checkInHooks.useList().data ?? [];
   const expenses = expenseHooks.useList().data ?? [];
   const moves = moneyMoveHooks.useList().data ?? [];
+  const goals = goalHooks.useList().data ?? [];
+  const milestones = milestoneHooks.useList().data ?? [];
   const create = weeklyReviewHooks.useCreate();
   const update = weeklyReviewHooks.useUpdate();
   const [priorities, setPriorities] = useState<string[]>(SLOTS.map((i) => review?.priorities[i] ?? ''));
@@ -62,7 +65,8 @@ function ReviewBody({ weekStart, review }: { weekStart: string; review: WeeklyRe
   const nextWeek = useMemo(() => [...workloadByDay(addDays(weekStart, 7), addDays(weekStart, 14), { events, blocks: timeBlocks, tasks }).values()], [weekStart, events, timeBlocks, tasks]);
 
   const chosen = priorities.map((p) => p.trim()).filter(Boolean);
-  const summary = reviewSummary({ score, names, unmadeUp, missedTasks: missed.map((t) => t.title), learned, nextWeek, priorities: chosen, notes });
+  const standings = goalStandings({ applications, offerGoal: settings.offerGoal, offerTargetDate: settings.offerTargetDate, goals, moves, milestones, today });
+  const summary = reviewSummary({ score, names, unmadeUp, missedTasks: missed.map((t) => t.title), learned, goals: standings, nextWeek, priorities: chosen, notes });
 
   /** Saves the priorities and notes; the review for the week is made the first time. */
   const save = (changes: { priorities?: string[]; notes?: string }) => {
@@ -79,7 +83,7 @@ function ReviewBody({ weekStart, review }: { weekStart: string; review: WeeklyRe
     }
   }
 
-  const go = (week: string) => setParams(week === thisWeek ? {} : { week });
+  const go = (week: string) => setParams({ week });
 
   return (
     <div className="max-w-[900px]">

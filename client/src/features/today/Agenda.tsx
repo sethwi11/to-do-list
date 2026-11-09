@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import { CircleAlert } from 'lucide-react';
 import { timeOfMinutes, timePart, type CalendarColor, type DayPlan, type PlanItem } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
@@ -7,7 +7,7 @@ import { cx } from '../../lib/cx';
 import { formatTime } from '../../lib/dates';
 import { formatTimeRange } from '../calendar/format';
 import { BlockText, blockPadding } from '../../ui/blocks';
-import { agendaRange, layoutLanes, minutesInto } from './todayModel';
+import { agendaRange, layoutLanes, minutesInto, openAtMinutes } from './todayModel';
 
 const PX_PER_MINUTE = 1;
 const GUTTER = '4.5rem';
@@ -29,8 +29,18 @@ export function Agenda({ plan, now, onOpen }: { plan: DayPlan; now: string; onOp
   const nowAt = minutesInto(plan.date, now);
   const hours = Array.from({ length: (to - from) / 60 + 1 }, (_, i) => from + i * 60);
 
+  // Open at the current time, once: not again as the minutes tick over, and from the top when the day hasn't started or has ended.
+  const root = useRef<HTMLDivElement>(null);
+  const opened = useRef(false);
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    const at = openAtMinutes(plan, now);
+    if (at !== null && root.current) window.scrollTo({ top: root.current.getBoundingClientRect().top + window.scrollY + y(at) - window.innerHeight * 0.35, behavior: 'auto' });
+  });
+
   return (
-    <div className="relative" style={{ height: y(to) }}>
+    <div ref={root} className="relative" style={{ height: y(to) }}>
       {hours.map((m) => (
         <div key={m} className="absolute inset-x-0 border-t border-hairline" style={{ top: y(m) }}>
           <span className="absolute -top-2 left-0 bg-paper pr-2 font-mono text-time text-ink-muted">{formatTime(timeOfMinutes(m % 1440))}</span>

@@ -1,7 +1,7 @@
 import { buildEvent, expandOccurrences, type Event, type PlanItem } from '@todo/shared';
 import { describe, expect, it } from 'vitest';
 import { buildBlank } from '../calendar/testHelpers';
-import { agendaRange, currentItem, duringBlock, layoutLanes, nextItem, nextUpcoming, summarize, supposedToBeDoing } from './todayModel';
+import { agendaRange, currentItem, duringBlock, layoutLanes, nextItem, nextUpcoming, openAtMinutes, summarize, supposedToBeDoing } from './todayModel';
 
 const NOW = '2026-11-04T12:00:00.000Z';
 let n = 0;
@@ -116,5 +116,22 @@ describe('the agenda', () => {
   it('shows 6 AM to 10 PM, stretched for an early start or a late night past midnight', () => {
     expect(agendaRange({ date: '2026-11-04', items: [item('A', '09:00', '10:00')] })).toEqual({ from: 360, to: 1320 });
     expect(agendaRange({ date: '2026-11-04', items: [item('Gym', '05:30', '06:30'), { ...item('Free', '22:00', '23:00'), end: '2026-11-05T02:00' }] })).toEqual({ from: 300, to: 1560 });
+  });
+});
+
+describe('where the agenda opens', () => {
+  // A day from 7:00 AM to 10:30 PM with one 9:00 to 10:00 block.
+  const plan = { date: '2026-11-10', wake: '2026-11-10T07:00', bed: '2026-11-10T22:30', items: [{ start: '2026-11-10T09:00', end: '2026-11-10T10:00' }] as never[] };
+  it('opens at the current time during the day', () => {
+    expect(openAtMinutes(plan, '2026-11-10T07:00')).toBe(420);
+    expect(openAtMinutes(plan, '2026-11-10T13:25')).toBe(13 * 60 + 25);
+    expect(openAtMinutes(plan, '2026-11-10T21:59')).toBe(21 * 60 + 59);
+    expect(openAtMinutes(plan, '2026-11-10T22:15')).toBeNull(); // the agenda ends at 10 PM, so there is nothing to scroll to
+  });
+  it('opens at the top before the day starts and once it has ended', () => {
+    expect(openAtMinutes(plan, '2026-11-10T05:59')).toBeNull();
+    expect(openAtMinutes(plan, '2026-11-10T06:59')).toBeNull(); // before this day's wake time
+    expect(openAtMinutes(plan, '2026-11-10T22:30')).toBeNull(); // bedtime: the day is over
+    expect(openAtMinutes(plan, '2026-11-11T01:00')).toBeNull();
   });
 });

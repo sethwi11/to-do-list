@@ -41,6 +41,7 @@ export default function DisplayPage() {
     <div className="flex h-dvh flex-col overflow-hidden bg-paper px-6 py-6 text-ink md:px-10 md:py-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
+          <h1 className="sr-only">Display view</h1>
           <p className="font-mono text-[clamp(3rem,7vw,6.5rem)] leading-none tabular-nums">{formatTime(timePart(now))}</p>
           <p className="mt-2 font-display text-section text-ink-muted">{fullDate(date)}</p>
         </div>

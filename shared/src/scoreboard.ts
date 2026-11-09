@@ -17,6 +17,14 @@ export function weekRange(date: string): [string, string] {
   return [monday, addDays(monday, 6)];
 }
 
+/** The week the review opens on: this one, unless it has barely started (check-ins on fewer than two days) while last week has some. Then last week, which is the one you mean on a Monday morning. */
+export function defaultReviewWeek(today: string, checkIns: readonly Pick<CheckIn, 'date'>[]): string {
+  const [thisWeek] = weekRange(today);
+  const lastWeek = addDays(thisWeek, -7);
+  const days = (start: string) => new Set(checkIns.filter((c) => c.date >= start && c.date <= addDays(start, 6)).map((c) => c.date)).size;
+  return days(thisWeek) < 2 && days(lastWeek) > 0 ? lastWeek : thisWeek;
+}
+
 /** One planned thing on a day: a block cut into pieces counts once, and open time isn't one. The nightly check-in has one row each. */
 export interface PlannedRow {
   key: string;

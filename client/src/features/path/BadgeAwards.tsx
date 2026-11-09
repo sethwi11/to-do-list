@@ -11,7 +11,7 @@ import { toLocalISODate } from '../../lib/dates';
 import { Fireworks } from '../../ui/Fireworks';
 import { usePlanSources } from '../today/useTodayPlan';
 
-// Keys already sent since the page loaded, so a re-render can't send one twice.
+// Keys being sent (or that failed to save), so a re-render can't send one twice.
 const sent = new Set<string>();
 
 /** Saves each badge the data has earned that isn't saved yet, and plays the fireworks for one earned today. Renders nothing else. */
@@ -40,7 +40,12 @@ export function BadgeAwards() {
     const fresh = missing.filter((b) => !sent.has(b.key));
     if (fresh.length === 0) return;
     fresh.forEach((b) => sent.add(b.key));
-    void Promise.allSettled(fresh.map((b) => badgesApi.create({ id: crypto.randomUUID(), ...b }))).then(() => qc.invalidateQueries({ queryKey: badgeHooks.key }));
+    void Promise.allSettled(fresh.map((b) => badgesApi.create({ id: crypto.randomUUID(), ...b })))
+      .then(async (results) => {
+        await qc.invalidateQueries({ queryKey: badgeHooks.key });
+        // Saved ones can be earned again later (a reopened milestone); a failed one stays blocked, so a broken save can't retry forever.
+        results.forEach((r, i) => r.status === 'fulfilled' && sent.delete(fresh[i]!.key));
+      });
     // Badges from earlier days are filed quietly; only one earned today gets the fireworks.
     const now = fresh.filter((b) => b.earnedOn === today);
     if (now.length > 0) setCelebrate(now.length === 1 ? `Badge: ${now[0]!.title}` : `${now.length} new badges`);

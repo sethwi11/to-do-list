@@ -45,6 +45,12 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss(), selfHostedOcr()],
+    build: {
+      // The libraries every page needs get their own file: the app's own code stays small, and the libraries stay cached across updates.
+      rolldownOptions: {
+        output: { codeSplitting: { groups: [{ name: 'vendor', test: /node_modules[\\/](react|react-dom|scheduler|react-router|@tanstack|@dnd-kit|lucide-react)[\\/]/ }] } },
+      },
+    },
     server: {
       port: 5173,
       // The browser only ever talks to Vite (same origin), and Vite forwards

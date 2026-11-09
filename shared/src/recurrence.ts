@@ -39,6 +39,11 @@ export const isRolling = (t: Pick<Task, 'recurrence' | 'rollsOver'>) => t.recurr
 /** Open, past its due date, and not a rolling task (those are never overdue). */
 export const isOverdue = (t: RollFields, today: string) => t.status === 'todo' && t.missedAt === null && t.dueDate !== null && t.dueDate < today && !isRolling(t);
 
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+/** The order to-dos are listed against a block: soonest due first (a date, then a time), then by priority. */
+export const soonestFirst = (a: Pick<Task, 'dueDate' | 'dueTime' | 'priority'>, b: Pick<Task, 'dueDate' | 'dueTime' | 'priority'>) =>
+  (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || (a.dueTime ?? '99').localeCompare(b.dueTime ?? '99') || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+
 /** The last day an open rolling task is still current: the day before its next occurrence. */
 export const rollDeadline = (t: RollFields) => (t.dueDate && t.recurrence !== 'none' ? addDays(stepRecurrence(t.dueDate, t.recurrence, t.repeatDays), -1) : null);
 

@@ -9,6 +9,7 @@ import { ItemDetail } from '../features/calendar/ItemDetail';
 import { Agenda, Legend } from '../features/today/Agenda';
 import { DayBar, MorningHeader } from '../features/today/MorningHeader';
 import { NowCard } from '../features/today/NowCard';
+import { WeekPriorities } from '../features/today/WeekPriorities';
 import { Headlines } from '../features/today/Headlines';
 import { MissedList, weekOf } from '../features/today/MissedList';
 import { MilestoneFireworks, useStreaks } from '../features/today/Streaks';
@@ -102,6 +103,7 @@ export default function TodayPage() {
         <SkeletonRows count={5} />
       ) : (
         <>
+          <WeekPriorities date={date} />
           <p className="mb-8 flex flex-wrap items-center gap-x-1 text-meta text-ink-muted">
             {date !== now.slice(0, 10) && <span className="text-ink">{weekday} night, until bedtime · </span>}
             <Num>{summary.events}</Num> {summary.events === 1 ? 'event' : 'events'}

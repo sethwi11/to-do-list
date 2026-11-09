@@ -34,6 +34,21 @@ describe('pop-ups from the server', () => {
     expect(sent).toEqual([]);
   });
 
+  it('sends bedtime at 2:00 AM after a late night, once', async () => {
+    const { repos, sent, app } = setup();
+    await request(app).post('/api/week-templates').send({ name: 'Made-up week', effectiveFrom: '2026-09-01', days: [{ weekday: 5, wake: '06:00', bed: '02:00' }] }).expect(201);
+    let minute = '2026-11-14T01:59';
+    const tick = createPopupScheduler(repos, (p) => sent.push(p), () => minute);
+    await tick();
+    expect(sent).toEqual([]);
+    minute = '2026-11-14T02:00'; // Saturday, 2:00 AM: Friday's bedtime
+    await tick();
+    await tick();
+    minute = '2026-11-14T02:01';
+    await tick();
+    expect(sent.map((p) => p.title)).toEqual(['Bedtime. Tomorrow starts at 6:00 AM']);
+  });
+
   it('sends the Sunday review reminder at 8:30 PM only when that setting is on', async () => {
     const { repos, sent, app } = setup();
     const tick = createPopupScheduler(repos, (p) => sent.push(p), () => '2026-11-08T20:30');

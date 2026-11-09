@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { addDays, LocalDateSchema, planDay, plannedRows, planningDate, timePart, CHECK_IN_STATUSES, type CheckIn, type CheckInStatus, type Task } from '@todo/shared';
+import { addDays, LocalDateSchema, planDay, plannedRows, planningDate, timePart, weekRange, CHECK_IN_STATUSES, type CheckIn, type CheckInStatus, type Task } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { checkInsApi } from '../api/entities';
 import { checkInHooks } from '../data/useCheckIns';
@@ -35,7 +35,7 @@ export default function CheckInPage() {
   const rows = useMemo(() => plannedRows(planDay(src, date).items), [src, date]);
   const tomorrow = useMemo(() => planDay(src, addDays(date, 1)).items.filter((i) => i.kind !== 'open').slice(0, 3), [src, date]);
   // Missed rolling to-dos are hidden from every list, so read them from the raw cache.
-  const missed = (qc.getQueryData<Task[]>(keys.tasks) ?? []).filter((t) => t.missedAt && toLocalISODate(new Date(t.missedAt)) > addDays(date, -7) && toLocalISODate(new Date(t.missedAt)) <= date);
+  const missed = (qc.getQueryData<Task[]>(keys.tasks) ?? []).filter((t) => t.missedAt && toLocalISODate(new Date(t.missedAt)) >= weekRange(date)[0] && toLocalISODate(new Date(t.missedAt)) <= date);
 
   const mine = (key: string): CheckIn | undefined => checkIns.data?.find((c) => c.date === date && c.itemKey === key);
   const fail = () => showToast('Couldn’t save that. Check that the server is running.');
@@ -74,7 +74,13 @@ export default function CheckInPage() {
       <p className="mb-6 font-display text-section text-ink-muted">{fullDate(date)}</p>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-meta text-ink-muted">
-          <span className="font-mono text-ink">{marked}</span> of <span className="font-mono">{rows.length}</span> marked. Tap again to clear; anything unmarked stays unknown.
+          {rows.length === 0 ? (
+            'Nothing was planned for this day, so there is nothing to mark.'
+          ) : (
+            <>
+              <span className="font-mono text-ink">{marked}</span> of <span className="font-mono">{rows.length}</span> marked. Tap again to clear; anything unmarked stays unknown.
+            </>
+          )}
         </p>
         {marked < rows.length && (
           <Button variant="secondary" onClick={() => void markRestDone()}>

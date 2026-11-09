@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import type { Milestone } from '@todo/shared';
 import { ApiError } from '../api/client';
-import { milestonesApi } from '../api/entities';
+import { badgesApi, milestonesApi } from '../api/entities';
 import { useApp } from '../app/AppContext';
-import { milestoneHooks } from '../data/usePath';
+import { badgeHooks, milestoneHooks } from '../data/usePath';
 
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Unexpected error');
 const NONE: never[] = [];
@@ -41,10 +41,26 @@ export function useMilestones() {
     return m;
   }
 
-  /** Mark it reached today (or reopen it with null). A badge already earned stays earned. */
+  /** Reopening a milestone (or undoing "Reached") takes its badge back, so marking it reached again earns it again. */
+  const dropBadge = async (id: string) => {
+    const badge = (await badgesApi.list()).find((b) => b.key === `milestone:${id}`);
+    if (badge) await badgesApi.remove(badge.id);
+    await qc.invalidateQueries({ queryKey: badgeHooks.key });
+  };
+
+  /** Mark it reached today (or reopen it with null). */
   async function setReached(m: Milestone, reachedOn: string | null) {
-    const done = await attempt('save that', () => update.mutateAsync({ id: m.id, changes: { reachedOn } }));
-    if (done) showToast(reachedOn ? `Reached: “${m.title}”` : `Reopened “${m.title}”`, undo(() => milestonesApi.update(m.id, { reachedOn: m.reachedOn })));
+    const done = await attempt('save that', async () => {
+      const row = await update.mutateAsync({ id: m.id, changes: { reachedOn } });
+      if (reachedOn === null) await dropBadge(m.id);
+      return row;
+    });
+    if (done) showToast(reachedOn ? `Reached: “${m.title}”` : `Reopened “${m.title}”`, undo(async () => {
+      await milestonesApi.update(m.id, { reachedOn: m.reachedOn });
+      // Refresh the milestones first: from the old list the badge would just be earned again.
+      await qc.invalidateQueries({ queryKey: milestoneHooks.key });
+      if (m.reachedOn === null) await dropBadge(m.id);
+    }));
   }
 
   async function deleteMilestone(m: Milestone) {

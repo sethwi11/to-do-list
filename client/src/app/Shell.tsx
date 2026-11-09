@@ -25,6 +25,14 @@ export function Shell() {
   const fullHeight = location.pathname === '/calendar' || location.pathname === '/week';
   const fullscreen = useFullscreen();
   useFullscreenShortcut();
+  // Launched again with an address (clicking a pop-up opens the installed window at its page): the window that's already open comes to the front and goes there.
+  useEffect(() => {
+    const queue = (window as unknown as { launchQueue?: { setConsumer(fn: (params: { targetURL?: string }) => void): void } }).launchQueue;
+    queue?.setConsumer(({ targetURL }) => {
+      const url = targetURL ? new URL(targetURL) : null;
+      if (url && url.origin === window.location.origin) navigate(url.pathname + url.search);
+    });
+  }, [navigate]);
   // Browsers need a click to enter full screen, so a window last closed in full screen offers one.
   const [offerFullscreen, setOfferFullscreen] = useState(wasFullscreen);
 
@@ -45,6 +53,17 @@ export function Shell() {
 
   return (
     <div className="md:flex">
+      {/* The first stop for a keyboard: skip the sidebar's many links and land on the page. */}
+      <a
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById('main')?.focus();
+        }}
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-control focus:bg-surface focus:px-3 focus:py-2 focus:text-body focus:shadow-popover"
+      >
+        Skip to main content
+      </a>
       <aside
         aria-label="Sidebar"
         className={`sticky top-0 hidden h-dvh shrink-0 border-r border-rule bg-surface transition-[width] duration-150 ease-out md:block ${collapsed ? 'w-14' : 'w-62'}`}
@@ -59,10 +78,12 @@ export function Shell() {
         </div>
         {/* The calendar fills the screen instead of scrolling the page: its grid scrolls inside it. */}
         <main
+          id="main"
+          tabIndex={-1}
           className={
             fullHeight
-              ? 'flex h-[calc(100dvh-3rem)] flex-col px-3 pt-3 pb-24 sm:px-5 md:h-dvh md:px-8 md:pt-6 md:pb-4'
-              : 'px-5 pt-6 pb-28 sm:px-8 md:px-10 md:pt-10'
+              ? 'flex h-[calc(100dvh-3rem)] flex-col outline-none px-3 pt-3 pb-24 sm:px-5 md:h-dvh md:px-8 md:pt-6 md:pb-4'
+              : 'px-5 pt-6 pb-28 outline-none sm:px-8 md:px-10 md:pt-10'
           }
         >
           {/* Keyed by address, so leaving a page that crashed clears the message. */}

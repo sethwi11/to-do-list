@@ -1,4 +1,4 @@
-import { addDays, addMinutes, combine, conflictMap, expandOccurrences, isOverdue, minutesBetween, type DayPlan, type Event, type EventOccurrence, type PlanItem, type PlanKind, type Task, type TimeBlock } from '@todo/shared';
+import { addDays, addMinutes, combine, conflictMap, expandOccurrences, isOverdue, minutesBetween, soonestFirst, type DayPlan, type Event, type EventOccurrence, type PlanItem, type PlanKind, type Task, type TimeBlock } from '@todo/shared';
 
 // The logic behind the Today page, apart from any drawing.
 
@@ -48,8 +48,6 @@ export function currentItem(items: readonly PlanItem[], now: string): PlanItem |
 /** The next thing to start after `now`, skipping open time. */
 export const nextItem = (items: readonly PlanItem[], now: string) => items.find((i) => i.kind !== 'open' && i.start > now);
 
-const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
-const soonestFirst = (a: Task, b: Task) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || (a.dueTime ?? '99').localeCompare(b.dueTime ?? '99') || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
 
 /** During a routine block: every open to-do in its category or its alt category, soonest due first, then priority. Uncategorized to-dos never match. */
 export function duringBlock(tasks: readonly Task[], item: Pick<PlanItem, 'kind' | 'calendarId' | 'altCalendarId'> | undefined): Task[] {
@@ -99,6 +97,14 @@ export function agendaRange(plan: Pick<DayPlan, 'date' | 'items'>): { from: numb
   const starts = plan.items.map((i) => minutesInto(plan.date, i.start));
   const ends = plan.items.map((i) => minutesInto(plan.date, i.end));
   return { from: Math.max(0, Math.floor(Math.min(360, ...starts) / 60) * 60), to: Math.ceil(Math.max(1320, ...ends) / 60) * 60 };
+}
+
+/** Where the agenda opens: now, in minutes from the day's midnight. Null (open at the top) before the day starts, once it has ended, or when now is off the agenda. */
+export function openAtMinutes(plan: Pick<DayPlan, 'date' | 'wake' | 'bed' | 'items'>, now: string): number | null {
+  if (now < plan.wake || now >= plan.bed) return null;
+  const { from, to } = agendaRange(plan);
+  const at = minutesInto(plan.date, now);
+  return at >= from && at <= to ? at : null;
 }
 
 export const greeting = (hour: number) => (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');

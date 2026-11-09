@@ -224,6 +224,13 @@
   .planner-cal .fc-timegrid-slot-label-cushion {
     padding: 0 4px;
   }
+  /* Seven day columns don't fit a phone: keep each readable and let the week scroll sideways. */
+  .planner-cal .fc-view-harness {
+    overflow-x: auto;
+  }
+  .planner-cal .fc-timeGridWeek-view {
+    min-width: 600px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
