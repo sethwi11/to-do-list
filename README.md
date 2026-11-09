@@ -1,8 +1,8 @@
 # Planner
 
-A personal planner built from a to-do app: tasks, a calendar, courses, an internship tracker and time blocking today, with a weekly routine, reminders, focus mode, money tracking and a weekly review being added phase by phase (see the roadmap). **It runs entirely on your computer. No accounts, no API keys, no paid services.**
+A free, private personal planner that runs entirely on your own computer. It puts a calendar, a weekly routine, to-dos, courses, an internship tracker, money, a daily journal and a weekly review in one app, with Mac pop-ups and a focus mode. **No accounts, no API keys, no paid services, and nothing is sent anywhere unless you press a button.**
 
-> Work in progress. The full README (every feature, supported file types, shortcuts, installing on your phone) arrives in the last phase.
+Built with React 19, TypeScript, Express and SQLite in an npm-workspaces monorepo. The data models (zod) and all the business logic live in `shared/` as pure functions used by both the server and the browser, covered by more than 500 automated tests. All fifteen planned phases are built; the sections below describe how each part works.
 
 ## What works today
 
