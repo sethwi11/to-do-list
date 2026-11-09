@@ -35,6 +35,8 @@ export interface TaskRowProps {
   liRef?: Ref<HTMLLIElement>;
   liStyle?: CSSProperties;
   dragging?: boolean;
+  /** It belongs to the block happening right now: a tint in its calendar color and a "Now" tag. */
+  now?: boolean;
 }
 
 // The sequence, from the click: the line draws for 250ms; at 400ms the row starts to fade and collapse (250ms); when that finishes, the change is committed and the list drops the row.
@@ -69,6 +71,7 @@ export function TaskRow({
   liRef,
   liStyle,
   dragging = false,
+  now = false,
 }: TaskRowProps) {
   const reduced = useReducedMotion();
   const [leaving, setLeaving] = useState<'idle' | 'striking' | 'collapsing'>('idle');
@@ -134,7 +137,10 @@ export function TaskRow({
       )}
     >
       <div className="min-h-0 overflow-hidden">
-        <div className="group relative flex min-h-11 items-center gap-1 border-b border-hairline pr-1 pl-2 transition-colors duration-150 ease-out hover:bg-surface focus-within:bg-surface">
+        <div
+          style={now && calendar ? calendarVars(calendar.color) : undefined}
+          className={cx('group relative flex min-h-11 items-center gap-1 border-b border-hairline pr-1 pl-2 transition-colors duration-150 ease-out hover:bg-surface focus-within:bg-surface', now && calendar && 'bg-(color:--c-soft)')}
+        >
           {bar && <span aria-hidden className={cx('absolute left-0 w-[3px]', bar)} />}
           <span className="sr-only">{PRIORITY_LABEL[priority]}.</span>
 
@@ -155,6 +161,7 @@ export function TaskRow({
           </div>
 
           {/* Metadata sits on the same line, right-aligned. On a phone only the due date and calendar stay. */}
+          {now && <span className="shrink-0 rounded-control border border-rule px-1.5 font-mono text-time text-ink uppercase">Now</span>}
           {showMeta && (
             <div className="flex shrink-0 items-center gap-3 pl-2 text-meta text-ink-muted">
               {subtasks && (

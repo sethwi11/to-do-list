@@ -24,6 +24,9 @@ export function buildBlank(title: string, dueDate: string | null, extra: Partial
     updatedAt: '2026-11-04T00:00:00.000Z',
     completedAt: null,
     nextOccurrenceId: null,
+    rollsOver: false,
+    repeatDays: [],
+    missedAt: null,
     ...extra,
   };
 }

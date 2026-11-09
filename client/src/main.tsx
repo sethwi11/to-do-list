@@ -23,6 +23,7 @@ const CoursesPage = lazy(() => import('./pages/CoursesPage'));
 const CoursePage = lazy(() => import('./pages/CoursePage'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 const WeekPage = lazy(() => import('./pages/WeekPage'));
+const DisplayPage = lazy(() => import('./pages/DisplayPage'));
 
 // Providers, outside in: settings (applies the theme), the server-data cache, the router, then AppProvider (shared data, actions, dialogs, toast).
 createRoot(document.getElementById('root')!).render(
@@ -32,6 +33,8 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <Routes>
             <Route path="/styleguide" element={<Suspense><StyleGuide /></Suspense>} />
+            {/* The display view fills the screen on its own, without the sidebar. */}
+            <Route path="/display" element={<AppProvider><Suspense><DisplayPage /></Suspense></AppProvider>} />
             <Route
               element={
                 <AppProvider>

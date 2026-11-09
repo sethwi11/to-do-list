@@ -64,6 +64,12 @@ export const TaskSchema = z.object({
    * (or undo), so toggling a checkbox never piles up duplicates.
    */
   nextOccurrenceId: z.uuid().nullable(),
+  /** A repeating task that isn't finished by its next occurrence is marked missed (never overdue). Defaults on. */
+  rollsOver: z.boolean().default(true),
+  /** Weekly repeats on these weekdays (0 = Sunday); empty = the due date's weekday. */
+  repeatDays: z.array(z.number().int().min(0).max(6)).max(7).default([]),
+  /** When a rolling task was replaced by its next occurrence without being finished. */
+  missedAt: z.iso.datetime().nullable().default(null),
 });
 
 /**
@@ -85,6 +91,8 @@ export const CreateTaskInputSchema = z.object({
   reminders: TaskSchema.shape.reminders.optional(),
   subtasks: z.array(SubtaskSchema).optional(),
   recurrence: RecurrenceSchema.optional(),
+  rollsOver: z.boolean().optional(),
+  repeatDays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
   estimatedMinutes: TaskSchema.shape.estimatedMinutes.optional(),
   source: TaskSourceSchema.optional(),
   sourceSnippet: TaskSchema.shape.sourceSnippet.optional(),

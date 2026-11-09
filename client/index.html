@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Installable as its own window (Chrome: Install Planner), with no tabs or address bar. -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f8f5" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#00222c" />
     <title>Planner</title>
     <script>
       // Apply the saved theme before first paint, so dark mode doesn't flash white on load.

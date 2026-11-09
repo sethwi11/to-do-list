@@ -350,6 +350,15 @@ const migrations: Migration[] = [
       CREATE INDEX idx_routine_blocks_template ON routine_blocks(template_id, weekday);
     `);
   },
+
+  // v6: repeating tasks roll over instead of going overdue (on by default), and can repeat on chosen weekdays.
+  (db) => {
+    db.exec(`
+      ALTER TABLE tasks ADD COLUMN rolls_over INTEGER NOT NULL DEFAULT 1;
+      ALTER TABLE tasks ADD COLUMN repeat_days TEXT NOT NULL DEFAULT '[]';
+      ALTER TABLE tasks ADD COLUMN missed_at TEXT;
+    `);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

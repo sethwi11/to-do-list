@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { blockMinutesFor, describeLoad, selfIds, type DayLoad, type EventOccurrence } from '@todo/shared';
+import { blockMinutesFor, describeLoad, selfIds, timePart, type DayLoad, type EventOccurrence, type PlanItem } from '@todo/shared';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -10,7 +10,8 @@ import { useApp } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { anchorOf, type PopoverAnchor } from '../../ui/Popover';
 import '../../styles/calendar.css';
-import { describeConflicts } from './format';
+import { describeConflicts, formatTimeRange } from './format';
+import { shadeFor, shadeProps } from '../../lib/calendarColors';
 import { localDate, localDateTime, selectionToSpan, spanFromFullCalendar, taskSpan, type CalendarItem } from './calendarModel';
 import { HeatTooltip } from './HeatLegend';
 import { ItemBlock } from './ItemBlock';
@@ -37,6 +38,7 @@ function toFullCalendarEvent(item: CalendarItem): EventInput {
 }
 
 const itemOf = (arg: { event: { extendedProps: Record<string, unknown> } }) => arg.event.extendedProps.item as CalendarItem;
+const NO_ROUTINE: PlanItem[] = [];
 
 interface CalendarViewProps {
   view: GridView;
@@ -49,10 +51,13 @@ interface CalendarViewProps {
   onOpenDay: (date: string) => void;
   /** Month view only: how heavy each day is, to shade it (null = the workload map is off). */
   loads?: Map<string, DayLoad> | null;
+  /** Routine blocks to draw behind everything else (read-only here; edited on the Week page). */
+  routine?: readonly PlanItem[];
+  onOpenRoutine?: (blockId: string) => void;
 }
 
 /** Month, Week, and Day, drawn by FullCalendar (which does the hard parts: layout of overlapping events, dragging, resizing, selecting). */
-export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay, loads = null }: CalendarViewProps) {
+export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay, loads = null, routine = NO_ROUTINE, onOpenRoutine }: CalendarViewProps) {
   const { clashesFor, editEvent, rescheduleTask, toggleTask, tasks, scheduleTask, moveTimeBlock, showToast } = useApp();
   const [tip, setTip] = useState<{ load: DayLoad; x: number; y: number } | null>(null);
   const ref = useRef<FullCalendar>(null);
@@ -71,7 +76,10 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
     if (!hasSelection) ref.current?.getApi().unselect();
   }, [hasSelection]);
 
-  const events = useMemo(() => items.map(toFullCalendarEvent), [items]);
+  const events = useMemo(
+    () => [...items.map(toFullCalendarEvent), ...routine.map((r): EventInput => ({ id: r.key, title: r.title, start: r.start, end: r.end, editable: false, extendedProps: { routine: r } }))],
+    [items, routine],
+  );
 
   function handleSelect(info: DateSelectArg) {
     const span = spanFromFullCalendar(info.start, info.end, info.allDay);
@@ -86,6 +94,8 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
 
   function handleClick(info: EventClickArg) {
     info.jsEvent.preventDefault();
+    const r = info.event.extendedProps.routine as PlanItem | undefined;
+    if (r) return onOpenRoutine?.(r.sourceId!);
     // The checkbox on a to-do does its own thing; clicking it shouldn't also open the details.
     if ((info.jsEvent.target as HTMLElement).closest('input[type=checkbox]')) return;
     onOpenItem(itemOf(info), anchorOf(info.el));
@@ -138,6 +148,16 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
   }
 
   function renderContent(arg: EventContentArg) {
+    const r = arg.event.extendedProps.routine as PlanItem | undefined;
+    if (r) {
+      const look = shadeProps(r.color, shadeFor(r));
+      return (
+        <div style={look.style} title={`${r.title} (routine)`} className={cx('h-full overflow-hidden rounded-control px-1.5 py-0.5 text-ink opacity-80', look.className)}>
+          <p className="truncate text-meta leading-tight font-medium">{r.title}</p>
+          <p className="truncate font-mono text-time">{formatTimeRange(timePart(r.start), timePart(r.end))}</p>
+        </div>
+      );
+    }
     const item = arg.event.extendedProps.item as CalendarItem | undefined;
     // While you drag out a range, FullCalendar draws a temporary "ghost" event that isn't one of ours.
     if (!item) return <div className="h-full rounded-control border border-dashed border-accent bg-accent-soft" />;

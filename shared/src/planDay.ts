@@ -34,6 +34,7 @@ export interface PlanItem {
   focus: boolean;
   soundtrack: string | null;
   altTitle: string | null;
+  altCalendarId: string | null;
   /** The routine block, event occurrence key or time block it came from. */
   sourceId: string | null;
 }
@@ -92,7 +93,7 @@ function openGaps(sorted: readonly PlanItem[], wake: string, bed: string): PlanI
   const out: PlanItem[] = [];
   const gap = (start: string, end: string) => {
     if (minutesBetween(start, end) >= MIN_OPEN_MINUTES) {
-      out.push({ key: `open:${start}`, kind: 'open', start, end, title: 'Open', calendarId: null, color: null, priority: null, focus: false, soundtrack: null, altTitle: null, sourceId: null });
+      out.push({ key: `open:${start}`, kind: 'open', start, end, title: 'Open', calendarId: null, color: null, priority: null, focus: false, soundtrack: null, altTitle: null, altCalendarId: null, sourceId: null });
     }
   };
   let cursor = wake;
@@ -114,7 +115,7 @@ export function routineOn(src: Pick<PlanSources, 'templates' | 'blocks' | 'semes
   const colorOf = (id: string | null) => (id ? (src.calendars.find((c) => c.id === id)?.color ?? NEUTRAL) : NEUTRAL);
   return src.blocks
     .filter((b) => b.templateId === template.id && b.weekday === weekday && (!b.schoolDaysOnly || schoolDay))
-    .map((b) => ({ key: `routine:${b.id}@${date}`, kind: 'routine', ...spanOn(date, b.start, b.end), title: b.title, calendarId: b.calendarId, color: b.priority === 'free' ? null : colorOf(b.calendarId), priority: b.priority, focus: b.focus, soundtrack: b.soundtrack, altTitle: b.altTitle, sourceId: b.id }));
+    .map((b) => ({ key: `routine:${b.id}@${date}`, kind: 'routine', ...spanOn(date, b.start, b.end), title: b.title, calendarId: b.calendarId, color: b.priority === 'free' ? null : colorOf(b.calendarId), priority: b.priority, focus: b.focus, soundtrack: b.soundtrack, altTitle: b.altTitle, altCalendarId: b.altCalendarId, sourceId: b.id }));
 }
 
 /** Everything planned on a date: the routine (if a template covers it), classes, events and time set aside for to-dos, with Open time in the gaps. Overlaps sit side by side. */
@@ -122,7 +123,7 @@ export function planDay(src: PlanSources, date: string): DayPlan {
   const template = activeTemplate(src.templates, date);
   const { wake, bed } = dayBounds(template, date);
   const colorOf = (id: string | null) => (id ? (src.calendars.find((c) => c.id === id)?.color ?? null) : null);
-  const plain = { priority: null, focus: false, soundtrack: null, altTitle: null };
+  const plain = { priority: null, focus: false, soundtrack: null, altTitle: null, altCalendarId: null };
   const items: PlanItem[] = routineOn(src, date);
 
   // From midnight to bedtime, so a free night's late events belong to this day too.

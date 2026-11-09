@@ -1,4 +1,4 @@
-import { addDays, type Priority, type Task } from '@todo/shared';
+import { addDays, isOverdue, type Priority, type Task } from '@todo/shared';
 
 export interface Filters {
   query: string;
@@ -30,7 +30,7 @@ export function applyFilters(tasks: Task[], f: Filters, today: string): Task[] {
 
     switch (f.due) {
       case 'overdue':
-        return t.dueDate !== null && t.dueDate < today;
+        return isOverdue(t, today);
       case 'today':
         return t.dueDate === today;
       case 'tomorrow':

@@ -1,4 +1,4 @@
-import { addDays, type Task } from '@todo/shared';
+import { addDays, isOverdue, type Task } from '@todo/shared';
 
 export type SmartViewId = 'today' | 'upcoming' | 'overdue' | 'all' | 'completed';
 export type View = { type: 'smart'; id: SmartViewId } | { type: 'calendar'; id: string };
@@ -12,7 +12,7 @@ export function inView(task: Task, view: View, today: string): boolean {
     case 'upcoming': // the next 7 days, not counting today
       return task.dueDate !== null && task.dueDate > today && task.dueDate <= addDays(today, 7);
     case 'overdue':
-      return task.status === 'todo' && task.dueDate !== null && task.dueDate < today;
+      return isOverdue(task, today);
     case 'all':
       return true;
     case 'completed':

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { nextOccurrence, type CreateTaskInput, type Task, type UpdateTaskInput } from '@todo/shared';
+import { nextOccurrence, rollTarget, type CreateTaskInput, type Task, type UpdateTaskInput } from '@todo/shared';
 import type { Db } from '../db/connection';
 import type { RequestContext, TaskRepository } from './TaskRepository';
 
@@ -26,6 +26,9 @@ interface TaskRow {
   updated_at: string;
   completed_at: string | null;
   next_occurrence_id: string | null;
+  rolls_over: number;
+  repeat_days: string;
+  missed_at: string | null;
 }
 
 // Gap between sortOrder values.
@@ -54,6 +57,9 @@ function rowToTask(row: TaskRow): Task {
     updatedAt: row.updated_at,
     completedAt: row.completed_at,
     nextOccurrenceId: row.next_occurrence_id,
+    rollsOver: row.rolls_over === 1,
+    repeatDays: JSON.parse(row.repeat_days),
+    missedAt: row.missed_at,
   };
 }
 
@@ -80,6 +86,9 @@ function taskToRow(task: Task): TaskRow {
     updated_at: task.updatedAt,
     completed_at: task.completedAt,
     next_occurrence_id: task.nextOccurrenceId,
+    rolls_over: task.rollsOver ? 1 : 0,
+    repeat_days: JSON.stringify(task.repeatDays),
+    missed_at: task.missedAt,
   };
 }
 
@@ -114,6 +123,9 @@ export class SqliteTaskRepository implements TaskRepository {
       restore: db.prepare<[string]>('UPDATE tasks SET deleted_at = NULL WHERE id = ?'),
       setSort: db.prepare<[number, string]>('UPDATE tasks SET sort_order = ? WHERE id = ?'),
       purge: db.prepare<[string]>('DELETE FROM tasks WHERE deleted_at IS NOT NULL AND deleted_at < ?'),
+      rollCandidates: db.prepare<[string], TaskRow>(
+        "SELECT * FROM tasks WHERE deleted_at IS NULL AND status = 'todo' AND missed_at IS NULL AND rolls_over = 1 AND recurrence != 'none' AND due_date < ?",
+      ),
     };
   }
 
@@ -165,23 +177,7 @@ export class SqliteTaskRepository implements TaskRepository {
       if (reopening) next.completedAt = null;
 
       if (completing && next.recurrence !== 'none') {
-        const spawned = this.insert({
-          title: next.title,
-          notes: next.notes,
-          dueDate: nextOccurrence(next.dueDate, next.recurrence, ctx.today),
-          dueTime: next.dueTime,
-          priority: next.priority,
-          calendarId: next.calendarId,
-          courseId: next.courseId,
-          applicationId: next.applicationId,
-          reminders: next.reminders,
-          subtasks: next.subtasks.map((s) => ({ ...s, done: false })),
-          recurrence: next.recurrence,
-          estimatedMinutes: next.estimatedMinutes,
-          source: next.source,
-          sourceSnippet: next.sourceSnippet,
-        });
-        next.nextOccurrenceId = spawned.id;
+        next.nextOccurrenceId = this.spawn(next, nextOccurrence(next.dueDate, next.recurrence, ctx.today, next.repeatDays)).id;
       }
 
       if (reopening && existing.nextOccurrenceId) {
@@ -194,6 +190,44 @@ export class SqliteTaskRepository implements TaskRepository {
       this.stmts.update.run(taskToRow(next));
       return next;
     })();
+  }
+
+  /** Rolling tasks whose next occurrence has arrived: each is marked missed and the current occurrence takes its place. Returns how many rolled. */
+  async rollOver(today: string): Promise<number> {
+    return this.db.transaction(() => {
+      let rolled = 0;
+      for (const row of this.stmts.rollCandidates.all(today)) {
+        const task = rowToTask(row);
+        const due = rollTarget(task, today);
+        if (!due) continue;
+        const now = new Date().toISOString();
+        this.stmts.update.run(taskToRow({ ...task, missedAt: now, nextOccurrenceId: this.spawn(task, due).id, updatedAt: now }));
+        rolled++;
+      }
+      return rolled;
+    })();
+  }
+
+  /** The next occurrence of a repeating task: same details, subtasks unticked. */
+  private spawn(t: Task, dueDate: string | null): Task {
+    return this.insert({
+      title: t.title,
+      notes: t.notes,
+      dueDate,
+      dueTime: t.dueTime,
+      priority: t.priority,
+      calendarId: t.calendarId,
+      courseId: t.courseId,
+      applicationId: t.applicationId,
+      reminders: t.reminders,
+      subtasks: t.subtasks.map((s) => ({ ...s, done: false })),
+      recurrence: t.recurrence,
+      rollsOver: t.rollsOver,
+      repeatDays: t.repeatDays,
+      estimatedMinutes: t.estimatedMinutes,
+      source: t.source,
+      sourceSnippet: t.sourceSnippet,
+    });
   }
 
   async delete(id: string): Promise<boolean> {
@@ -244,6 +278,9 @@ export class SqliteTaskRepository implements TaskRepository {
       updatedAt: now,
       completedAt: null,
       nextOccurrenceId: null,
+      rollsOver: input.rollsOver ?? true,
+      repeatDays: input.repeatDays ?? [],
+      missedAt: null,
     };
 
     this.stmts.insert.run(taskToRow(task));

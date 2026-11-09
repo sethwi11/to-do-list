@@ -29,6 +29,9 @@ function task(overrides: Partial<Task>): Task {
     updatedAt: '2026-11-02T00:00:00.000Z',
     completedAt: null,
     nextOccurrenceId: null,
+    rollsOver: false,
+    repeatDays: [],
+    missedAt: null,
     ...overrides,
   };
 }

@@ -12,7 +12,9 @@ export function tasksRouter(tasks: TaskRepository): Router {
   const router = Router();
   const notFound = { error: 'NotFound', message: 'Task not found' };
 
-  router.get('/', async (_req, res) => {
+  // Rolling over first means every screen sees this week's occurrence, never last week's as overdue.
+  router.get('/', async (req, res) => {
+    await tasks.rollOver(requestContext(req).today);
     res.json(await tasks.list());
   });
 

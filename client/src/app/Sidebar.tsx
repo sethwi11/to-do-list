@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { Link, NavLink, useLocation } from 'react-router';
-import { Briefcase, CalendarCheck, CalendarDays, CalendarRange, GraduationCap, ListTodo, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
-import { followUpSuggestions } from '@todo/shared';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router';
+import { Briefcase, CalendarCheck, CalendarDays, CalendarRange, GraduationCap, ListTodo, Maximize, Minimize, MonitorPlay, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
+import { useFullscreen } from '../hooks/useFullscreen';
+import { followUpSuggestions, isOverdue } from '@todo/shared';
 import { calendarVars } from '../lib/calendarColors';
 import { cx } from '../lib/cx';
 import { tasksUrl } from '../lib/taskParams';
@@ -29,6 +30,8 @@ const navClass = (collapsed: boolean) => ({ isActive }: { isActive: boolean }) =
 export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigate }: SidebarProps) {
   const { calendars, tasks, applications, today, openDialog, hiddenCalendarIds, toggleCalendarHidden } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
+  const fullscreen = useFullscreen();
   const activeCalendar = location.pathname === '/tasks' ? new URLSearchParams(location.search).get('calendar') : null;
 
   const openCounts = useMemo(() => {
@@ -38,7 +41,7 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
   }, [tasks]);
   // Applications waiting on you (the follow-up rule), shown as a count like Today's.
   const needFollowUp = useMemo(() => followUpSuggestions(applications, today).length, [applications, today]);
-  const dueToday = tasks.filter((t) => t.status === 'todo' && t.dueDate !== null && t.dueDate <= today).length;
+  const dueToday = tasks.filter((t) => t.status === 'todo' && (t.dueDate === today || isOverdue(t, today))).length;
 
   const nav = [
     { to: '/', label: 'Today', icon: CalendarCheck, end: true, count: dueToday },
@@ -142,19 +145,21 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
         </section>
       </div>
 
-      <div className={cx('border-t border-hairline p-3', collapsed && 'flex justify-center')}>
+      <div className={cx('flex border-t border-hairline p-3', collapsed ? 'flex-col items-center gap-1' : 'items-center gap-1')}>
         {collapsed ? (
           <IconButton icon={Settings} label="Settings" onClick={() => openDialog({ kind: 'settings' })} />
         ) : (
           <button
             type="button"
             onClick={() => openDialog({ kind: 'settings' })}
-            className="flex h-9 w-full items-center gap-3 rounded-control px-3 text-body text-ink transition-colors duration-150 ease-out hover:bg-accent-soft"
+            className="flex h-9 min-w-0 flex-1 items-center gap-3 rounded-control px-3 text-body text-ink transition-colors duration-150 ease-out hover:bg-accent-soft"
           >
             <Settings className="size-[18px]" aria-hidden />
             Settings
           </button>
         )}
+        <IconButton icon={MonitorPlay} label="Display view (big Now card and agenda)" onClick={() => navigate('/display')} />
+        {fullscreen.supported && <IconButton icon={fullscreen.on ? Minimize : Maximize} label={fullscreen.on ? 'Exit full screen (Shift+F)' : 'Full screen (Shift+F)'} onClick={fullscreen.toggle} />}
       </div>
     </div>
   );

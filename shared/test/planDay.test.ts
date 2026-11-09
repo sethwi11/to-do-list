@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeTemplate, planDay, planningDate, quoteFor, strongerOverlaps, type Event, type PlanSources, type RoutineBlock, type Semester, type WeekTemplate } from '../src';
+import { activeTemplate, planDay, planningDate, parseQuotes, quoteFor, quotesToText, strongerOverlaps, type Event, type PlanSources, type RoutineBlock, type Semester, type WeekTemplate } from '../src';
 
 // A made-up student's week.
 const NOW = '2026-01-01T00:00:00.000Z';
@@ -113,5 +113,13 @@ describe('quoteFor', () => {
     expect(quoteFor(WED, quotes)).toBe(quoteFor(WED, quotes));
     expect(quoteFor(WED, quotes)).not.toBe(quoteFor('2026-11-12', quotes));
     expect(quoteFor(WED, [])).toBeUndefined();
+  });
+});
+
+describe('editing quotes as text', () => {
+  it('round-trips, strips quote marks, and reports lines with no author instead of guessing', () => {
+    const quotes = [{ text: 'Keep going — always.', by: 'Someone Jr.' }]; // a dash inside the quote is fine: the author follows the last one
+    expect(parseQuotes(quotesToText(quotes)).quotes).toEqual(quotes);
+    expect(parseQuotes('“Be kind.” — A. Person\n\nNo author here\n — Nobody')).toEqual({ quotes: [{ text: 'Be kind.', by: 'A. Person' }], problems: [3, 4] });
   });
 });

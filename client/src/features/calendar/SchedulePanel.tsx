@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Draggable } from '@fullcalendar/interaction';
 import { CalendarPlus, GripVertical, Search } from 'lucide-react';
-import { blockMinutesFor, formatMinutes } from '@todo/shared';
+import { blockMinutesFor, formatMinutes, isOverdue } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { calendarVars } from '../../lib/calendarColors';
 import { formatDueDate } from '../../lib/dates';
@@ -64,7 +64,7 @@ export function SchedulePanel() {
               <span className="min-w-0 flex-1">
                 <span className="line-clamp-2 text-body break-words">{t.title}</span>
                 <span className="mt-0.5 flex flex-wrap items-center gap-x-3 font-mono text-time text-ink-muted">
-                  {t.dueDate && <span className={cx(t.dueDate < today && 'text-danger')}>Due {formatDueDate(t.dueDate, today)}</span>}
+                  {t.dueDate && <span className={cx(isOverdue(t, today) && 'text-danger')}>Due {formatDueDate(t.dueDate, today)}</span>}
                   <span>{formatMinutes(blockMinutesFor(t))}{t.estimatedMinutes ? '' : ' (default)'}</span>
                   {planned ? <span className="text-ink">{formatMinutes(planned)} set aside</span> : null}
                 </span>

@@ -5,6 +5,7 @@ import { Dialog } from '../../ui/Panel';
 const SHORTCUTS: [string, string][] = [
   ['N', 'Add a task (jumps to the quick-add box)'],
   ['/', 'Search tasks'],
+  ['Shift F', 'Full screen on or off'],
   ['Ctrl/⌘ Z', 'Undo the last delete or complete'],
   ['Esc', 'Close a dialog or menu'],
   ['?', 'Show this list'],

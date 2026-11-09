@@ -21,6 +21,8 @@ export interface TaskRepository {
   restore(id: string): Promise<Task | null>;
   /** Rewrites sortOrder so the given ids are evenly spaced in this order. */
   reorder(ids: string[]): Promise<void>;
+  /** Marks rolling tasks missed once their next occurrence has arrived, and creates that occurrence. */
+  rollOver(today: string): Promise<number>;
   /** Permanently removes tasks soft-deleted before the given ISO timestamp. */
   purgeDeleted(before: string): Promise<number>;
 }

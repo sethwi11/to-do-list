@@ -1,4 +1,4 @@
-import { CalendarClock, CalendarDays, ChevronLeft, ChevronRight, FileUp, Flame, ListChecks, PanelRight } from 'lucide-react';
+import { CalendarClock, CalendarDays, CalendarRange, ChevronLeft, ChevronRight, FileUp, Flame, ListChecks, PanelRight } from 'lucide-react';
 import { cx } from '../../lib/cx';
 import { Button, IconButton } from '../../ui/Button';
 import { Segmented } from '../../ui/Segmented';
@@ -9,6 +9,8 @@ export interface Layers {
   tasks: boolean;
   /** Time blocks: time set aside to work on a to-do. */
   blocks: boolean;
+  /** The weekly routine from the Week page (Week and Day views only). */
+  routine: boolean;
 }
 
 interface CalendarHeaderProps {
@@ -54,6 +56,7 @@ export function CalendarHeader({ title, view, layers, onView, onToday, onPrev, o
         <LayerToggle icon={CalendarDays} label="Events" on={layers.events} onChange={(events) => onLayers({ ...layers, events })} />
         <LayerToggle icon={ListChecks} label="To-dos" on={layers.tasks} onChange={(tasks) => onLayers({ ...layers, tasks })} />
         <LayerToggle icon={CalendarClock} label="Time blocks" on={layers.blocks} onChange={(blocks) => onLayers({ ...layers, blocks })} />
+        {(view === 'week' || view === 'day') && <LayerToggle icon={CalendarRange} label="Routine" on={layers.routine} onChange={(routine) => onLayers({ ...layers, routine })} />}
       </div>
 
       {view === 'month' && <LayerToggle icon={Flame} label="Workload" on={heat} onChange={onHeat} title={heat ? 'Hide the workload shading' : 'Shade each day by how heavy it is'} />}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BackupSchema, upgradeBackup } from '../src';
+import { BACKUP_VERSION, BackupSchema, upgradeBackup } from '../src';
 
 // Shaped like a real export from the original to-do app (version 1).
 const v1 = {
@@ -39,7 +39,7 @@ const v1 = {
 describe('upgradeBackup', () => {
   it('turns a version 1 file into a valid current backup without losing tasks', () => {
     const parsed = BackupSchema.parse(upgradeBackup(v1));
-    expect(parsed.version).toBe(2);
+    expect(parsed.version).toBe(BACKUP_VERSION);
     // Same colors and order the database upgrade produces: defaults by their palette color, your own after them.
     expect(parsed.calendars.map((c) => [c.name, c.color, c.sortOrder])).toEqual([
       ['School', 'dusty-blue', 1024],
@@ -55,10 +55,19 @@ describe('upgradeBackup', () => {
       source: 'manual', // 'brain-dump' no longer exists
       courseId: null,
       reminders: [],
+      rollsOver: true, // repeating tasks roll over unless turned off
+      repeatDays: [],
     });
     expect(task.subtasks).toHaveLength(1);
     expect('categoryId' in task).toBe(false);
     expect(parsed.events).toEqual([]);
+  });
+
+  it('reads a version 2 file: the routine tables are empty and missing settings keep their current value', () => {
+    const v2 = { app: 'voice-todo', version: 2, exportedAt: '2026-11-03T12:00:00.000Z', calendars: [], tasks: [], settings: { offerGoal: 5 } };
+    const parsed = BackupSchema.parse(upgradeBackup(v2));
+    expect(parsed).toMatchObject({ version: BACKUP_VERSION, weekTemplates: [], routineBlocks: [], settings: { offerGoal: 5 } });
+    expect(parsed.settings && 'quotes' in parsed.settings).toBe(false);
   });
 
   it('leaves non-v1 input alone, so real validation errors surface normally', () => {

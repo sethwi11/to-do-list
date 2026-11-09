@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
-import { addDays, addMinutes, combine, expandOccurrences, isoWeekNumber, LocalDateTimeSchema, planDay, planningDate, quoteFor, type PlanItem } from '@todo/shared';
-import { useRoutine } from '../actions/useRoutineActions';
+import { useNavigate } from 'react-router';
+import { addMinutes, combine, isOverdue, isRolling, isoWeekNumber, quoteFor, type PlanItem } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
 import { useAppSettings } from '../data/useApplications';
-import { localDateTime, toBlockItem, toEventItem, type CalendarItem } from '../features/calendar/calendarModel';
+import { toBlockItem, toEventItem, type CalendarItem } from '../features/calendar/calendarModel';
 import { ItemDetail } from '../features/calendar/ItemDetail';
 import { Agenda, Legend } from '../features/today/Agenda';
 import { DayBar, MorningHeader } from '../features/today/MorningHeader';
-import { NowCard, type UpNext } from '../features/today/NowCard';
-import { currentItem, greeting, nextItem, nextUpcoming, summarize } from '../features/today/todayModel';
+import { NowCard } from '../features/today/NowCard';
+import { greeting, summarize } from '../features/today/todayModel';
+import { useNowText, useTodayPlan } from '../features/today/useTodayPlan';
 import { StatsBlock } from '../features/tasks/StatsBlock';
 import { CompletedSection, TaskList } from '../features/tasks/TaskList';
-import { useNow } from '../hooks/useNow';
 import { fullDate, parseLocalISODate } from '../lib/dates';
 import { sortByCompletedDesc, sortTasks } from '../lib/filters';
 import { computeStats } from '../lib/stats';
@@ -37,34 +36,13 @@ const Num = ({ children, tone }: { children: number; tone?: 'danger' }) => <span
 /** Today: the planned day as an agenda, what's happening now, and the to-dos that need doing. `?now=2026-11-11T06:00` shows it as of that moment. */
 export default function TodayPage() {
   const app = useApp();
-  const { tasks, events, timeBlocks, calendars, calendarsById, semesters, today, loading, eventsLoading, error, dismissError, reload, openDialog } = app;
-  const routine = useRoutine();
+  const { tasks, timeBlocks, calendarsById, today, loading, eventsLoading, error, dismissError, reload, openDialog } = app;
   const { settings } = useAppSettings();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const clock = useNow();
-  const fake = params.get('now');
-  const now = fake && LocalDateTimeSchema.safeParse(fake).success ? fake : localDateTime(clock);
+  const now = useNowText();
   const [detail, setDetail] = useState<{ item: CalendarItem; anchor: PopoverAnchor } | null>(null);
-
-  const date = planningDate(routine.templates, now);
-  const plan = useMemo(
-    () => planDay({ templates: routine.templates, blocks: routine.blocks, semesters, events, timeBlocks, tasks, calendars }, date),
-    [routine.templates, routine.blocks, semesters, events, timeBlocks, tasks, calendars, date],
-  );
-  const occurrences = useMemo(() => expandOccurrences(events, combine(date), plan.bed > combine(addDays(date, 1)) ? plan.bed : combine(addDays(date, 1))), [events, date, plan.bed]);
+  const { routine, date, plan, occurrences, current, next, during, supposed } = useTodayPlan(now);
   const summary = useMemo(() => summarize(occurrences, tasks, today, plan.items.filter((i) => i.kind === 'task').length), [occurrences, tasks, today, plan.items]);
-
-  const current = currentItem(plan.items, now);
-  // After the day's last item: tomorrow's first, then the next event in the coming two weeks.
-  const later = useMemo(() => {
-    const soon = nextItem(plan.items, now);
-    if (soon) return soon;
-    const tomorrow = planDay({ templates: routine.templates, blocks: routine.blocks, semesters, events, timeBlocks, tasks, calendars }, addDays(date, 1));
-    return nextItem(tomorrow.items, now);
-  }, [plan.items, now, routine.templates, routine.blocks, semesters, events, timeBlocks, tasks, calendars, date]);
-  const upcoming = useMemo(() => (later ? undefined : nextUpcoming(events, now)), [later, events, now]);
-  const next: UpNext | undefined = later ?? (upcoming && { title: upcoming.event.title, start: upcoming.start, color: toEventItem(upcoming, calendarsById).color });
 
   // Before noon, and the first time the app opens each day, Today greets you (not during last night's late hours).
   const hour = Number(now.slice(11, 13));
@@ -81,8 +59,9 @@ export default function TodayPage() {
   const { overdue, dueToday, doneToday } = useMemo(() => {
     const open = tasks.filter((t) => t.status === 'todo');
     return {
-      overdue: sortTasks(open.filter((t) => t.dueDate !== null && t.dueDate < today), 'due'),
-      dueToday: sortTasks(open.filter((t) => t.dueDate === today), 'due'),
+      overdue: sortTasks(open.filter((t) => isOverdue(t, today)), 'due'),
+      // A rolling task stays on Today from its day until the next one replaces it.
+      dueToday: sortTasks(open.filter((t) => t.dueDate === today || (isRolling(t) && t.dueDate !== null && t.dueDate < today)), 'due'),
       doneToday: sortByCompletedDesc(tasks.filter((t) => t.status === 'done' && t.dueDate === today)),
     };
   }, [tasks, today]);
@@ -181,7 +160,7 @@ export default function TodayPage() {
             </section>
 
             <div className="order-1 space-y-8 @3xl:order-2">
-              <NowCard current={current} next={next} now={now} today={today} onOpen={open} />
+              <NowCard current={current} next={next} now={now} today={today} onOpen={open} during={during} supposed={supposed} />
 
               {overdue.length > 0 && (
                 <section>

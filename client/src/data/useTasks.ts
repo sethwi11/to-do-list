@@ -3,7 +3,9 @@ import type { CreateTaskInput, Task, UpdateTaskInput } from '@todo/shared';
 import { tasksApi } from '../api/tasks';
 import { keys } from './queryClient';
 
-export const useTasksQuery = () => useQuery({ queryKey: keys.tasks, queryFn: tasksApi.list });
+// A rolling task that was missed stays in the database (for the check-in and the Sunday review) but leaves every list.
+const notMissed = (tasks: Task[]) => tasks.filter((t) => t.missedAt === null);
+export const useTasksQuery = () => useQuery({ queryKey: keys.tasks, queryFn: tasksApi.list, select: notMissed });
 
 /** Task mutations. */
 export function useTaskMutations() {

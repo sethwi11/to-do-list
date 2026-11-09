@@ -1,4 +1,4 @@
-import { addDays, combine, conflictMap, expandOccurrences, minutesBetween, type DayPlan, type Event, type EventOccurrence, type PlanItem, type PlanKind, type Task } from '@todo/shared';
+import { addDays, addMinutes, combine, conflictMap, expandOccurrences, isOverdue, minutesBetween, type DayPlan, type Event, type EventOccurrence, type PlanItem, type PlanKind, type Task, type TimeBlock } from '@todo/shared';
 
 // The logic behind the Today page, apart from any drawing.
 
@@ -31,31 +31,40 @@ export function summarize(todays: EventOccurrence[], tasks: Task[], today: strin
     events: todays.length,
     blocks,
     tasks: open.filter((t) => t.dueDate === today).length,
-    overdue: open.filter((t) => t.dueDate! < today).length,
+    overdue: open.filter((t) => isOverdue(t, today)).length,
     conflicts,
   };
 }
 
 const STRENGTH: Record<PlanKind, number> = { class: 0, event: 0, task: 1, routine: 2, open: 3 };
+const RANK = { commitment: 0, high: 1, normal: 2, free: 3 };
 
-/** What's under way at `now`: a class or event over the routine, free and open time last. */
+/** What's under way at `now`: a class or event over the routine, then the stronger routine block (volleyball over club work), free and open time last. */
 export function currentItem(items: readonly PlanItem[], now: string): PlanItem | undefined {
-  const free = (i: PlanItem) => Number(i.priority === 'free');
-  return items.filter((i) => i.start <= now && now < i.end).sort((a, b) => STRENGTH[a.kind] - STRENGTH[b.kind] || free(a) - free(b))[0];
+  const rank = (i: PlanItem) => RANK[i.priority ?? 'normal'];
+  return items.filter((i) => i.start <= now && now < i.end).sort((a, b) => STRENGTH[a.kind] - STRENGTH[b.kind] || rank(a) - rank(b))[0];
 }
 
 /** The next thing to start after `now`, skipping open time. */
 export const nextItem = (items: readonly PlanItem[], now: string) => items.find((i) => i.kind !== 'open' && i.start > now);
 
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+const soonestFirst = (a: Task, b: Task) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || (a.dueTime ?? '99').localeCompare(b.dueTime ?? '99') || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
 
-/** Up to `n` open to-dos in a category: soonest due first (undated last), then by priority. */
-export function todosFor(tasks: readonly Task[], calendarId: string | null, n = 3): Task[] {
-  if (!calendarId) return [];
+/** During a routine block: every open to-do in its category or its alt category, soonest due first, then priority. Uncategorized to-dos never match. */
+export function duringBlock(tasks: readonly Task[], item: Pick<PlanItem, 'kind' | 'calendarId' | 'altCalendarId'> | undefined): Task[] {
+  if (item?.kind !== 'routine') return [];
+  const ids = [item.calendarId, item.altCalendarId].filter((id): id is string => id !== null);
+  return tasks.filter((t) => t.status === 'todo' && t.calendarId !== null && ids.includes(t.calendarId)).sort(soonestFirst);
+}
+
+/** What you set out to do now: to-dos with time set aside right now, and to-dos due during the current item (or the next hour when nothing is on). */
+export function supposedToBeDoing(tasks: readonly Task[], blocks: readonly TimeBlock[], now: string, span: { start: string; end: string } | undefined): Task[] {
+  const window = span ?? { start: now, end: addMinutes(now, 60) };
+  const scheduled = new Set(blocks.filter((b) => b.start <= now && now < b.end).map((b) => b.taskId));
   return tasks
-    .filter((t) => t.status === 'todo' && t.calendarId === calendarId)
-    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority])
-    .slice(0, n);
+    .filter((t) => t.status === 'todo' && (scheduled.has(t.id) || (t.dueDate && t.dueTime && combine(t.dueDate, t.dueTime) >= window.start && combine(t.dueDate, t.dueTime) < window.end)))
+    .sort(soonestFirst);
 }
 
 /** Overlapping items sit side by side: each gets a lane, and the number of lanes its overlapping group needs. */

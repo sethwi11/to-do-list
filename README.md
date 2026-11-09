@@ -12,7 +12,11 @@ A personal planner built from a to-do app: tasks, a calendar, courses, an intern
 - **Workload map**: in Month view, turn on *Workload* to shade each day by how heavy it is (four shades, with a legend), and hover a day for "2 events, 4h scheduled, 3 tasks due"
 - **Add events from files**: drop in (or paste, or pick) a screenshot, PDF, Word document, text file or calendar (.ics) file, review what was found, and add it. Pictures and scanned PDFs are read on your computer with OCR; nothing is uploaded until you press Add
 - **Attachments**: the original file is kept and attached to everything made from it; you can attach files to any event or to-do yourself, and open them in a preview
-- **Today** page: the day's schedule as a timeline (with a line for the current moment), an "Up next" card with a live countdown and join link, to-dos and overdue beside it, and a summary line ("5 events · 3 tasks · 2 overdue")
+- **Week**: your weekly routine as a grid, Monday first: drag blocks to move or stretch them (or use the form), copy a block or a whole day to other days, and duplicate the template for a new semester. Each block has a category, a priority (commitment, high, normal or free), an "or instead" alternative, and can be limited to school days
+- **Today** page: a morning greeting with a daily quote and the shape of the day; the day as a color-coded agenda (routine, classes, events and time set aside, with Open time in the gaps); a Now card with the time left, what's next, the open to-dos in the current block's category ("During this block") and what you scheduled or have due right now; plus to-dos and overdue
+- **Repeating to-dos never pile up as overdue**: one that isn't done by its next occurrence is marked missed and the next one takes its place (switchable per to-do). Weekly ones can repeat on chosen days
+- **Full screen and a display view**: install the app as its own window, put it in full screen (Shift+F), and switch to a big display of the clock, the Now card and the agenda
+- **12-hour times** everywhere the app writes a time
 - **Conflict warnings**: if an event overlaps another, you're told when you pick the time, on the Today timeline, in an event's details, and after a drag. You are warned, never blocked
 - **Courses**: set up a semester (dates and breaks such as Thanksgiving), add each class with its meeting days, times, room and instructor, and every meeting appears on the calendar. Cancel or move a single class, import a syllabus from the course's page, and archive a finished semester without deleting anything
 - **Applications**: an internship tracker with a board (drag a card to change its status) and a sortable, filterable table, an offer goal with a progress bar, response and interview rates, a "time to follow up?" nudge after 14 days of silence, and a page for each application with its timeline, interviews, to-dos, files and notes. A new Interview event asks which application it belongs to and offers the prep checklist
@@ -119,7 +123,7 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 ### Today, and conflicts
 
 - **Conflicts** (`shared/src/conflicts.ts`): two timed events conflict if they overlap by at least a minute. Touching ends don't count (10-11 and 11-12 are fine), all-day events never conflict (they mark a day rather than claim an hour), and an event never conflicts with its own series.
-- **The Today model** (`features/today/todayModel.ts`) is plain functions of "now" (next event, what's under way, the timeline, the summary), so it is unit-tested without a browser. Up next looks two weeks ahead and skips all-day events.
+- **The Today model** (`features/today/todayModel.ts`) is plain functions of "now" (what's under way, what's next, which to-dos match the block, the agenda's lanes and hours, the summary), so it is unit-tested without a browser. After the day's last item, Next looks at tomorrow, then two weeks of events.
 - **The clock** (`hooks/useNow.ts`) wakes once a minute, exactly on the minute, so the countdown and the now-line stay right without ticking every second.
 - Today shows every event, including calendars you've hidden from the calendar page: hiding is about the calendar view, not about your day.
 
@@ -130,6 +134,27 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 - **The list you drag from sits beside the calendar, not in the app's sidebar,** because that's where you're looking when you plan. It only appears on Week and Day on a wide screen; the to-dos without any time set aside come first. Without a mouse, the schedule button on each to-do (and "Set time aside" in its edit dialog) opens a plain form for the day, time and length. It's also how you change a block's time precisely: click the block, then Edit time.
 - **Overlaps are warned about, never blocked,** and now count blocks as well as events: scheduling over a meeting (or over another block) says so, in the form and in the toast. (`findClashes` in `shared/src/conflicts.ts`.)
 - **The workload score** (`shared/src/workload.ts`) is *hours of events + hours of time blocks + the open to-dos due that day, weighted by priority (high 3, medium 2, low 1)*. Everything that decides what counts as heavy is in one constant, `HEATMAP`: the weights, and where "moderate", "busy" and "packed" begin (a day with a class and a couple of to-dos is moderate; a full day of classes is busy; nine or more is packed). All-day events count as an event but add no hours, and an overnight event counts only the part inside each day. Ticking a to-do off lightens its day. The map counts everything, even calendars hidden from the view: hiding a calendar tidies the page, it doesn't free up your week.
+
+## My week and the Today agenda
+
+- **The routine is a week template**: blocks for each weekday, a wake and bed time per day, and the dates the template applies to. When dates overlap, the template that started most recently wins, so next semester's copy can start before this one ends. A bed time earlier than the wake time means after midnight, and so does a block that ends at or before it starts (10:00 PM–2:00 AM).
+- **One function plans a day** (`planDay` in `shared/src/planDay.ts`): the template's blocks for that weekday, plus classes, events and time blocks, with gaps of 15 minutes or more between wake and bed shown as Open. Today, the calendar's Routine layer and (later) pop-ups and the check-in all read from it, so they can't disagree. Overlaps sit side by side for now; the rules for who keeps a slot come next.
+- **After midnight, Today keeps showing the day that's still going** until its bed time (at 1:00 AM after a free night you still see that night), then switches. `?now=2026-11-11T06:00` in the address shows Today (or the display view) as of that moment.
+- **School-days blocks** are hidden outside a semester's dates and during its breaks, using the breaks set in Courses.
+- **Which block wins an overlap inside the template** is shown on the Week page: the stronger one (commitment, then high) keeps the time, and the covered one is faded with "under ...".
+- **Shading**: classes, events and commitments are solid (45% of the category color, so ink text stays readable, tested in `tokens.test.ts`); other routine blocks are the soft tint; free and open time is a neutral hatch, so color is never the only signal.
+- **To-dos come to you during their block**: while a routine block runs, every open to-do in its category or its "or instead" category is listed in the Now card (soonest due first, then priority; five shown, then a link), and highlighted with a "Now" tag in task lists. To-dos without a category never match.
+- **Rolling repeating to-dos.** A repeating to-do rolls over by default: past its day it's still current ("Until Tuesday"), and once its next occurrence arrives it is marked missed and replaced, so it never shows in Overdue. The server does this whenever the app loads to-dos. Missed ones stay in the database (for the coming check-in and weekly review) but leave every list.
+- **Seeding a week** from a private file: `npm run seed:week -w server` reads `.private/seed-week.json` (categories and colors, a semester and its courses, the template and its blocks, weekly reminder to-dos), backs the database up first, skips anything that already exists, and lists what was assumed.
+
+### Full screen and the installed window
+
+The app can run as its own window with no tabs or address bar, kept in a full-screen space you swipe to:
+
+1. Open the app in Chrome (`http://localhost:5173`).
+2. Chrome menu (⋮) → **Cast, save and share** → **Install page as app…** (on older versions, **Install Planner…**). It opens in its own window and gets a Dock icon.
+3. In that window, press the green button (or Ctrl+⌘+F) for a macOS full-screen space; three-finger swipe moves between it and your other spaces.
+4. Inside the app, the sidebar's full-screen button (or Shift+F) uses the browser's full screen instead, and the display button opens the big Now card, clock and agenda. If the app was in full screen when you closed it, it offers a one-click way back (browsers need a click to enter full screen).
 
 ## Courses
 
@@ -162,17 +187,16 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 | Folder | What's in it |
 | --- | --- |
 | `app/` | The frame around every page: `Shell`, `Sidebar`, `AppProvider` (shared data, dialogs, toast), `PageHeader`, `QuickAdd`, `MiniMonth`, `NewMenu` |
-| `actions/` | Everything that changes data, with Undo: `useEventActions`, `useCourseActions`, `useApplicationActions`, `useTimeBlockActions` |
+| `actions/` | Everything that changes data, with Undo: `useEventActions`, `useCourseActions`, `useApplicationActions`, `useTimeBlockActions`, `useRoutineActions` |
 | `data/` | Server data (TanStack Query): one hook per kind of data, and the shared cache |
 | `api/` | The fetch calls behind those hooks |
-| `pages/` | One file per page; routes are in `main.tsx` (`/styleguide` sits outside the shell) |
-| `features/` | The parts pages are built from, by subject: `calendar/`, `tasks/`, `today/`, `courses/`, `applications/`, `import/`, `attachments/`, `events/`, `settings/` |
+| `pages/` | One file per page; routes are in `main.tsx` (`/styleguide` and the `/display` view sit outside the shell) |
+| `features/` | The parts pages are built from, by subject: `calendar/`, `tasks/`, `today/`, `week/`, `courses/`, `applications/`, `import/`, `attachments/`, `events/`, `settings/` |
 | `ui/` | Design-system components (buttons, fields, dialog, popover, blocks, task row...) |
 | `lib/`, `hooks/`, `styles/` | Small helpers, React hooks, and the design tokens |
 
 Pure logic and every data model live in `shared/` (models in `shared/src/models/`), so the server and the client share them and they're tested without a browser.
 
-- **The address bar is the state.** What the Tasks page shows (`/tasks?view=...&calendar=...&date=...`) lives in the URL, so a sidebar link, a mini-month day, and the browser's back button all just work.
 - **The address bar is the state.** What the Tasks page shows (`/tasks?view=...&calendar=...&date=...`) lives in the URL, so a sidebar link, a mini-month day, and the browser's back button all just work.
 - **One dialog at a time.** Task, calendar, settings and shortcuts dialogs are all driven by a single piece of state in `AppProvider`, so opening one from inside another can't stack them.
 

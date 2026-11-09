@@ -7,6 +7,7 @@ import { Button, IconButton } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Field, Input, Label, Select, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
+import { WeekdayPicker } from '../../ui/WeekdayPicker';
 import { uploadAndLink } from '../attachments/useAttachments';
 import { AttachmentList } from '../attachments/AttachmentList';
 
@@ -78,6 +79,8 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
   const [calendarId, setCalendarId] = useState(task?.calendarId ?? defaults.calendarId ?? '');
   const [applicationId, setApplicationId] = useState(task?.applicationId ?? defaults.applicationId ?? '');
   const [recurrence, setRecurrence] = useState<Recurrence>(task?.recurrence ?? 'none');
+  const [rollsOver, setRollsOver] = useState(task?.rollsOver ?? true);
+  const [repeatDays, setRepeatDays] = useState<number[]>(task?.repeatDays ?? []);
   const [estimate, setEstimate] = useState(task?.estimatedMinutes?.toString() ?? '');
   const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? []);
   const [draft, setDraft] = useState('');
@@ -108,6 +111,8 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
       calendarId: calendarId || null,
       applicationId: applicationId || null,
       recurrence,
+      rollsOver,
+      repeatDays: recurrence === 'weekly' ? repeatDays : [],
       estimatedMinutes: Number.isFinite(minutes) && minutes > 0 ? Math.min(minutes, 1440) : null,
       subtasks,
     };
@@ -202,6 +207,23 @@ function TaskForm({ task, defaults }: { task: Task | null; defaults: TaskDefault
           {(p) => <Input {...p} type="number" inputMode="numeric" min={1} max={1440} value={estimate} onChange={(e) => setEstimate(e.target.value)} placeholder="60" />}
         </Field>
       </div>
+
+      {recurrence === 'weekly' && (
+        <div>
+          <Label>On</Label>
+          <WeekdayPicker value={repeatDays} onChange={setRepeatDays} />
+          <p className="mt-1.5 text-meta text-ink-muted">{repeatDays.length === 0 ? 'None picked: the due date’s weekday.' : 'Repeats on these days.'}</p>
+        </div>
+      )}
+      {recurrence !== 'none' && (
+        <label className="flex cursor-pointer items-center gap-2">
+          <Checkbox checked={rollsOver} onChange={(e) => setRollsOver(e.target.checked)} label="Rolls over" />
+          <span>
+            <span className="block text-body">Rolls over</span>
+            <span className="block text-meta text-ink-muted">Not done by the next one? It’s marked missed instead of overdue.</span>
+          </span>
+        </label>
+      )}
 
       <Field label="Notes">{(p) => <Textarea {...p} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={5000} />}</Field>
 

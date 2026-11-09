@@ -77,6 +77,9 @@ const task = (over: Partial<Task> = {}): Task => ({
   updatedAt: at('2026-11-01'),
   completedAt: null,
   nextOccurrenceId: null,
+  rollsOver: false,
+  repeatDays: [],
+  missedAt: null,
   ...over,
 });
 

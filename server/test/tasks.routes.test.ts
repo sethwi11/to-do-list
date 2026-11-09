@@ -165,3 +165,38 @@ describe('calendars API', () => {
     expect(after.calendarId).toBeNull();
   });
 });
+
+describe('rolling repeating tasks', () => {
+  const day = (date: string) => ({ 'X-Client-Date': date });
+
+  it('replaces an unfinished weekly task with this week’s occurrence and marks the old one missed', async () => {
+    const app = makeTestApp();
+    const { body: old } = await request(app).post('/api/tasks').send({ title: 'Check in with a friend', dueDate: '2026-11-04', recurrence: 'weekly' }).expect(201);
+    expect(old.rollsOver).toBe(true);
+    let list = (await request(app).get('/api/tasks').set(day('2026-11-10'))).body;
+    expect(list).toHaveLength(1); // still its week
+    list = (await request(app).get('/api/tasks').set(day('2026-11-19'))).body;
+    const missed = list.filter((t: { missedAt: string | null }) => t.missedAt !== null);
+    const current = list.filter((t: { missedAt: string | null }) => t.missedAt === null);
+    expect(missed).toHaveLength(1);
+    expect(current).toEqual([expect.objectContaining({ title: 'Check in with a friend', dueDate: '2026-11-18', status: 'todo' })]);
+    // Running again changes nothing.
+    expect((await request(app).get('/api/tasks').set(day('2026-11-19'))).body).toHaveLength(2);
+  });
+
+  it('finishing one early still creates the next one, and nothing is missed', async () => {
+    const app = makeTestApp();
+    const { body: t } = await request(app).post('/api/tasks').send({ title: 'Water plants', dueDate: '2026-11-11', recurrence: 'weekly', repeatDays: [3] }).expect(201);
+    await request(app).patch(`/api/tasks/${t.id}`).set(day('2026-11-09')).send({ status: 'done' }).expect(200);
+    const list = (await request(app).get('/api/tasks').set(day('2026-11-09'))).body;
+    expect(list.find((x: { status: string }) => x.status === 'todo')).toMatchObject({ dueDate: '2026-11-18', repeatDays: [3] });
+    expect(list.some((x: { missedAt: string | null }) => x.missedAt)).toBe(false);
+  });
+
+  it('leaves a repeating task with rolling turned off to go overdue as before', async () => {
+    const app = makeTestApp();
+    await request(app).post('/api/tasks').send({ title: 'Pay rent', dueDate: '2026-11-01', recurrence: 'monthly', rollsOver: false }).expect(201);
+    const list = (await request(app).get('/api/tasks').set(day('2026-12-15'))).body;
+    expect(list).toEqual([expect.objectContaining({ title: 'Pay rent', dueDate: '2026-11-01', missedAt: null })]);
+  });
+});

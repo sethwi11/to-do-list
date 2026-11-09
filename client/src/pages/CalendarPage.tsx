@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { workloadByDay } from '@todo/shared';
+import { addDays, eachDate, routineOn, workloadByDay } from '@todo/shared';
+import { useRoutine } from '../actions/useRoutineActions';
+import { weekStart } from '../features/calendar/calendarModel';
 import { useApp } from '../app/AppContext';
 import { AgendaView } from '../features/calendar/AgendaView';
 import { buildItems, calendarUrl, dataRange, isCalendarView, parseCalendarQuery, shiftDate, viewTitle, type CalendarItem, type CalendarViewId } from '../features/calendar/calendarModel';
@@ -14,10 +16,11 @@ import { usePersistedState } from '../hooks/usePersistedState';
 import type { PopoverAnchor } from '../ui/Popover';
 import { ErrorBanner } from '../ui/states';
 
-// Layers saved before time blocks existed have no `blocks`: still a valid choice (blocks default to shown).
-type SavedLayers = Pick<Layers, 'events' | 'tasks'> & Partial<Pick<Layers, 'blocks'>>;
+// Layers saved before time blocks or the routine existed lack those keys: still a valid choice (they default to shown).
+type SavedLayers = Pick<Layers, 'events' | 'tasks'> & Partial<Pick<Layers, 'blocks' | 'routine'>>;
+const optionalBool = (v: unknown) => v === undefined || typeof v === 'boolean';
 const isLayers = (v: unknown): v is SavedLayers =>
-  typeof v === 'object' && v !== null && typeof (v as Layers).events === 'boolean' && typeof (v as Layers).tasks === 'boolean' && ((v as Layers).blocks === undefined || typeof (v as Layers).blocks === 'boolean');
+  typeof v === 'object' && v !== null && typeof (v as Layers).events === 'boolean' && typeof (v as Layers).tasks === 'boolean' && optionalBool((v as Layers).blocks) && optionalBool((v as Layers).routine);
 const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 
 /** A phone has no room for a month grid, so it starts on the agenda. */
@@ -26,14 +29,15 @@ const firstView = (): CalendarViewId => (typeof matchMedia === 'function' && mat
 /** The calendar. */
 export default function CalendarPage() {
   const app = useApp();
-  const { events, tasks, timeBlocks, calendarsById, hiddenCalendarIds, today } = app;
+  const { events, tasks, timeBlocks, calendars, calendarsById, hiddenCalendarIds, semesters, today } = app;
+  const { templates, blocks } = useRoutine();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const query = parseCalendarQuery(params, today);
 
   const [lastView, setLastView] = usePersistedState<CalendarViewId>('voice-todo.calendar.view', firstView(), isCalendarView);
   const [savedLayers, setLayers] = usePersistedState<SavedLayers>('voice-todo.calendar.layers', { events: true, tasks: true, blocks: true }, isLayers);
-  const layers: Layers = { blocks: true, ...savedLayers };
+  const layers: Layers = { blocks: true, routine: true, ...savedLayers };
   const [heat, setHeat] = usePersistedState<boolean>('voice-todo.calendar.heat', false, isBoolean);
   const [panel, setPanel] = usePersistedState<boolean>('voice-todo.calendar.panel', true, isBoolean);
   const view = query.view ?? lastView;
@@ -52,6 +56,13 @@ export default function CalendarPage() {
     const [from, to] = dataRange(date);
     return buildItems({ events, tasks, blocks: timeBlocks, calendarsById, hiddenCalendarIds, showEvents: layers.events, showTasks: layers.tasks, showBlocks: layers.blocks }, from, to);
   }, [events, tasks, timeBlocks, calendarsById, hiddenCalendarIds, layers.events, layers.tasks, layers.blocks, date]);
+
+  // The routine shows on Week and Day only; Month and the workload map leave it out.
+  const routine = useMemo(() => {
+    if (!layers.routine || (view !== 'week' && view !== 'day')) return [];
+    const days = view === 'day' ? [date] : eachDate(weekStart(date), addDays(weekStart(date), 7));
+    return days.flatMap((d) => routineOn({ templates, blocks, semesters, calendars }, d)).filter((i) => i.calendarId === null || !hiddenCalendarIds.has(i.calendarId));
+  }, [layers.routine, view, date, templates, blocks, semesters, calendars, hiddenCalendarIds]);
 
   // The workload map counts everything you have on, whichever calendars are hidden from view: hiding a calendar tidies the page, but it doesn't free up your week.
   const loads = useMemo(() => {
@@ -117,6 +128,8 @@ export default function CalendarPage() {
               }}
               onOpenDay={(d) => go({ view: 'day', date: d })}
               loads={loads}
+              routine={routine}
+              onOpenRoutine={(blockId) => navigate(`/week?block=${blockId}`)}
             />
           )}
         </div>

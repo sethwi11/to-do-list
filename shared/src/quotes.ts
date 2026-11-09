@@ -13,6 +13,23 @@ export function quoteFor(date: string, quotes: readonly Quote[]): Quote | undefi
   return quotes[((n % quotes.length) + quotes.length) % quotes.length];
 }
 
+/** Quotes as editable text: one per line, "the quote — who said it". */
+export const quotesToText = (quotes: readonly Quote[]) => quotes.map((q) => `${q.text} — ${q.by}`).join('\n');
+
+/** Reads that text back. Lines without " — " before a name are returned as problems, never guessed at. */
+export function parseQuotes(text: string): { quotes: Quote[]; problems: number[] } {
+  const quotes: Quote[] = [];
+  const problems: number[] = [];
+  text.split('\n').forEach((line, i) => {
+    if (!line.trim()) return;
+    const at = line.lastIndexOf(' — ');
+    const quote = QuoteSchema.safeParse({ text: line.slice(0, at).trim().replace(/^[“"]|[”"]$/g, ''), by: line.slice(at + 3).trim() });
+    if (at > 0 && quote.success) quotes.push(quote.data);
+    else problems.push(i + 1);
+  });
+  return { quotes, problems };
+}
+
 export const DEFAULT_QUOTES: Quote[] = [
   { text: 'Simplicity is prerequisite for reliability.', by: 'Edsger W. Dijkstra' },
   { text: 'Talk is cheap. Show me the code.', by: 'Linus Torvalds' },

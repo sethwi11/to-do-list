@@ -5,6 +5,8 @@ import { useDueNotifications } from '../hooks/useDueNotifications';
 import { usePersistedState } from '../hooks/usePersistedState';
 import { useSettings } from '../hooks/useSettings';
 import { useShortcuts } from '../hooks/useShortcuts';
+import { forgetFullscreen, useFullscreen, useFullscreenShortcut, wasFullscreen } from '../hooks/useFullscreen';
+import { Button } from '../ui/Button';
 import { IconButton } from '../ui/Button';
 import { Drawer } from '../ui/Drawer';
 import { useApp } from './AppContext';
@@ -23,6 +25,10 @@ export function Shell() {
   const [collapsed, setCollapsed] = usePersistedState('voice-todo.sidebarCollapsed', false, isBoolean);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const fullHeight = location.pathname === '/calendar' || location.pathname === '/week';
+  const fullscreen = useFullscreen();
+  useFullscreenShortcut();
+  // Browsers need a click to enter full screen, so a window last closed in full screen offers one.
+  const [offerFullscreen, setOfferFullscreen] = useState(wasFullscreen);
 
   useDueNotifications(app.tasks, settings.notifications);
 
@@ -71,6 +77,18 @@ export function Shell() {
           </ErrorBoundary>
         </main>
       </div>
+
+      {offerFullscreen && !fullscreen.on && (
+        <div role="status" className="fixed right-4 bottom-4 z-40 flex items-center gap-3 rounded-panel border border-hairline bg-surface py-2 pr-2 pl-4 text-body shadow-popover">
+          You were in full screen.
+          <Button variant="primary" onClick={() => { fullscreen.toggle(); setOfferFullscreen(false); }}>
+            Go full screen
+          </Button>
+          <Button variant="ghost" onClick={() => { forgetFullscreen(); setOfferFullscreen(false); }}>
+            Not now
+          </Button>
+        </div>
+      )}
 
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} label="Menu">
         <SidebarContent onNavigate={() => setDrawerOpen(false)} />

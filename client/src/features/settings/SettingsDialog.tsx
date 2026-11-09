@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { parseQuotes, quotesToText } from '@todo/shared';
 import { Download, Upload } from 'lucide-react';
 import { useApp } from '../../app/AppContext';
 import { ApiError } from '../../api/client';
@@ -8,7 +9,7 @@ import { notificationsSupported } from '../../hooks/useDueNotifications';
 import { useSettings } from '../../hooks/useSettings';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
-import { Input } from '../../ui/fields';
+import { Input, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
 import { ThemeToggle } from '../../app/ThemeToggle';
 
@@ -83,6 +84,8 @@ export function SettingsDialog() {
         </label>
 
         <OfferGoal />
+
+        <Quotes />
 
         <div className={`${row} flex-wrap`}>
           <span className="text-body">Your data</span>
@@ -172,6 +175,44 @@ function OfferGoal() {
             }}
           />
         </label>
+      </span>
+    </div>
+  );
+}
+
+/** The morning quotes, one per line as "quote — who said it". Saved with Save; a line with no author is pointed out, never guessed. */
+function Quotes() {
+  const { showToast } = useApp();
+  const { settings, update } = useAppSettings();
+  const [text, setText] = useState(() => quotesToText(settings.quotes));
+  const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => setText(quotesToText(settings.quotes)), [settings.quotes]);
+
+  async function save() {
+    const { quotes, problems } = parseQuotes(text);
+    if (problems.length > 0) return setProblem(`Line ${problems.join(', ')} needs “ — ” and then who said it.`);
+    const previous = settings.quotes;
+    try {
+      await update({ quotes });
+      setProblem(null);
+      showToast(`Saved ${quotes.length} quotes`, () => void update({ quotes: previous }));
+    } catch {
+      setProblem('Couldn’t save the quotes. Check that the server is running.');
+    }
+  }
+
+  return (
+    <div className={`${row} flex-col items-stretch gap-2`}>
+      <span>
+        <span className="block text-body">Morning quotes</span>
+        <span className="block text-meta text-ink-muted">One a day on the morning view. One per line: the quote, then “ — ” and who said it.</span>
+      </span>
+      <Textarea aria-label="Morning quotes" aria-invalid={problem ? true : undefined} value={text} onChange={(e) => setText(e.target.value)} className="min-h-40 text-meta" />
+      {problem && <p role="alert" className="text-meta text-danger">{problem}</p>}
+      <span>
+        <Button variant="secondary" onClick={() => void save()} disabled={text === quotesToText(settings.quotes)}>
+          Save quotes
+        </Button>
       </span>
     </div>
   );

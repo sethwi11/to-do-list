@@ -1,7 +1,7 @@
 import { buildEvent, expandOccurrences, type Event, type PlanItem } from '@todo/shared';
 import { describe, expect, it } from 'vitest';
 import { buildBlank } from '../calendar/testHelpers';
-import { agendaRange, currentItem, layoutLanes, nextItem, nextUpcoming, summarize, todosFor } from './todayModel';
+import { agendaRange, currentItem, duringBlock, layoutLanes, nextItem, nextUpcoming, summarize, supposedToBeDoing } from './todayModel';
 
 const NOW = '2026-11-04T12:00:00.000Z';
 let n = 0;
@@ -10,7 +10,7 @@ const ev = (title: string, start: string, end: string, extra: Partial<Event> = {
 
 const day = (events: Event[]) => expandOccurrences(events, '2026-11-04', '2026-11-05');
 const item = (title: string, start: string, end: string, extra: Partial<PlanItem> = {}): PlanItem => ({
-  key: title, kind: 'routine', start: `2026-11-04T${start}`, end: `2026-11-04T${end}`, title, calendarId: null, color: null, priority: 'normal', focus: false, soundtrack: null, altTitle: null, sourceId: null, ...extra,
+  key: title, kind: 'routine', start: `2026-11-04T${start}`, end: `2026-11-04T${end}`, title, calendarId: null, color: null, priority: 'normal', focus: false, soundtrack: null, altTitle: null, altCalendarId: null, sourceId: null, ...extra,
 });
 
 describe('nextUpcoming', () => {
@@ -75,17 +75,34 @@ describe('the Now card', () => {
   it('says what comes next, skipping open time', () => {
     expect(nextItem(items, '2026-11-04T10:30')?.title).toBe('Lunch');
   });
-  it('lists open to-dos in the current category: soonest due, then priority, undated last', () => {
+  it('during a block, lists every open to-do in its category and alt category: soonest due, then priority, undated last', () => {
     const tasks = [
       buildBlank('later', '2026-11-09', { calendarId: 'c' }),
       buildBlank('undated', null, { calendarId: 'c' }),
       buildBlank('soon, low', '2026-11-05', { calendarId: 'c', priority: 'low' }),
       buildBlank('soon, high', '2026-11-05', { calendarId: 'c', priority: 'high' }),
+      buildBlank('alt category', '2026-11-06', { calendarId: 'alt' }),
       buildBlank('done', '2026-11-04', { calendarId: 'c', status: 'done' }),
       buildBlank('other category', '2026-11-04', { calendarId: 'x' }),
+      buildBlank('no category', '2026-11-04'),
     ];
-    expect(todosFor(tasks, 'c').map((t) => t.title)).toEqual(['soon, high', 'soon, low', 'later']);
-    expect(todosFor(tasks, null)).toEqual([]);
+    const block = item('POSH work', '15:50', '17:50', { calendarId: 'c', altCalendarId: 'alt' });
+    expect(duringBlock(tasks, block).map((t) => t.title)).toEqual(['soon, high', 'soon, low', 'alt category', 'later', 'undated']);
+    expect(duringBlock(tasks, { ...block, calendarId: null, altCalendarId: null })).toEqual([]); // a block with no category matches nothing
+    expect(duringBlock(tasks, { ...block, kind: 'class' })).toEqual([]);
+  });
+
+  it('knows what you set out to do now: time set aside now, and to-dos due during the current item', () => {
+    const tasks = [
+      buildBlank('scheduled now', null, { id: 's' }),
+      buildBlank('due at 4', '2026-11-04', { dueTime: '16:00' }),
+      buildBlank('due at 7', '2026-11-04', { dueTime: '19:00' }),
+      buildBlank('due today, no time', '2026-11-04'),
+    ];
+    const blocks = [{ id: 'b', taskId: 's', start: '2026-11-04T15:30', end: '2026-11-04T16:30', createdAt: '', updatedAt: '' }];
+    const now = '2026-11-04T15:45';
+    expect(supposedToBeDoing(tasks, blocks, now, { start: '2026-11-04T15:00', end: '2026-11-04T17:00' }).map((t) => t.title)).toEqual(['due at 4', 'scheduled now']);
+    expect(supposedToBeDoing(tasks, [], now, undefined).map((t) => t.title)).toEqual(['due at 4']); // nothing on: the next hour
   });
 });
 
