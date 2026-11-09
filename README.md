@@ -90,6 +90,7 @@ Everything lives in one SQLite file, `server/data/todo.db`. It is not in git and
 
 - **Automatic backups.** Before the server changes the database's structure (an upgrade), it saves a full copy to `server/data/backups/todo-v{version}-{timestamp}.db`. The newest 10 are kept.
 - **Manual backup.** Settings → Export JSON saves everything to a file; Import JSON merges one back in. Import only adds and updates, never deletes, and importing the same file twice changes nothing. Files from the original to-do app (version 1) can still be imported.
+- **Review copies and carrying changes over.** A new version is tried on a throwaway copy of the database, so anything added or checked off there would vanish with it. `npm run carry-over -w server -- <copy url> <real app url> <when the copy was made>` copies what was added or changed in the copy into the real app (the newer edit wins; settings and deletions aren't carried) once the real app runs the same version.
 - **Restoring a database backup.** Stop the server, copy the backup file over `server/data/todo.db`, and delete `todo.db-wal` and `todo.db-shm` next to it.
 
 ## Architecture
