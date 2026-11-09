@@ -86,7 +86,7 @@ describe('the Now card', () => {
       buildBlank('other category', '2026-11-04', { calendarId: 'x' }),
       buildBlank('no category', '2026-11-04'),
     ];
-    const block = item('POSH work', '15:50', '17:50', { calendarId: 'c', altCalendarId: 'alt' });
+    const block = item('Club work', '15:50', '17:50', { calendarId: 'c', altCalendarId: 'alt' });
     expect(duringBlock(tasks, block).map((t) => t.title)).toEqual(['soon, high', 'soon, low', 'alt category', 'later', 'undated']);
     expect(duringBlock(tasks, { ...block, calendarId: null, altCalendarId: null })).toEqual([]); // a block with no category matches nothing
     expect(duringBlock(tasks, { ...block, kind: 'class' })).toEqual([]);
