@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { hasFields, LocalDateSchema, LocalTimeSchema, NO_FIELDS_MESSAGE } from '../localTime';
+import { hasFields, LocalDateSchema, LocalDateTimeSchema, LocalTimeSchema, NO_FIELDS_MESSAGE } from '../localTime';
 
 // The weekly routine: a template of blocks per weekday, valid for a range of dates.
 
@@ -76,3 +76,37 @@ export type RoutineBlock = z.infer<typeof RoutineBlockSchema>;
 export type CreateRoutineBlockInput = z.infer<typeof CreateRoutineBlockInputSchema>;
 export type UpdateRoutineBlockInput = z.infer<typeof UpdateRoutineBlockInputSchema>;
 export type RoutineBlockBatchInput = z.infer<typeof RoutineBlockBatchInputSchema>;
+
+/** One-day changes to the routine: skip, move or replace a block on a date, make up bumped time, or let it go. */
+export const OVERRIDE_ACTIONS = ['skip', 'move', 'replace', 'makeup', 'letgo'] as const;
+export const OverrideActionSchema = z.enum(OVERRIDE_ACTIONS);
+export type OverrideAction = z.infer<typeof OverrideActionSchema>;
+
+export const RoutineOverrideFieldsSchema = z.object({
+  /** The day it applies to (for a make-up, the day of the make-up). */
+  date: LocalDateSchema,
+  routineBlockId: z.uuid().nullable(),
+  action: OverrideActionSchema,
+  /** Move and make-up: the new time. */
+  start: LocalDateTimeSchema.nullable(),
+  end: LocalDateTimeSchema.nullable(),
+  title: z.string().trim().min(1).max(100).nullable(),
+  calendarId: z.uuid().nullable(),
+  /** Replace: what took the slot. */
+  taskId: z.uuid().nullable(),
+  eventId: z.uuid().nullable(),
+  /** Make-up and let-go: the day the bumped block was on. */
+  sourceDate: LocalDateSchema.nullable(),
+});
+export const RoutineOverrideSchema = RoutineOverrideFieldsSchema.extend({ id: z.uuid(), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() });
+const timedWhenNeeded = (v: { action?: OverrideAction; start?: string | null; end?: string | null; sourceDate?: string | null }) =>
+  (v.action !== 'move' && v.action !== 'makeup') || (!!v.start && !!v.end && v.end > v.start && (v.action !== 'makeup' || !!v.sourceDate));
+const TIMED_REFINE = { message: 'A move or make-up needs a start before its end (and a make-up, the day it makes up)', path: ['end'] };
+export const CreateRoutineOverrideInputSchema = RoutineOverrideFieldsSchema.partial()
+  .required({ date: true, action: true })
+  .extend({ id: z.uuid().optional() })
+  .refine(timedWhenNeeded, TIMED_REFINE);
+export const UpdateRoutineOverrideInputSchema = RoutineOverrideFieldsSchema.partial().refine(hasFields, NO_FIELDS_MESSAGE);
+export type RoutineOverride = z.infer<typeof RoutineOverrideSchema>;
+export type CreateRoutineOverrideInput = z.infer<typeof CreateRoutineOverrideInputSchema>;
+export type UpdateRoutineOverrideInput = z.infer<typeof UpdateRoutineOverrideInputSchema>;

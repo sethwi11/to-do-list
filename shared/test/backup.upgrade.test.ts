@@ -66,7 +66,7 @@ describe('upgradeBackup', () => {
   it('reads a version 2 file: the routine tables are empty and missing settings keep their current value', () => {
     const v2 = { app: 'voice-todo', version: 2, exportedAt: '2026-11-03T12:00:00.000Z', calendars: [], tasks: [], settings: { offerGoal: 5 } };
     const parsed = BackupSchema.parse(upgradeBackup(v2));
-    expect(parsed).toMatchObject({ version: BACKUP_VERSION, weekTemplates: [], routineBlocks: [], settings: { offerGoal: 5 } });
+    expect(parsed).toMatchObject({ version: BACKUP_VERSION, weekTemplates: [], routineBlocks: [], routineOverrides: [], settings: { offerGoal: 5 } });
     expect(parsed.settings && 'quotes' in parsed.settings).toBe(false);
   });
 

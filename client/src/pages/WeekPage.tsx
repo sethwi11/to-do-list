@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { CopyPlus, Plus, Settings2 } from 'lucide-react';
-import { activeTemplate, classTitle, strongerOverlaps, type RoutineBlock } from '@todo/shared';
-import { useRoutine, type BlockFields } from '../actions/useRoutineActions';
+import { activeTemplate, addDays, classTitle, openBumps, strongerOverlaps, type RoutineBlock } from '@todo/shared';
+import type { BlockFields } from '../actions/useRoutineActions';
+import { BumpedList } from '../features/today/BumpedList';
+import { useNowText, usePlanSources } from '../features/today/useTodayPlan';
 import { useApp } from '../app/AppContext';
 import { BlockDialog, type BlockDialogState } from '../features/week/BlockDialog';
 import { TemplateDialog, type TemplateDialogState } from '../features/week/TemplateDialog';
@@ -21,8 +23,10 @@ const DAY_OPTIONS = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ value: String(d), label:
 /** My week: the routine template as a grid, Monday first. Drag to move or stretch a block; click one to edit it. */
 export default function WeekPage() {
   const { today, courses, semesters, calendarsById } = useApp();
-  const routine = useRoutine();
+  const { src, routine } = usePlanSources();
   const { templates, blocks } = routine;
+  const now = useNowText();
+  const bumps = useMemo(() => openBumps(src, addDays(today, -7), addDays(today, 7)), [src, today]);
   const [params, setParams] = useSearchParams();
   const [day, setDay] = useState<number | null>(() => (isPhone() ? new Date().getDay() : null));
   const [blockDialog, setBlockDialog] = useState<BlockDialogState | null>(null);
@@ -124,6 +128,11 @@ export default function WeekPage() {
         />
       </div>
       <p className="mt-2 text-meta text-ink-muted">Classes come from Courses. A faded block is covered by a stronger one (commitment, then high) and shows only when that one doesn’t happen.</p>
+      {bumps.length > 0 && (
+        <div className="mt-4 max-h-56 overflow-y-auto">
+          <BumpedList bumps={bumps} src={src} now={now} today={today} />
+        </div>
+      )}
 
       <BlockDialog
         state={blockDialog}

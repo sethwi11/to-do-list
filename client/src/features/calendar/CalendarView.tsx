@@ -53,7 +53,7 @@ interface CalendarViewProps {
   loads?: Map<string, DayLoad> | null;
   /** Routine blocks to draw behind everything else (read-only here; edited on the Week page). */
   routine?: readonly PlanItem[];
-  onOpenRoutine?: (blockId: string) => void;
+  onOpenRoutine?: (item: PlanItem) => void;
 }
 
 /** Month, Week, and Day, drawn by FullCalendar (which does the hard parts: layout of overlapping events, dragging, resizing, selecting). */
@@ -95,7 +95,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
   function handleClick(info: EventClickArg) {
     info.jsEvent.preventDefault();
     const r = info.event.extendedProps.routine as PlanItem | undefined;
-    if (r) return onOpenRoutine?.(r.sourceId!);
+    if (r) return onOpenRoutine?.(r);
     // The checkbox on a to-do does its own thing; clicking it shouldn't also open the details.
     if ((info.jsEvent.target as HTMLElement).closest('input[type=checkbox]')) return;
     onOpenItem(itemOf(info), anchorOf(info.el));

@@ -7,6 +7,8 @@ import {
   CreateEventTypeInputSchema,
   CreateRoutineBlockInputSchema,
   CreateWeekTemplateInputSchema,
+  CreateRoutineOverrideInputSchema,
+  UpdateRoutineOverrideInputSchema,
   EventBatchInputSchema,
   RoutineBlockBatchInputSchema,
   CreateFocusSessionInputSchema,
@@ -62,6 +64,7 @@ export function createApp(repos: Repositories, options: { uploadsDir: string }) 
   app.use('/api/week-templates', crudRouter(repos.weekTemplates, { label: 'Week template', create: CreateWeekTemplateInputSchema, update: UpdateWeekTemplateInputSchema }));
   app.use('/api/routine-blocks', batchRouter(repos.routineBlocks, RoutineBlockBatchInputSchema));
   app.use('/api/routine-blocks', crudRouter(repos.routineBlocks, { label: 'Routine block', create: CreateRoutineBlockInputSchema, update: UpdateRoutineBlockInputSchema }));
+  app.use('/api/routine-overrides', crudRouter(repos.routineOverrides, { label: 'Routine change', create: CreateRoutineOverrideInputSchema, update: UpdateRoutineOverrideInputSchema }));
   app.use('/api/attachments', attachmentsRouter(repos.attachments, options.uploadsDir));
   app.use('/api/settings', settingsRouter(repos.settings));
   app.use('/api/backup', backupRouter(repos.backup));

@@ -359,6 +359,29 @@ const migrations: Migration[] = [
       ALTER TABLE tasks ADD COLUMN missed_at TEXT;
     `);
   },
+
+  // v7: one-day changes to the routine (skip, move, replace, make-up, let go). One new table; nothing existing changes.
+  (db) => {
+    db.exec(`
+      CREATE TABLE routine_overrides (
+        id               TEXT PRIMARY KEY,
+        date             TEXT NOT NULL,            -- 'YYYY-MM-DD': the day it applies to
+        routine_block_id TEXT REFERENCES routine_blocks(id) ON DELETE CASCADE,
+        action           TEXT NOT NULL CHECK (action IN ('skip','move','replace','makeup','letgo')),
+        start_at         TEXT,                     -- move and make-up: the new time
+        end_at           TEXT,
+        title            TEXT,
+        calendar_id      TEXT REFERENCES calendars(id) ON DELETE SET NULL,
+        task_id          TEXT,
+        event_id         TEXT,
+        source_date      TEXT,                     -- make-up and let go: the day it was bumped
+        created_at       TEXT NOT NULL,
+        updated_at       TEXT NOT NULL,
+        deleted_at       TEXT
+      );
+      CREATE INDEX idx_routine_overrides_date ON routine_overrides(date);
+    `);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

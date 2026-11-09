@@ -18,6 +18,9 @@ import type {
   UpdateRoutineBlockInput,
   UpdateWeekTemplateInput,
   WeekTemplate,
+  RoutineOverride,
+  CreateRoutineOverrideInput,
+  UpdateRoutineOverrideInput,
   Event,
   EventType,
   FocusSession,
@@ -49,6 +52,7 @@ import {
   createWeeklyReviewRepository,
   createRoutineBlockRepository,
   createWeekTemplateRepository,
+  createRoutineOverrideRepository,
 } from './entities';
 import { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import { SqliteAttachmentRepository } from './SqliteAttachmentRepository';
@@ -74,6 +78,7 @@ export interface Repositories {
   weeklyReviews: CrudRepository<WeeklyReview, CreateWeeklyReviewInput, UpdateWeeklyReviewInput>;
   weekTemplates: RestorableRepository<WeekTemplate, CreateWeekTemplateInput, UpdateWeekTemplateInput>;
   routineBlocks: RestorableRepository<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput> & Batchable<RoutineBlock>;
+  routineOverrides: RestorableRepository<RoutineOverride, CreateRoutineOverrideInput, UpdateRoutineOverrideInput>;
   settings: SettingsRepository;
   attachments: SqliteAttachmentRepository;
   backup: BackupRepository;
@@ -95,6 +100,7 @@ export function createRepositories(db: Db): Repositories {
     weeklyReviews: createWeeklyReviewRepository(db),
     weekTemplates: createWeekTemplateRepository(db),
     routineBlocks: createRoutineBlockRepository(db),
+    routineOverrides: createRoutineOverrideRepository(db),
     settings: new SqliteSettingsRepository(db),
   };
   return { ...concrete, attachments: new SqliteAttachmentRepository(db), backup: new BackupRepository(db, concrete) };

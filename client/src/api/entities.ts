@@ -20,6 +20,9 @@ import type {
   UpdateRoutineBlockInput,
   UpdateWeekTemplateInput,
   WeekTemplate,
+  RoutineOverride,
+  CreateRoutineOverrideInput,
+  UpdateRoutineOverrideInput,
   Event,
   EventBatchInput,
   EventType,
@@ -63,6 +66,8 @@ export const routineBlocksApi = {
   ...createCrudApi<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput>('/routine-blocks'),
   batch: (plan: RoutineBlockBatchInput) => apiFetch<{ put: RoutineBlock[]; removed: string[] }>('/routine-blocks/batch', { method: 'POST', body: JSON.stringify(plan) }),
 };
+
+export const routineOverridesApi = createCrudApi<RoutineOverride, CreateRoutineOverrideInput, UpdateRoutineOverrideInput>('/routine-overrides');
 
 export const settingsApi = {
   get: () => apiFetch<AppSettings>('/settings'),

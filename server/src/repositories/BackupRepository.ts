@@ -12,6 +12,7 @@ import type {
   WeeklyReviewRepo,
   RoutineBlockRepo,
   WeekTemplateRepo,
+  RoutineOverrideRepo,
 } from './entities';
 import type { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import type { SqliteSettingsRepository } from './SqliteSettingsRepository';
@@ -32,6 +33,7 @@ export interface BackupSources {
   weeklyReviews: WeeklyReviewRepo;
   weekTemplates: WeekTemplateRepo;
   routineBlocks: RoutineBlockRepo;
+  routineOverrides: RoutineOverrideRepo;
   settings: SqliteSettingsRepository;
 }
 
@@ -64,6 +66,7 @@ export class BackupRepository {
       weeklyReviews: r.weeklyReviews.listSync(),
       weekTemplates: r.weekTemplates.listSync(),
       routineBlocks: r.routineBlocks.listSync(),
+      routineOverrides: r.routineOverrides.listSync(),
       settings: r.settings.getSync(),
     };
   }
@@ -137,6 +140,8 @@ export class BackupRepository {
       for (const b of backup.routineBlocks) {
         count('routineBlocks', r.routineBlocks.upsertSync({ ...b, calendarId: mapCalendar(b.calendarId), altCalendarId: mapCalendar(b.altCalendarId) }));
       }
+
+      for (const o of backup.routineOverrides) count('routineOverrides', r.routineOverrides.upsertSync({ ...o, calendarId: mapCalendar(o.calendarId) }));
 
       if (backup.settings) {
         r.settings.setSync(mergeSettings(r.settings.getSync(), backup.settings));

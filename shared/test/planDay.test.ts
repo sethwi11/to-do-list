@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activeTemplate, planDay, planningDate, parseQuotes, quoteFor, quotesToText, strongerOverlaps, type Event, type PlanSources, type RoutineBlock, type Semester, type WeekTemplate } from '../src';
+import { activeTemplate, openBumps, openSlots, parseQuotes, planDay, planningDate, quoteFor, quotesToText, strongerOverlaps, type Event, type PlanSources, type RoutineBlock, type RoutineOverride, type Semester, type WeekTemplate } from '../src';
 
 // A made-up student's week.
 const NOW = '2026-01-01T00:00:00.000Z';
@@ -16,9 +16,16 @@ const block = (t: WeekTemplate, over: Partial<RoutineBlock>): RoutineBlock => ({
   id: id(), templateId: t.id, weekday: 3, start: '09:00', end: '10:00', title: 'Study', calendarId: CAL, altTitle: null, altCalendarId: null,
   priority: 'normal', focus: false, soundtrack: null, notify: true, schoolDaysOnly: false, notes: null, createdAt: NOW, updatedAt: NOW, ...over,
 });
+const ev = (over: Partial<Event>): Event => ({
+  id: id(), title: 'Lab', start: `2026-11-11T09:30`, end: `2026-11-11T10:30`, allDay: false, calendarId: CAL, typeId: null, location: null, link: null, notes: null, color: 'teal',
+  reminderMinutes: null, recurrence: null, recurringEventId: null, originalStart: null, courseId: null, applicationId: null, source: 'manual', createdAt: NOW, updatedAt: NOW, ...over,
+});
+const override = (over: Partial<RoutineOverride>): RoutineOverride => ({
+  id: id(), date: '2026-11-11', routineBlockId: null, action: 'skip', start: null, end: null, title: null, calendarId: null, taskId: null, eventId: null, sourceDate: null, createdAt: NOW, updatedAt: NOW, ...over,
+});
 const semester: Semester = { id: id(), name: 'Fall', startDate: '2026-08-20', endDate: '2026-12-10', excludedRanges: [{ start: '2026-11-25', end: '2026-11-29', label: 'Thanksgiving' }], archived: false, createdAt: NOW };
 const sources = (templates: WeekTemplate[], blocks: RoutineBlock[], extra: Partial<PlanSources> = {}): PlanSources => ({
-  templates, blocks, semesters: [semester], events: [], timeBlocks: [], tasks: [], calendars: [{ id: CAL, color: 'indigo' }], ...extra,
+  templates, blocks, semesters: [semester], events: [], timeBlocks: [], tasks: [], calendars: [{ id: CAL, color: 'indigo' }], overrides: [], ...extra,
 });
 
 // 2026-11-11 is a Wednesday.
@@ -70,16 +77,11 @@ describe('planDay', () => {
     expect(titles('2026-12-16')).not.toContain('Drive to campus'); // after the semester
   });
 
-  it('adds classes and events, classes marked as such, sitting beside overlapping routine', () => {
+  it('adds classes and events (classes marked as such), and an event after midnight belongs to the night before bedtime', () => {
     const t = template();
-    const ev = (over: Partial<Event>): Event => ({
-      id: id(), title: 'Lab', start: `${WED}T09:30`, end: `${WED}T10:30`, allDay: false, calendarId: CAL, typeId: null, location: null, link: null, notes: null, color: 'teal',
-      reminderMinutes: null, recurrence: null, recurringEventId: null, originalStart: null, courseId: null, applicationId: null, source: 'manual', createdAt: NOW, updatedAt: NOW, ...over,
-    });
-    const plan = planDay(sources([t], [block(t, {})], { events: [ev({ courseId: id() }), ev({ title: 'Late show', start: '2026-11-12T00:30', end: '2026-11-12T01:30', color: null })] }), WED);
+    const plan = planDay(sources([t], [], { events: [ev({ courseId: id() }), ev({ title: 'Late show', start: '2026-11-12T00:30', end: '2026-11-12T01:30', color: null })] }), WED);
     expect(plan.items.find((i) => i.title === 'Lab')).toMatchObject({ kind: 'class', color: 'teal' });
-    expect(plan.items.find((i) => i.title === 'Late show')).toMatchObject({ kind: 'event', color: 'indigo' }); // after midnight, before bedtime
-    expect(plan.items.some((i) => i.title === 'Study')).toBe(true);
+    expect(plan.items.find((i) => i.title === 'Late show')).toMatchObject({ kind: 'event', color: 'indigo' });
   });
 });
 
@@ -121,5 +123,98 @@ describe('editing quotes as text', () => {
     const quotes = [{ text: 'Keep going — always.', by: 'Someone Jr.' }]; // a dash inside the quote is fine: the author follows the last one
     expect(parseQuotes(quotesToText(quotes)).quotes).toEqual(quotes);
     expect(parseQuotes('“Be kind.” — A. Person\n\nNo author here\n — Nobody')).toEqual({ quotes: [{ text: 'Be kind.', by: 'A. Person' }], problems: [3, 4] });
+  });
+});
+
+describe('life happens: who keeps a slot', () => {
+  const titles = (plan: ReturnType<typeof planDay>) => plan.items.filter((i) => i.kind !== 'open').map((i) => `${i.title} ${i.start.slice(11)}-${i.end.slice(11)}`);
+
+  it('an event over a high block takes it completely: the event says what it replaced, and the minutes go to Bumped', () => {
+    const t = template();
+    const game = block(t, { start: '18:00', end: '20:00', title: 'Volleyball', priority: 'high' });
+    const plan = planDay(sources([t], [game], { events: [ev({ title: 'Service event', start: `${WED}T18:00`, end: `${WED}T20:00`, color: 'olive' })] }), WED);
+    expect(titles(plan)).toEqual(['Service event 18:00-20:00']);
+    expect(plan.items.find((i) => i.title === 'Service event')).toMatchObject({ replaces: ['Volleyball'], color: 'olive' });
+    expect(plan.bumped).toEqual([expect.objectContaining({ blockId: game.id, minutes: 120, by: 'Service event' })]);
+  });
+
+  it('an event in the middle of a block leaves the pieces around it, and only the overlap counts as bumped', () => {
+    const t = template();
+    const study = block(t, { start: '13:00', end: '15:00' });
+    const plan = planDay(sources([t], [study], { events: [ev({ title: 'Call', start: `${WED}T13:45`, end: `${WED}T14:15` })] }), WED);
+    expect(titles(plan)).toEqual(['Study 13:00-13:45', 'Call 13:45-14:15', 'Study 14:15-15:00']);
+    expect(plan.items.filter((i) => i.title === 'Study').every((i) => i.status === 'trimmed')).toBe(true);
+    expect(plan.bumped[0]!.minutes).toBe(30);
+  });
+
+  it('drops a leftover piece under 15 minutes', () => {
+    const t = template();
+    const plan = planDay(sources([t], [block(t, { start: '13:00', end: '14:00' })], { events: [ev({ start: `${WED}T13:10`, end: `${WED}T14:00` })] }), WED);
+    expect(plan.items.some((i) => i.title === 'Study')).toBe(false);
+  });
+
+  it('an event over a commitment bumps nothing and shows the conflict', () => {
+    const t = template();
+    const hours = block(t, { start: '12:00', end: '13:00', title: 'Office hours', priority: 'commitment' });
+    const plan = planDay(sources([t], [hours], { events: [ev({ title: 'Interview', start: `${WED}T12:30`, end: `${WED}T13:30` })] }), WED);
+    expect(plan.bumped).toEqual([]);
+    expect(plan.items.find((i) => i.title === 'Office hours')).toMatchObject({ start: `${WED}T12:00`, end: `${WED}T13:00` });
+    expect(plan.items.find((i) => i.title === 'Interview')?.clashes).toEqual(['Office hours']);
+  });
+
+  it('free time gives way to events but never goes to Bumped', () => {
+    const t = template();
+    const plan = planDay(sources([t], [block(t, { start: '22:00', end: '23:00', title: 'Free', priority: 'free', calendarId: null })], { events: [ev({ start: `${WED}T22:00`, end: `${WED}T23:00` })] }), WED);
+    expect(plan.bumped).toEqual([]);
+  });
+
+  it('inside the template the high block hides the part of a normal block it covers (not bumped), and skipping it brings that part back', () => {
+    const t = template();
+    const work = block(t, { start: '17:00', end: '17:30', title: 'Club work' });
+    const game = block(t, { start: '17:00', end: '19:30', title: 'Volleyball', priority: 'high' });
+    expect(titles(planDay(sources([t], [work, game]), WED))).toEqual(['Volleyball 17:00-19:30']);
+    expect(planDay(sources([t], [work, game]), WED).bumped).toEqual([]);
+    const skipped = planDay(sources([t], [work, game], { overrides: [override({ routineBlockId: game.id })] }), WED);
+    expect(titles(skipped)).toEqual(['Club work 17:00-17:30']);
+    expect(skipped.bumped).toEqual([expect.objectContaining({ title: 'Volleyball', minutes: 150, by: 'Skipped' })]);
+  });
+
+  it('moves a block for one day without bumping it, and a make-up adds a block on another day', () => {
+    const t = template();
+    const study = block(t, { start: '13:00', end: '15:00' });
+    const moved = planDay(sources([t], [study], { overrides: [override({ routineBlockId: study.id, action: 'move', start: `${WED}T16:00`, end: `${WED}T18:00` })] }), WED);
+    expect(titles(moved)).toEqual(['Study 16:00-18:00']);
+    expect(moved.bumped).toEqual([]);
+    const makeup = override({ date: '2026-11-12', routineBlockId: study.id, action: 'makeup', start: '2026-11-12T10:00', end: '2026-11-12T11:00', sourceDate: WED });
+    expect(planDay(sources([t], [study], { overrides: [makeup] }), '2026-11-12').items.find((i) => i.makeup)).toMatchObject({ title: 'Study', start: '2026-11-12T10:00' });
+  });
+
+  it('lists bumped time until it is made up or let go', () => {
+    const t = template();
+    const study = block(t, { start: '13:00', end: '15:00' });
+    const src = sources([t], [study], { events: [ev({ start: `${WED}T13:00`, end: `${WED}T14:00` })] });
+    expect(openBumps(src, '2026-11-09', '2026-11-13')).toHaveLength(1);
+    const letgo = override({ routineBlockId: study.id, action: 'letgo', sourceDate: WED });
+    expect(openBumps({ ...src, overrides: [letgo] }, '2026-11-09', '2026-11-13')).toEqual([]);
+  });
+
+  it('suggests make-up slots only in Open time: never on classes, events, commitments, high or free blocks', () => {
+    const t = template({ days: [{ weekday: 3, wake: '08:00', bed: '12:00' }, { weekday: 4, wake: '08:00', bed: '10:00' }] });
+    const blocks = [
+      block(t, { start: '08:00', end: '09:00', title: 'Commitment', priority: 'commitment' }),
+      block(t, { start: '09:00', end: '10:00', title: 'Game', priority: 'high' }),
+      block(t, { start: '10:00', end: '11:00', title: 'Free', priority: 'free', calendarId: null }),
+    ];
+    const src = sources([t], blocks, { events: [ev({ start: `${WED}T11:00`, end: `${WED}T11:30` })] });
+    expect(openSlots(src, 30, `${WED}T07:00`, { days: 1 })).toEqual([
+      { start: `${WED}T11:30`, end: `${WED}T12:00`, inWindow: false },
+      { start: '2026-11-12T08:00', end: '2026-11-12T08:30', inWindow: false },
+    ]);
+  });
+
+  it('finds a time inside the meeting windows first', () => {
+    const t = template({ days: [{ weekday: 3, wake: '08:00', bed: '20:00' }], meetingWindows: [{ weekday: 3, start: '15:00', end: '18:00' }] });
+    const slots = openSlots(sources([t], []), 60, `${WED}T08:00`, { days: 0, windowsFirst: true, count: 2 });
+    expect(slots[0]).toEqual({ start: `${WED}T15:00`, end: `${WED}T16:00`, inWindow: true });
   });
 });

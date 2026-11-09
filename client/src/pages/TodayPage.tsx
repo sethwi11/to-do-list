@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { addMinutes, combine, isOverdue, isRolling, isoWeekNumber, quoteFor, type PlanItem } from '@todo/shared';
+import { addDays, addMinutes, combine, isOverdue, isRolling, isoWeekNumber, openBumps, quoteFor, type PlanItem } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
 import { useAppSettings } from '../data/useApplications';
@@ -9,6 +9,8 @@ import { ItemDetail } from '../features/calendar/ItemDetail';
 import { Agenda, Legend } from '../features/today/Agenda';
 import { DayBar, MorningHeader } from '../features/today/MorningHeader';
 import { NowCard } from '../features/today/NowCard';
+import { BumpedList } from '../features/today/BumpedList';
+import { DayChangeDialog } from '../features/today/DayChangeDialog';
 import { greeting, summarize } from '../features/today/todayModel';
 import { useNowText, useTodayPlan } from '../features/today/useTodayPlan';
 import { StatsBlock } from '../features/tasks/StatsBlock';
@@ -41,7 +43,9 @@ export default function TodayPage() {
   const navigate = useNavigate();
   const now = useNowText();
   const [detail, setDetail] = useState<{ item: CalendarItem; anchor: PopoverAnchor } | null>(null);
-  const { routine, date, plan, occurrences, current, next, during, supposed } = useTodayPlan(now);
+  const { routine, src, date, plan, occurrences, current, next, during, supposed } = useTodayPlan(now);
+  const [dayChange, setDayChange] = useState<PlanItem | null>(null);
+  const bumps = useMemo(() => openBumps(src, addDays(date, -7), addDays(date, 7)), [src, date]);
   const summary = useMemo(() => summarize(occurrences, tasks, today, plan.items.filter((i) => i.kind === 'task').length), [occurrences, tasks, today, plan.items]);
 
   // Before noon, and the first time the app opens each day, Today greets you (not during last night's late hours).
@@ -68,7 +72,7 @@ export default function TodayPage() {
   const stats = useMemo(() => computeStats(tasks, today), [tasks, today]);
 
   function open(item: PlanItem, el: HTMLElement) {
-    if (item.kind === 'routine') return navigate(`/week?block=${item.sourceId}`);
+    if (item.kind === 'routine') return setDayChange(item);
     if (item.kind === 'task') {
       const block = timeBlocks.find((b) => b.id === item.sourceId);
       const task = block && tasks.find((t) => t.id === block.taskId);
@@ -161,6 +165,7 @@ export default function TodayPage() {
 
             <div className="order-1 space-y-8 @3xl:order-2">
               <NowCard current={current} next={next} now={now} today={today} onOpen={open} during={during} supposed={supposed} />
+              <BumpedList bumps={bumps} src={src} now={now} today={now.slice(0, 10)} />
 
               {overdue.length > 0 && (
                 <section>
@@ -197,6 +202,7 @@ export default function TodayPage() {
       )}
 
       {detail && <ItemDetail item={detail.item} anchor={detail.anchor} onClose={() => setDetail(null)} />}
+      <DayChangeDialog item={dayChange} date={date} onClose={() => setDayChange(null)} />
     </div>
   );
 }

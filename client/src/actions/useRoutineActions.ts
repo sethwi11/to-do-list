@@ -1,10 +1,11 @@
 import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { RoutineBlock, WeekTemplate } from '@todo/shared';
+import type { Bump, CreateRoutineOverrideInput, PlanItem, RoutineBlock, RoutineOverride, Task, WeekTemplate } from '@todo/shared';
 import { ApiError } from '../api/client';
-import { routineBlocksApi, weekTemplatesApi } from '../api/entities';
+import { routineBlocksApi, routineOverridesApi, timeBlocksApi, weekTemplatesApi } from '../api/entities';
 import { useApp } from '../app/AppContext';
-import { routineBlockHooks, weekTemplateHooks } from '../data/useRoutine';
+import { routineBlockHooks, routineOverrideHooks, weekTemplateHooks } from '../data/useRoutine';
+import { timeBlockHooks } from '../data/useTimeBlocks';
 
 export type BlockFields = Omit<RoutineBlock, 'id' | 'createdAt' | 'updatedAt'>;
 export type TemplateFields = Omit<WeekTemplate, 'id' | 'createdAt' | 'updatedAt'>;
@@ -12,6 +13,7 @@ export type TemplateFields = Omit<WeekTemplate, 'id' | 'createdAt' | 'updatedAt'
 const messageOf = (err: unknown) => (err instanceof ApiError ? err.message : 'Unexpected error');
 const EMPTY_TEMPLATES: WeekTemplate[] = [];
 const EMPTY_BLOCKS: RoutineBlock[] = [];
+const EMPTY_OVERRIDES: RoutineOverride[] = [];
 
 /** The weekly routine (templates and their blocks) and everything that changes it, each change with Undo. */
 export function useRoutine() {
@@ -19,6 +21,10 @@ export function useRoutine() {
   const qc = useQueryClient();
   const templatesQuery = weekTemplateHooks.useList();
   const blocksQuery = routineBlockHooks.useList();
+  const overridesQuery = routineOverrideHooks.useList();
+  const overrides = overridesQuery.data ?? EMPTY_OVERRIDES;
+  const createOverride = routineOverrideHooks.useCreate();
+  const removeOverride = routineOverrideHooks.useDelete();
   const templates = templatesQuery.data ?? EMPTY_TEMPLATES;
   const allBlocks = blocksQuery.data ?? EMPTY_BLOCKS;
   // A deleted template's blocks stay in the database (so Undo brings them back) but don't show.
@@ -130,10 +136,47 @@ export function useRoutine() {
     [attempt, removeTemplate, showToast, undoWith],
   );
 
+  /** A one-day change (skip, move, replace, make-up, let go), with Undo. */
+  const changeDay = useCallback(
+    async (input: CreateRoutineOverrideInput, message: string) => {
+      const o = await attempt('change that', () => createOverride.mutateAsync(input));
+      if (o) showToast(message, () => void removeOverride.mutateAsync(o.id).catch((err: unknown) => showToast(`Couldn’t undo that: ${messageOf(err)}`)));
+      return o;
+    },
+    [attempt, createOverride, removeOverride, showToast],
+  );
+  const makeUp = useCallback(
+    (bump: Bump, slot: { start: string; end: string }) =>
+      changeDay({ date: slot.start.slice(0, 10), routineBlockId: bump.blockId, action: 'makeup', start: slot.start, end: slot.end, title: bump.title, calendarId: bump.calendarId, sourceDate: bump.date }, `Making up “${bump.title}”`),
+    [changeDay],
+  );
+  const letGo = useCallback((bump: Bump) => changeDay({ date: bump.date, routineBlockId: bump.blockId, action: 'letgo', sourceDate: bump.date }, `Let “${bump.title}” go`), [changeDay]);
+
+  /** A to-do takes a routine block's slot for one day: time set aside for it there, and the block goes to Bumped. One Undo reverses both. */
+  const replaceWithTask = useCallback(
+    async (item: PlanItem, date: string, task: Task) => {
+      const done = await attempt('replace that', async () => {
+        const block = await timeBlocksApi.create({ id: crypto.randomUUID(), taskId: task.id, start: item.start, end: item.end });
+        const o = await routineOverridesApi.create({ date, routineBlockId: item.sourceId, action: 'replace', taskId: task.id, title: task.title });
+        return { block, o };
+      });
+      const sync = () => Promise.all([qc.invalidateQueries({ queryKey: timeBlockHooks.key }), qc.invalidateQueries({ queryKey: routineOverrideHooks.key })]);
+      await sync();
+      if (done) showToast(`“${task.title}” replaces “${item.title}” today`, () => void Promise.all([timeBlocksApi.remove(done.block.id), routineOverridesApi.remove(done.o.id)]).then(sync).catch((err: unknown) => showToast(`Couldn’t undo that: ${messageOf(err)}`)));
+      return done !== null;
+    },
+    [attempt, qc, showToast],
+  );
+
   return {
     templates,
     blocks,
-    loading: templatesQuery.isPending || blocksQuery.isPending,
+    overrides,
+    replaceWithTask,
+    changeDay,
+    makeUp,
+    letGo,
+    loading: templatesQuery.isPending || blocksQuery.isPending || overridesQuery.isPending,
     saveBlock,
     moveBlock,
     deleteBlock,

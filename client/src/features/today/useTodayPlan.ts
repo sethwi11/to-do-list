@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router';
-import { addDays, combine, expandOccurrences, LocalDateTimeSchema, planDay, planningDate } from '@todo/shared';
+import { addDays, combine, expandOccurrences, LocalDateTimeSchema, planDay, planningDate, type PlanSources } from '@todo/shared';
 import { useRoutine } from '../../actions/useRoutineActions';
 import { useApp } from '../../app/AppContext';
 import { useNow } from '../../hooks/useNow';
@@ -15,12 +15,20 @@ export function useNowText(): string {
   return fake && LocalDateTimeSchema.safeParse(fake).success ? fake : localDateTime(clock);
 }
 
+/** Everything `planDay` reads, in one memo: the routine and its one-day changes plus the app's data. */
+export function usePlanSources(): { src: PlanSources; routine: ReturnType<typeof useRoutine> } {
+  const { tasks, events, timeBlocks, calendars, semesters } = useApp();
+  const routine = useRoutine();
+  const { templates, blocks, overrides } = routine;
+  const src = useMemo(() => ({ templates, blocks, overrides, semesters, events, timeBlocks, tasks, calendars }), [templates, blocks, overrides, semesters, events, timeBlocks, tasks, calendars]);
+  return { src, routine };
+}
+
 /** The day still going at `now`, planned: shared by Today and the display view so they always agree. */
 export function useTodayPlan(now: string) {
-  const { tasks, events, timeBlocks, calendars, calendarsById, semesters } = useApp();
-  const routine = useRoutine();
+  const { tasks, events, timeBlocks, calendarsById } = useApp();
+  const { src, routine } = usePlanSources();
   const date = planningDate(routine.templates, now);
-  const src = useMemo(() => ({ templates: routine.templates, blocks: routine.blocks, semesters, events, timeBlocks, tasks, calendars }), [routine.templates, routine.blocks, semesters, events, timeBlocks, tasks, calendars]);
   const plan = useMemo(() => planDay(src, date), [src, date]);
   const dayEnd = plan.bed > combine(addDays(date, 1)) ? plan.bed : combine(addDays(date, 1));
   const occurrences = useMemo(() => expandOccurrences(events, combine(date), dayEnd), [events, date, dayEnd]);
@@ -36,5 +44,5 @@ export function useTodayPlan(now: string) {
   const during = useMemo(() => duringBlock(tasks, current), [tasks, current]);
   const supposed = useMemo(() => supposedToBeDoing(tasks, timeBlocks, now, current && current.kind !== 'open' ? current : undefined), [tasks, timeBlocks, now, current]);
 
-  return { routine, date, plan, occurrences, current, next, during, supposed };
+  return { routine, src, date, plan, occurrences, current, next, during, supposed };
 }

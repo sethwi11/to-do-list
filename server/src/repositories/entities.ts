@@ -17,6 +17,9 @@ import {
   type UpdateRoutineBlockInput,
   type UpdateWeekTemplateInput,
   type WeekTemplate,
+  type RoutineOverride,
+  type CreateRoutineOverrideInput,
+  type UpdateRoutineOverrideInput,
   type Event,
   type EventType,
   type FocusSession,
@@ -219,6 +222,29 @@ export const createRoutineBlockRepository = (db: Db) =>
     }),
   });
 
+export const createRoutineOverrideRepository = (db: Db) =>
+  new SqliteEntityRepository<RoutineOverride, CreateRoutineOverrideInput, UpdateRoutineOverrideInput>(db, {
+    table: 'routine_overrides',
+    orderBy: 'date, created_at',
+    columns: TIME_COLUMNS,
+    softDelete: true,
+    build: (i, { id, now }) => ({
+      id,
+      date: i.date,
+      routineBlockId: i.routineBlockId ?? null,
+      action: i.action,
+      start: i.start ?? null,
+      end: i.end ?? null,
+      title: i.title ?? null,
+      calendarId: i.calendarId ?? null,
+      taskId: i.taskId ?? null,
+      eventId: i.eventId ?? null,
+      sourceDate: i.sourceDate ?? null,
+      createdAt: now,
+      updatedAt: now,
+    }),
+  });
+
 export type CalendarRepo = ReturnType<typeof createCalendarRepository>;
 export type EventTypeRepo = ReturnType<typeof createEventTypeRepository>;
 export type EventRepo = ReturnType<typeof createEventRepository>;
@@ -230,3 +256,4 @@ export type FocusSessionRepo = ReturnType<typeof createFocusSessionRepository>;
 export type WeeklyReviewRepo = ReturnType<typeof createWeeklyReviewRepository>;
 export type WeekTemplateRepo = ReturnType<typeof createWeekTemplateRepository>;
 export type RoutineBlockRepo = ReturnType<typeof createRoutineBlockRepository>;
+export type RoutineOverrideRepo = ReturnType<typeof createRoutineOverrideRepository>;

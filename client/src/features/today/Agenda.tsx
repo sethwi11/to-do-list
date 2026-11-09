@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { CircleAlert } from 'lucide-react';
 import { timeOfMinutes, timePart, type CalendarColor, type DayPlan, type PlanItem } from '@todo/shared';
 import { useApp } from '../../app/AppContext';
 import { calendarVars, shadeFor, shadeProps } from '../../lib/calendarColors';
@@ -47,7 +48,14 @@ export function Agenda({ plan, now, onOpen }: { plan: DayPlan; now: string; onOp
             <p className="truncate text-meta leading-tight font-semibold">{item.title}</p>
             {height >= 34 && (
               <p className="truncate text-time">
-                {categoryOf(item, calendarsById)} · <span className="font-mono">{formatTimeRange(timePart(item.start), timePart(item.end))}</span>
+                {item.makeup ? 'Make-up' : categoryOf(item, calendarsById)} · <span className="font-mono">{formatTimeRange(timePart(item.start), timePart(item.end))}</span>
+              </p>
+            )}
+            {item.replaces.length > 0 && <p className="truncate text-time italic">replaces {item.replaces.join(', ')}</p>}
+            {item.clashes.length > 0 && (
+              <p className="flex items-center gap-1 truncate text-time font-medium">
+                <CircleAlert className="size-3.5 shrink-0" aria-hidden />
+                Clashes with {item.clashes.join(', ')}
               </p>
             )}
           </>

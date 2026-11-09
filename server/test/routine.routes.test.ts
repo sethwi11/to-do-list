@@ -63,3 +63,18 @@ describe('week templates and routine blocks', () => {
     expect((await request(target).get('/api/routine-blocks')).body[0]).toMatchObject({ title: 'Gym', templateId: t.id });
   });
 });
+
+describe('one-day routine changes', () => {
+  it('stores skips, moves and make-ups, checks a move has a time, and can be undone', async () => {
+    const t = await makeTemplate();
+    const { body: b } = await api().post('/api/routine-blocks').send({ templateId: t.id, weekday: 3, start: '17:00', end: '19:30', title: 'Game', priority: 'high' }).expect(201);
+    const { body: skip } = await api().post('/api/routine-overrides').send({ date: '2026-11-11', routineBlockId: b.id, action: 'skip' }).expect(201);
+    expect(skip).toMatchObject({ action: 'skip', start: null, sourceDate: null });
+    await api().post('/api/routine-overrides').send({ date: '2026-11-11', routineBlockId: b.id, action: 'move' }).expect(400);
+    await api().post('/api/routine-overrides').send({ date: '2026-11-12', routineBlockId: b.id, action: 'makeup', start: '2026-11-12T10:00', end: '2026-11-12T11:00' }).expect(400); // which day it makes up
+    await api().delete(`/api/routine-overrides/${skip.id}`).expect(204);
+    await api().post(`/api/routine-overrides/${skip.id}/restore`).expect(200);
+    const backup = (await api().get('/api/backup/export')).body;
+    expect(backup.routineOverrides).toHaveLength(1);
+  });
+});

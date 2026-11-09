@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { dayOfWeek, isOpen, selfIds, type EventOccurrence } from '@todo/shared';
+import { combine, datePart, dayOfWeek, isOpen, minutesBetween, selfIds, timePart, type EventOccurrence } from '@todo/shared';
 import { useApp, type EventDefaults } from '../../app/AppContext';
 import { cx } from '../../lib/cx';
 import { Button } from '../../ui/Button';
@@ -10,6 +10,7 @@ import { uploadAndLink } from '../attachments/useAttachments';
 import { describeConflicts } from '../calendar/format';
 import { AttachmentList } from '../attachments/AttachmentList';
 import { ConflictNotice } from './ConflictNotice';
+import { FindTime } from './FindTime';
 import {
   fromRepeatFields,
   fromTimeFields,
@@ -219,6 +220,15 @@ function EventForm({ occurrence, defaults }: { occurrence: EventOccurrence | nul
         )}
       </fieldset>
       <ConflictNotice conflicts={conflicts} />
+      {!time.allDay && (
+        <FindTime
+          minutes={Math.max(15, minutesBetween(combine(time.startDate, time.startTime), combine(time.endDate, time.endTime)))}
+          onPick={(start, end) => {
+            setTime({ ...time, startDate: datePart(start), startTime: timePart(start), endDate: datePart(end), endTime: timePart(end) });
+            setErrors((x) => ({ ...x, time: undefined }));
+          }}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Calendar">

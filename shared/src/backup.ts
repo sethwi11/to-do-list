@@ -6,10 +6,10 @@ import { ApplicationSchema } from './models/applications';
 import { CourseSchema, SemesterSchema } from './models/courses';
 import { EventSchema, EventTypeSchema, TimeBlockSchema } from './models/events';
 import { AppSettingsSchema, FocusSessionSchema, WeeklyReviewSchema } from './models/misc';
-import { RoutineBlockSchema, WeekTemplateSchema } from './models/routine';
+import { RoutineBlockSchema, RoutineOverrideSchema, WeekTemplateSchema } from './models/routine';
 import { TemplateSchema } from './models/templates';
 
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 4;
 
 /** The JSON file format for export/import, versioned so a future format can still read old files. */
 export const BackupSchema = z.object({
@@ -29,6 +29,7 @@ export const BackupSchema = z.object({
   weeklyReviews: z.array(WeeklyReviewSchema).default([]),
   weekTemplates: z.array(WeekTemplateSchema).default([]),
   routineBlocks: z.array(RoutineBlockSchema).default([]),
+  routineOverrides: z.array(RoutineOverrideSchema).default([]),
   /** Omitted in older files, and partial in files older than a setting: what's missing keeps its current value. */
   settings: AppSettingsSchema.partial().optional(),
 });
@@ -52,9 +53,9 @@ function upgradeCalendars(categories: Record<string, unknown>[]) {
     });
 }
 
-/** Version 2 files only lack the newer tables, which default to empty. Version 1 files (from the original to-do app) have "categories" and tasks with a categoryId. */
+/** Version 2 and 3 files only lack the newer tables, which default to empty. Version 1 files (from the original to-do app) have "categories" and tasks with a categoryId. */
 export function upgradeBackup(raw: unknown): unknown {
-  if (isRecord(raw) && raw.version === 2) return { ...raw, version: BACKUP_VERSION };
+  if (isRecord(raw) && (raw.version === 2 || raw.version === 3)) return { ...raw, version: BACKUP_VERSION };
   if (!isRecord(raw) || raw.version !== 1) return raw;
 
   const categories = Array.isArray(raw.categories) ? raw.categories : [];

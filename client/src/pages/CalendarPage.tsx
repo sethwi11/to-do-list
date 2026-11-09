@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
-import { addDays, eachDate, routineOn, workloadByDay } from '@todo/shared';
-import { useRoutine } from '../actions/useRoutineActions';
+import { addDays, eachDate, planDay, workloadByDay, type PlanItem } from '@todo/shared';
+import { DayChangeDialog } from '../features/today/DayChangeDialog';
+import { usePlanSources } from '../features/today/useTodayPlan';
 import { weekStart } from '../features/calendar/calendarModel';
 import { useApp } from '../app/AppContext';
 import { AgendaView } from '../features/calendar/AgendaView';
@@ -29,8 +30,8 @@ const firstView = (): CalendarViewId => (typeof matchMedia === 'function' && mat
 /** The calendar. */
 export default function CalendarPage() {
   const app = useApp();
-  const { events, tasks, timeBlocks, calendars, calendarsById, hiddenCalendarIds, semesters, today } = app;
-  const { templates, blocks } = useRoutine();
+  const { events, tasks, timeBlocks, calendarsById, hiddenCalendarIds, today } = app;
+  const { src } = usePlanSources();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const query = parseCalendarQuery(params, today);
@@ -45,6 +46,7 @@ export default function CalendarPage() {
 
   const [selection, setSelection] = useState<Selection | null>(null);
   const [detail, setDetail] = useState<{ item: CalendarItem; anchor: PopoverAnchor } | null>(null);
+  const [dayChange, setDayChange] = useState<PlanItem | null>(null);
 
   // Moving to another view or date puts any open card away.
   useEffect(() => {
@@ -61,8 +63,8 @@ export default function CalendarPage() {
   const routine = useMemo(() => {
     if (!layers.routine || (view !== 'week' && view !== 'day')) return [];
     const days = view === 'day' ? [date] : eachDate(weekStart(date), addDays(weekStart(date), 7));
-    return days.flatMap((d) => routineOn({ templates, blocks, semesters, calendars }, d)).filter((i) => i.calendarId === null || !hiddenCalendarIds.has(i.calendarId));
-  }, [layers.routine, view, date, templates, blocks, semesters, calendars, hiddenCalendarIds]);
+    return days.flatMap((d) => planDay(src, d).items.filter((i) => i.kind === 'routine')).filter((i) => i.calendarId === null || !hiddenCalendarIds.has(i.calendarId));
+  }, [layers.routine, view, date, src, hiddenCalendarIds]);
 
   // The workload map counts everything you have on, whichever calendars are hidden from view: hiding a calendar tidies the page, but it doesn't free up your week.
   const loads = useMemo(() => {
@@ -129,7 +131,7 @@ export default function CalendarPage() {
               onOpenDay={(d) => go({ view: 'day', date: d })}
               loads={loads}
               routine={routine}
-              onOpenRoutine={(blockId) => navigate(`/week?block=${blockId}`)}
+              onOpenRoutine={setDayChange}
             />
           )}
         </div>
@@ -138,6 +140,7 @@ export default function CalendarPage() {
 
       {selection && <QuickCreate selection={selection} onClose={() => setSelection(null)} />}
       {detail && <ItemDetail item={detail.item} anchor={detail.anchor} onClose={() => setDetail(null)} />}
+      <DayChangeDialog item={dayChange} date={dayChange ? dayChange.start.slice(0, 10) : date} onClose={() => setDayChange(null)} />
     </div>
   );
 }
