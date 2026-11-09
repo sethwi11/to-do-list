@@ -26,7 +26,7 @@ describe('week templates and routine blocks', () => {
     const t = await makeTemplate();
     const block = { templateId: t.id, weekday: 3, start: '22:00', end: '02:00', title: 'Free', priority: 'free' };
     const { body } = await api().post('/api/routine-blocks').send(block).expect(201);
-    expect(body).toMatchObject({ ...block, calendarId: null, focus: false, notify: true, schoolDaysOnly: false, soundtrack: null });
+    expect(body).toMatchObject({ ...block, calendarId: null, focus: false, notify: true, schoolDaysOnly: false, reschedulable: false, soundtrack: null });
     await api().post('/api/routine-blocks').send({ ...block, end: '22:00' }).expect(400);
     await api().patch(`/api/routine-blocks/${body.id}`).send({ start: '02:00' }).expect(400);
   });
@@ -36,7 +36,7 @@ describe('week templates and routine blocks', () => {
     const now = new Date().toISOString();
     const row = (id: string, weekday: number) => ({
       id, templateId: t.id, weekday, start: '09:00', end: '10:00', title: 'Study', calendarId: null, altTitle: null, altCalendarId: null,
-      priority: 'normal', focus: true, soundtrack: 'lofi', notify: true, schoolDaysOnly: false, notes: null, createdAt: now, updatedAt: now,
+      priority: 'normal', focus: true, soundtrack: 'lofi', notify: true, schoolDaysOnly: false, reschedulable: true, notes: null, createdAt: now, updatedAt: now,
     });
     const ids = ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'];
     await api().post('/api/routine-blocks/batch').send({ put: ids.map((id, i) => row(id, i + 1)), remove: [] }).expect(200);

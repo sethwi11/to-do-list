@@ -76,6 +76,7 @@ function BlockForm({ start, existing, onSave, onSaved }: { start: Partial<Routin
     soundtrack: start.soundtrack ?? '',
     notify: start.notify ?? true,
     schoolDaysOnly: start.schoolDaysOnly ?? false,
+    reschedulable: start.reschedulable ?? true,
     notes: start.notes ?? '',
   });
   const [copyTo, setCopyTo] = useState<number[]>([]);
@@ -100,6 +101,7 @@ function BlockForm({ start, existing, onSave, onSaved }: { start: Partial<Routin
       soundtrack: f.soundtrack || null,
       notify: f.notify,
       schoolDaysOnly: f.schoolDaysOnly,
+      reschedulable: f.reschedulable && f.priority !== 'free',
       notes: f.notes.trim() || null,
     };
     if (await onSave(fields, copyTo.filter((d) => d !== f.weekday), existing ?? undefined)) onSaved();
@@ -110,7 +112,7 @@ function BlockForm({ start, existing, onSave, onSaved }: { start: Partial<Routin
       {c.name}
     </option>
   ));
-  const toggle = (key: 'focus' | 'notify' | 'schoolDaysOnly', label: string, hint: string) => (
+  const toggle = (key: 'focus' | 'notify' | 'schoolDaysOnly' | 'reschedulable', label: string, hint: string) => (
     <label className="flex cursor-pointer items-center gap-2">
       <Checkbox checked={f[key]} onChange={(e) => set(key, e.target.checked)} label={label} />
       <span>
@@ -177,6 +179,7 @@ function BlockForm({ start, existing, onSave, onSaved }: { start: Partial<Routin
       <div className="grid gap-3 sm:grid-cols-2">
         {toggle('focus', 'Focus block', 'Pomodoro available')}
         {toggle('schoolDaysOnly', 'School days only', 'Hidden outside the semester and on breaks')}
+        {f.priority !== 'free' && toggle('reschedulable', 'Can be rescheduled', 'If something takes its time, it shows in Missed this week')}
         {toggle('notify', 'Pop-ups', 'Start and stop reminders (coming soon)')}
         <Field label="Soundtrack">
           {(p) => (

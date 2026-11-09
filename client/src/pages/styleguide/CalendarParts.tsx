@@ -14,8 +14,8 @@ function BlockTrio() {
       <Stage className="grid gap-4 sm:grid-cols-3">
         <div>
           <p className="mb-2 text-meta text-ink-muted">Event: a highlighter stripe</p>
-          <EventBlock title="Interview with Acme" time="2:00 – 3:00 PM" color="tomato" calendarName="Applications" />
-          <EventBlock title="COMP 365" time="10:00 – 11:15 AM" color="dusty-blue" calendarName="School" className="mt-2" />
+          <EventBlock title="Interview with Acme" time="2:00–3:00 PM" color="tomato" calendarName="Applications" />
+          <EventBlock title="COMP 365" time="10:00–11:15 AM" color="dusty-blue" calendarName="School" className="mt-2" />
         </div>
         <div>
           <p className="mb-2 text-meta text-ink-muted">To-do: dashed, no fill, checkable</p>
@@ -24,7 +24,7 @@ function BlockTrio() {
         </div>
         <div>
           <p className="mb-2 text-meta text-ink-muted">Time block: hatched, tied to a task</p>
-          <TimeBlockBlock title="Lab write-up" time="9:00 – 10:30 AM" color="dusty-blue" calendarName="School" done={tb} onToggle={() => setTb((x) => !x)} className="min-h-14" />
+          <TimeBlockBlock title="Lab write-up" time="9:00–10:30 AM" color="dusty-blue" calendarName="School" done={tb} onToggle={() => setTb((x) => !x)} className="min-h-14" />
         </div>
       </Stage>
     </div>
@@ -78,10 +78,10 @@ function WeekSample() {
           </div>
           <DayColumn today date={4} weekday="Wed">
             <div className="absolute inset-x-1" style={{ top: y(9, 0), height: y(10, 15) - y(9, 0) }}>
-              <EventBlock title="COMP 365" time="9:00 – 10:15 AM" color="dusty-blue" calendarName="School" className="h-full" />
+              <EventBlock title="COMP 365" time="9:00–10:15 AM" color="dusty-blue" calendarName="School" className="h-full" />
             </div>
             <div className="absolute inset-x-1" style={{ top: y(10, 30), height: y(12, 0) - y(10, 30) }}>
-              <TimeBlockBlock title="Lab write-up" time="10:30 AM – 12 PM" color="dusty-blue" calendarName="School" done={tb} onToggle={() => setTb((x) => !x)} className="h-full" />
+              <TimeBlockBlock title="Lab write-up" time="10:30 AM–12:00 PM" color="dusty-blue" calendarName="School" done={tb} onToggle={() => setTb((x) => !x)} className="h-full" />
             </div>
             <div className="absolute inset-x-1" style={{ top: y(12, 30), height: 28 }}>
               <TodoBlock title="Email the recruiter" color="tomato" calendarName="Applications" done={false} onToggle={() => {}} className="h-full" />
@@ -93,7 +93,7 @@ function WeekSample() {
           </DayColumn>
           <DayColumn date={5} weekday="Thu">
             <div className="absolute inset-x-1" style={{ top: y(11, 0), height: y(12, 0) - y(11, 0) }}>
-              <EventBlock title="ACM meeting" time="11:00 AM – 12 PM" color="sage" calendarName="ACM" className="h-full" />
+              <EventBlock title="ACM meeting" time="11:00 AM–12:00 PM" color="sage" calendarName="ACM" className="h-full" />
             </div>
             <div className="absolute inset-x-1" style={{ top: y(13, 0) - 6, height: 30 }}>
               <EventBlock title="Office hours" color="crimson" calendarName="Kappa Alpha Psi" className="h-full" />

@@ -150,7 +150,18 @@ export function useRoutine() {
       changeDay({ date: slot.start.slice(0, 10), routineBlockId: bump.blockId, action: 'makeup', start: slot.start, end: slot.end, title: bump.title, calendarId: bump.calendarId, sourceDate: bump.date }, `Making up “${bump.title}”`),
     [changeDay],
   );
-  const letGo = useCallback((bump: Bump) => changeDay({ date: bump.date, routineBlockId: bump.blockId, action: 'letgo', sourceDate: bump.date }, `Let “${bump.title}” go`), [changeDay]);
+  const letGo = useCallback((bump: Bump) => changeDay({ date: bump.date, routineBlockId: bump.blockId, action: 'letgo', sourceDate: bump.date }, `Skipped “${bump.title}” this week`), [changeDay]);
+
+  /** New times for several template blocks at once (fitting them around a class); Undo puts them back. */
+  const retimeBlocks = useCallback(
+    async (changes: { block: RoutineBlock; start: string; end: string }[], message: string) => {
+      const now = new Date().toISOString();
+      const done = await attempt('change the template', () => routineBlocksApi.batch({ put: changes.map((c) => ({ ...c.block, start: c.start, end: c.end, updatedAt: now })), remove: [] }));
+      await refresh();
+      if (done) showToast(message, undoWith(() => routineBlocksApi.batch({ put: changes.map((c) => c.block), remove: [] })));
+    },
+    [attempt, refresh, showToast, undoWith],
+  );
 
   /** A to-do takes a routine block's slot for one day: time set aside for it there, and the block goes to Bumped. One Undo reverses both. */
   const replaceWithTask = useCallback(
@@ -173,6 +184,7 @@ export function useRoutine() {
     blocks,
     overrides,
     replaceWithTask,
+    retimeBlocks,
     changeDay,
     makeUp,
     letGo,

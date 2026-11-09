@@ -4,26 +4,20 @@ import FullCalendar from '@fullcalendar/react';
 import interactionPlugin, { type EventResizeDoneArg } from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import type { DateSelectArg, EventClickArg, EventContentArg, EventDropArg, EventInput } from '@fullcalendar/core';
-import { addDays, combine, datePart, dayOfWeek, spanOn, timePart, type Calendar, type CalendarColor, type RoutineBlock } from '@todo/shared';
+import { combine, datePart, dayOfWeek, layoutTemplate, minutesBetween, refDate, spanOn, timePart, type Calendar, type CalendarColor, type ClassSlot as SharedClassSlot, type RoutineBlock } from '@todo/shared';
 import { shadeFor, shadeProps } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
 import { WEEKDAY_NAME } from '../../lib/dates';
+import { BlockText, blockPadding } from '../../ui/blocks';
 import { IconButton } from '../../ui/Button';
 import { localDateTime } from '../calendar/calendarModel';
 import { formatTimeRange } from '../calendar/format';
 import '../../styles/calendar.css';
 
-// The template is drawn on one fixed reference week (Monday 2001-01-01), so FullCalendar does the dragging and resizing.
-const REF_MONDAY = '2001-01-01';
-const refDate = (weekday: number) => addDays(REF_MONDAY, (weekday + 6) % 7);
+// The template is drawn on one fixed reference week, so FullCalendar does the dragging and resizing.
 
 /** A class from Courses, shown on the grid for reference (edited in Courses). */
-export interface ClassSlot {
-  key: string;
-  title: string;
-  weekday: number;
-  start: string;
-  end: string;
+export interface ClassSlot extends SharedClassSlot {
   color: CalendarColor;
 }
 
@@ -32,8 +26,6 @@ export type Slot = Pick<RoutineBlock, 'weekday' | 'start' | 'end'>;
 interface Props {
   blocks: readonly RoutineBlock[];
   classes: readonly ClassSlot[];
-  /** Block id -> the stronger block that keeps the overlapping time. */
-  covered: ReadonlyMap<string, RoutineBlock>;
   calendarsById: ReadonlyMap<string, Calendar>;
   /** Phones show one day at a time. */
   day: number | null;
@@ -49,38 +41,57 @@ const slotOf = (start: Date, end: Date | null): Slot => {
   return { weekday: dayOfWeek(datePart(s)), start: timePart(s), end: timePart(e) };
 };
 
-export function WeekGrid({ blocks, classes, covered, calendarsById, day, onOpen, onCreate, onMove, onCopyDay }: Props) {
+export function WeekGrid({ blocks, classes, calendarsById, day, onOpen, onCreate, onMove, onCopyDay }: Props) {
   const ref = useRef<FullCalendar>(null);
   const view = day === null ? 'timeGridWeek' : 'timeGridDay';
 
   useEffect(() => {
-    const api = ref.current?.getApi();
-    if (!api) return;
-    api.changeView(view, refDate(day ?? 1));
+    ref.current?.getApi().changeView(view, refDate(day ?? 1));
   }, [view, day]);
 
-  const events = useMemo<EventInput[]>(
-    () => [
-      ...blocks.map((b) => ({ id: b.id, ...spanOn(refDate(b.weekday), b.start, b.end), extendedProps: { block: b } })),
-      ...classes.map((c) => ({ id: c.key, start: combine(refDate(c.weekday), c.start), end: combine(refDate(c.weekday), c.end), editable: false, extendedProps: { cls: c } })),
-    ],
-    [blocks, classes],
-  );
+  // The stronger block takes the full width; a covered block shows only as "+1 hidden" on it, and a partly covered one as what's left (not draggable: click it to edit).
+  const { events, hides } = useMemo(() => {
+    const layout = layoutTemplate(blocks, classes);
+    const out: EventInput[] = [];
+    for (const b of blocks) {
+      const whole = spanOn(refDate(b.weekday), b.start, b.end);
+      const pieces = layout.pieces.get(b.id) ?? [];
+      const clipped = pieces.length !== 1 || pieces[0]!.start !== whole.start || pieces[0]!.end !== whole.end;
+      pieces.forEach((p, i) => out.push({ id: `${b.id}#${i}`, ...p, editable: !clipped, extendedProps: { block: b, clipped } }));
+    }
+    for (const c of classes) out.push({ id: c.key, start: combine(refDate(c.weekday), c.start), end: combine(refDate(c.weekday), c.end), editable: false, extendedProps: { cls: c } });
+    return { events: out, hides: layout.hides };
+  }, [blocks, classes]);
 
   function renderContent(arg: EventContentArg) {
-    const { block, cls } = arg.event.extendedProps as { block?: RoutineBlock; cls?: ClassSlot };
+    const { block, cls, clipped } = arg.event.extendedProps as { block?: RoutineBlock; cls?: ClassSlot; clipped?: boolean };
     if (!block && !cls) return <div className="h-full rounded-control border border-dashed border-accent bg-accent-soft" />;
+    const minutes = minutesBetween(localDateTime(arg.event.start!), localDateTime(arg.event.end!));
     const title = block?.title ?? cls!.title;
     const color = block ? (block.calendarId ? (calendarsById.get(block.calendarId)?.color ?? 'slate') : null) : cls!.color;
     const look = shadeProps(color, block ? shadeFor({ kind: 'routine', priority: block.priority }) : 'solid');
-    const winner = block && covered.get(block.id);
-    const category = block ? (block.calendarId ? calendarsById.get(block.calendarId)?.name : 'Free') : 'Class';
+    const category = block ? (block.priority === 'free' ? 'Free' : block.calendarId ? calendarsById.get(block.calendarId)?.name : undefined) : 'Class';
+    const time = formatTimeRange(block?.start ?? cls!.start, block?.end ?? cls!.end);
+    const hidden = (hides.get(block?.id ?? cls!.key) ?? []).map((id) => blocks.find((b) => b.id === id)!).filter(Boolean);
+    const marker =
+      hidden.length > 0 ? (
+        <span className="text-time italic">
+          +{hidden.length} hidden:{' '}
+          {hidden.map((h, i) => (
+            <span key={h.id} data-hidden-id={h.id} className="underline underline-offset-2">
+              {h.title}
+              {i < hidden.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </span>
+      ) : null;
     return (
-      <div style={look.style} title={winner ? `${title}: ${winner.title} keeps this time` : title} className={cx('h-full overflow-hidden rounded-control px-1.5 py-0.5 text-ink', look.className, winner && 'opacity-55')}>
-        <p className="truncate text-meta leading-tight font-semibold">{title}</p>
-        <p className="truncate text-time">
-          {winner ? `under ${winner.title}` : category} · <span className="font-mono">{formatTimeRange(block?.start ?? cls!.start, block?.end ?? cls!.end)}</span>
-        </p>
+      <div
+        style={look.style}
+        title={[title, category, time, clipped && 'partly covered', ...hidden.map((h) => `hides ${h.title}`)].filter(Boolean).join(' · ')}
+        className={cx('h-full overflow-hidden rounded-control text-ink', blockPadding(minutes), look.className)}
+      >
+        <BlockText title={title} detail={category} time={time} minutes={minutes} notes={marker && <p className="truncate">{marker}</p>} alert={minutes < 60 && hidden.length > 0 ? <span className="font-mono text-time">+{hidden.length}</span> : undefined} />
       </div>
     );
   }
@@ -108,7 +119,7 @@ export function WeekGrid({ blocks, classes, covered, calendarsById, day, onOpen,
         scrollTime="06:00:00"
         slotDuration="00:30:00"
         snapDuration="00:05:00"
-        eventMinHeight={20}
+        eventMinHeight={0}
         slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: true, meridiem: 'short', hour12: true }}
         selectable
         selectMirror
@@ -121,7 +132,9 @@ export function WeekGrid({ blocks, classes, covered, calendarsById, day, onOpen,
           onCreate(slotOf(info.start, info.end));
         }}
         eventClick={(info: EventClickArg) => {
-          const block = blockOf(info);
+          // Tapping a name in "+1 hidden" opens that block; anywhere else opens the block itself.
+          const hiddenId = (info.jsEvent.target as HTMLElement).closest<HTMLElement>('[data-hidden-id]')?.dataset.hiddenId;
+          const block = hiddenId ? blocks.find((b) => b.id === hiddenId) : blockOf(info);
           if (block) onOpen(block);
         }}
         eventDrop={(info) => void handleChange(info)}

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { CopyPlus, Plus, Settings2 } from 'lucide-react';
-import { activeTemplate, addDays, classTitle, openBumps, strongerOverlaps, type RoutineBlock } from '@todo/shared';
+import { activeTemplate, classTitle, fitAround, openBumps, weeklyClashes, type RoutineBlock } from '@todo/shared';
 import type { BlockFields } from '../actions/useRoutineActions';
-import { BumpedList } from '../features/today/BumpedList';
+import { MissedList, weekOf } from '../features/today/MissedList';
+import { formatTimeRange } from '../features/calendar/format';
 import { useNowText, usePlanSources } from '../features/today/useTodayPlan';
 import { useApp } from '../app/AppContext';
 import { BlockDialog, type BlockDialogState } from '../features/week/BlockDialog';
@@ -26,7 +27,7 @@ export default function WeekPage() {
   const { src, routine } = usePlanSources();
   const { templates, blocks } = routine;
   const now = useNowText();
-  const bumps = useMemo(() => openBumps(src, addDays(today, -7), addDays(today, 7)), [src, today]);
+  const bumps = useMemo(() => openBumps(src, ...weekOf(now.slice(0, 10))), [src, now]);
   const [params, setParams] = useSearchParams();
   const [day, setDay] = useState<number | null>(() => (isPhone() ? new Date().getDay() : null));
   const [blockDialog, setBlockDialog] = useState<BlockDialogState | null>(null);
@@ -35,7 +36,6 @@ export default function WeekPage() {
 
   const template = templates.find((t) => t.id === params.get('template')) ?? activeTemplate(templates, today) ?? templates[0];
   const templateBlocks = useMemo(() => blocks.filter((b) => b.templateId === template?.id), [blocks, template]);
-  const covered = useMemo(() => strongerOverlaps(templateBlocks), [templateBlocks]);
 
   // Classes from Courses whose semester overlaps the template's dates, for reference.
   const classes = useMemo<ClassSlot[]>(() => {
@@ -43,6 +43,18 @@ export default function WeekPage() {
     const inRange = new Set(semesters.filter((s) => !s.archived && s.endDate >= template.effectiveFrom && (template.effectiveTo === null || s.startDate <= template.effectiveTo)).map((s) => s.id));
     return courses.filter((c) => inRange.has(c.semesterId)).flatMap((c) => c.meetingDays.map((weekday) => ({ key: `class:${c.id}:${weekday}`, title: classTitle(c), weekday, start: c.startTime, end: c.endTime, color: c.color })));
   }, [template, semesters, courses]);
+
+  // A class that overlaps a block every week means the template doesn't match the class time.
+  const clashes = useMemo(() => weeklyClashes(templateBlocks, classes), [templateBlocks, classes]);
+  function fitClash(c: (typeof clashes)[number]) {
+    const changes = c.blockIds.flatMap((id) => {
+      const block = templateBlocks.find((b) => b.id === id)!;
+      const others = classes.filter((x) => x.weekday === block.weekday && !(x.title === c.classTitle && x.start === c.classStart));
+      const fit = fitAround(block, { start: c.classStart, end: c.classEnd }, others);
+      return fit ? [{ block, ...fit }] : [];
+    });
+    if (changes.length > 0) void routine.retimeBlocks(changes, `${c.blockTitle} now fits around ${c.classTitle}`);
+  }
 
   // Today's agenda links here with ?block= to edit that block.
   const linked = params.get('block');
@@ -80,7 +92,7 @@ export default function WeekPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <div className="flex h-full min-h-0 flex-col [&>*]:shrink-0">
       <header className="mb-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h1 className="font-display text-page leading-none">Week</h1>
@@ -112,13 +124,26 @@ export default function WeekPage() {
         </div>
       </header>
 
+      {clashes.map((c) => (
+        <div key={`${c.classTitle}|${c.blockTitle}|${c.classStart}`} role="status" className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-panel border border-rule bg-surface px-4 py-2.5">
+          <p className="text-body">
+            {c.classTitle.split(' ').slice(0, 2).join(' ')} overlaps {c.blockTitle} every {c.weekdays.map((w) => WEEKDAY_NAME[w]).join(' and ')}. Adjust the template?
+            <span className="block text-meta text-ink-muted">
+              From Courses: {c.classTitle} meets {c.weekdays.map((w) => WEEKDAY_NAME[w]!.slice(0, 3)).join(', ')} {formatTimeRange(c.classStart, c.classEnd)}.
+            </span>
+          </p>
+          <Button variant="secondary" onClick={() => fitClash(c)}>
+            Fit {c.blockTitle} around the class
+          </Button>
+        </div>
+      ))}
+
       {day !== null && <Segmented label="Day" value={String(day)} onChange={(v) => setDay(Number(v))} options={DAY_OPTIONS} className="mb-3 self-start" />}
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-[30rem] flex-1 shrink!">
         <WeekGrid
           blocks={templateBlocks}
           classes={classes}
-          covered={covered}
           calendarsById={calendarsById}
           day={day}
           onOpen={(block) => setBlockDialog({ mode: 'edit', block })}
@@ -127,10 +152,10 @@ export default function WeekPage() {
           onCopyDay={setCopyDay}
         />
       </div>
-      <p className="mt-2 text-meta text-ink-muted">Classes come from Courses. A faded block is covered by a stronger one (commitment, then high) and shows only when that one doesn’t happen.</p>
+      <p className="mt-2 text-meta text-ink-muted">Classes come from Courses. Where two blocks overlap, the stronger one (commitment, then high) takes the time and shows “+1 hidden”; the hidden block comes back on a day the stronger one is skipped.</p>
       {bumps.length > 0 && (
         <div className="mt-4 max-h-56 overflow-y-auto">
-          <BumpedList bumps={bumps} src={src} now={now} today={today} />
+          <MissedList bumps={bumps} src={src} now={now} />
         </div>
       )}
 

@@ -382,6 +382,11 @@ const migrations: Migration[] = [
       CREATE INDEX idx_routine_overrides_date ON routine_overrides(date);
     `);
   },
+
+  // v8: a routine block says whether time taken from it can be made up on another day (off unless set).
+  (db) => {
+    db.exec(`ALTER TABLE routine_blocks ADD COLUMN reschedulable INTEGER NOT NULL DEFAULT 0;`);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

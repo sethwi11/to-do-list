@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { blockMinutesFor, describeLoad, selfIds, timePart, type DayLoad, type EventOccurrence, type PlanItem } from '@todo/shared';
+import { blockMinutesFor, describeLoad, minutesBetween, selfIds, timePart, type DayLoad, type EventOccurrence, type PlanItem } from '@todo/shared';
+import { BlockText, blockPadding } from '../../ui/blocks';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -151,10 +152,11 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
     const r = arg.event.extendedProps.routine as PlanItem | undefined;
     if (r) {
       const look = shadeProps(r.color, shadeFor(r));
+      const time = formatTimeRange(timePart(r.start), timePart(r.end));
+      const minutes = minutesBetween(r.start, r.end);
       return (
-        <div style={look.style} title={`${r.title} (routine)`} className={cx('h-full overflow-hidden rounded-control px-1.5 py-0.5 text-ink opacity-80', look.className)}>
-          <p className="truncate text-meta leading-tight font-medium">{r.title}</p>
-          <p className="truncate font-mono text-time">{formatTimeRange(timePart(r.start), timePart(r.end))}</p>
+        <div style={look.style} title={[r.title, 'routine', time, ...r.hidden.map((h) => `hides ${h}`)].join(' · ')} className={cx('h-full overflow-hidden rounded-control text-ink opacity-80', blockPadding(minutes), look.className)}>
+          <BlockText title={r.title} time={time} minutes={minutes} notes={r.hidden.length > 0 && <p className="truncate text-time italic">+{r.hidden.length} hidden: {r.hidden.join(', ')}</p>} />
         </div>
       );
     }
@@ -203,7 +205,7 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
         scrollTime="07:00:00"
         slotDuration="00:30:00"
         snapDuration="00:15:00"
-        eventMinHeight={24}
+        eventMinHeight={0}
         allDayText="All day"
         slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: true, meridiem: 'short', hour12: true }}
         selectable

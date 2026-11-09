@@ -138,6 +138,11 @@
 }
 .planner-cal .fc-timegrid-event .fc-event-main {
   padding: 0;
+  overflow: hidden;
+}
+/* Blocks sit exactly at their times; back-to-back ones get a clean 2px gap, taken from the top block rather than added on. */
+.planner-cal .fc-timegrid-event-harness > .fc-timegrid-event {
+  bottom: 2px;
 }
 .planner-cal .fc-timegrid-now-indicator-line {
   border-width: 1px 0 0;

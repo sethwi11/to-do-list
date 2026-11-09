@@ -56,7 +56,7 @@ export function formatDueDate(dueDate: string, today: string = todayLocalISO()):
 /** "14:30" -> "2:30 PM": always 12-hour, whatever the device's region uses. */
 export function formatTime(hhmm: string): string {
   const [h, m] = hhmm.split(':').map(Number);
-  return new Date(2000, 0, 1, h, m).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${h! % 12 || 12}:${pad(m!)} ${h! < 12 ? 'AM' : 'PM'}`;
 }
 
 /** "2h 15m", "45m", "1d 3h": a live countdown label. Returns "now" once the time has arrived. */

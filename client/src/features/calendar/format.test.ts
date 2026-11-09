@@ -4,14 +4,15 @@ import { describeConflicts, describeRepeat, formatClockShort, formatEventTimeOnD
 
 describe('formatTimeRange', () => {
   it('shares the AM/PM when both ends have it', () => {
-    expect(formatTimeRange('10:00', '11:15')).toMatch(/^10:00 – 11:15 AM$/);
-    expect(formatTimeRange('11:00', '13:00')).toMatch(/^11:00 AM – 1:00 PM$/);
+    expect(formatTimeRange('10:00', '11:15')).toBe('10:00–11:15 AM');
+    expect(formatTimeRange('16:00', '16:30')).toBe('4:00–4:30 PM');
+    expect(formatTimeRange('11:40', '12:00')).toBe('11:40 AM–12:00 PM');
   });
 });
 
 describe('formatWhen', () => {
   it('describes timed, all-day, multi-day and overnight events', () => {
-    expect(formatWhen('2026-11-04T10:00', '2026-11-04T11:15', false)).toBe('Wed, Nov 4 · 10:00 – 11:15 AM');
+    expect(formatWhen('2026-11-04T10:00', '2026-11-04T11:15', false)).toBe('Wed, Nov 4 · 10:00–11:15 AM');
     expect(formatWhen('2026-11-04T00:00', '2026-11-05T00:00', true)).toBe('Wed, Nov 4 · All day');
     expect(formatWhen('2026-11-04T00:00', '2026-11-07T00:00', true)).toBe('Wed, Nov 4 – Fri, Nov 6 · All day');
     expect(formatWhen('2026-11-04T22:00', '2026-11-05T01:00', false)).toBe('Wed, Nov 4, 10:00 PM – Thu, Nov 5, 1:00 AM');
@@ -55,7 +56,7 @@ describe('describeConflicts', () => {
 
 describe('formatEventTimeOnDay', () => {
   it('shows hours, all day, and how an overnight event continues', () => {
-    expect(formatEventTimeOnDay('2026-11-04T10:00', '2026-11-04T11:15', false, '2026-11-04')).toBe('10:00 – 11:15 AM');
+    expect(formatEventTimeOnDay('2026-11-04T10:00', '2026-11-04T11:15', false, '2026-11-04')).toBe('10:00–11:15 AM');
     expect(formatEventTimeOnDay('2026-11-04T00:00', '2026-11-05T00:00', true, '2026-11-04')).toBe('All day');
     expect(formatEventTimeOnDay('2026-11-04T22:00', '2026-11-05T01:00', false, '2026-11-04')).toBe('10:00 PM →');
     expect(formatEventTimeOnDay('2026-11-04T22:00', '2026-11-05T01:00', false, '2026-11-05')).toBe('until 1:00 AM');

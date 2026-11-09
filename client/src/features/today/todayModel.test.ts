@@ -10,7 +10,7 @@ const ev = (title: string, start: string, end: string, extra: Partial<Event> = {
 
 const day = (events: Event[]) => expandOccurrences(events, '2026-11-04', '2026-11-05');
 const item = (title: string, start: string, end: string, extra: Partial<PlanItem> = {}): PlanItem => ({
-  key: title, kind: 'routine', start: `2026-11-04T${start}`, end: `2026-11-04T${end}`, title, calendarId: null, color: null, priority: 'normal', focus: false, soundtrack: null, altTitle: null, altCalendarId: null, sourceId: null, status: 'planned', replaces: [], clashes: [], makeup: false, ...extra,
+  key: title, kind: 'routine', start: `2026-11-04T${start}`, end: `2026-11-04T${end}`, title, calendarId: null, color: null, priority: 'normal', focus: false, soundtrack: null, altTitle: null, altCalendarId: null, sourceId: null, status: 'planned', replaces: [], clashes: [], makeup: false, hidden: [], ...extra,
 });
 
 describe('nextUpcoming', () => {

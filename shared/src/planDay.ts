@@ -45,6 +45,8 @@ export interface PlanItem {
   clashes: string[];
   /** A make-up for time bumped on another day. */
   makeup: boolean;
+  /** Routine blocks this one covers completely today (shown as "+1 hidden"; they come back if this one is skipped). */
+  hidden: string[];
 }
 
 export interface DayPlan {
@@ -104,7 +106,7 @@ function openGaps(sorted: readonly PlanItem[], wake: string, bed: string): PlanI
   const out: PlanItem[] = [];
   const gap = (start: string, end: string) => {
     if (minutesBetween(start, end) >= MIN_OPEN_MINUTES) {
-      out.push({ key: `open:${start}`, kind: 'open', start, end, title: 'Open', calendarId: null, color: null, priority: null, focus: false, soundtrack: null, altTitle: null, altCalendarId: null, sourceId: null, status: 'planned', replaces: [], clashes: [], makeup: false });
+      out.push({ key: `open:${start}`, kind: 'open', start, end, title: 'Open', calendarId: null, color: null, priority: null, focus: false, soundtrack: null, altTitle: null, altCalendarId: null, sourceId: null, status: 'planned', replaces: [], clashes: [], makeup: false, hidden: [] });
     }
   };
   let cursor = wake;
@@ -118,6 +120,88 @@ function openGaps(sorted: readonly PlanItem[], wake: string, bed: string): PlanI
 }
 
 const RANK: Record<RoutinePriority, number> = { commitment: 0, high: 1, normal: 2, free: 3 };
+
+/** The template is drawn on one fixed week (Monday 2001-01-01): the date standing for a weekday. */
+export const refDate = (weekday: number) => addDays('2001-01-01', (weekday + 6) % 7);
+
+/** A class from Courses on the template's week. */
+export interface ClassSlot {
+  key: string;
+  title: string;
+  weekday: number;
+  start: string;
+  end: string;
+}
+
+/** The template as drawn on the Week page: classes keep their time over everything but a commitment, the stronger block keeps an overlap, and covered parts disappear (pieces under 15 minutes dropped). Returns each block's visible pieces, and the ids of the blocks each block or class hides completely. */
+export function layoutTemplate(blocks: readonly RoutineBlock[], classes: readonly ClassSlot[]): { pieces: Map<string, { start: string; end: string }[]>; hides: Map<string, string[]> } {
+  const pieces = new Map<string, { start: string; end: string }[]>();
+  const hides = new Map<string, string[]>();
+  for (let w = 0; w < 7; w++) {
+    const date = refDate(w);
+    const kept: { key: string; start: string; end: string; rank: number }[] = classes.filter((c) => c.weekday === w).map((c) => ({ key: c.key, ...spanOn(date, c.start, c.end), rank: -1 }));
+    for (const b of blocks.filter((x) => x.weekday === w).sort((a, z) => RANK[a.priority] - RANK[z.priority])) {
+      const rank = RANK[b.priority];
+      const span = spanOn(date, b.start, b.end);
+      const stronger = kept.filter((k) => k.rank < rank && !(k.rank === -1 && b.priority === 'commitment'));
+      const visible = subtract(span, stronger).pieces;
+      pieces.set(b.id, visible);
+      if (visible.length === 0) {
+        const winner = mostOverlap(span, stronger);
+        if (winner) hides.set(winner.key, [...(hides.get(winner.key) ?? []), b.id]);
+      }
+      kept.push(...visible.map((p) => ({ key: b.id, ...p, rank })));
+    }
+  }
+  return { pieces, hides };
+}
+
+/** Classes that overlap a template block every week: one notice per class and block title, with the weekdays and both times. */
+export interface WeeklyClash {
+  classTitle: string;
+  blockTitle: string;
+  blockIds: string[];
+  weekdays: number[];
+  classStart: string;
+  classEnd: string;
+}
+
+export function weeklyClashes(blocks: readonly RoutineBlock[], classes: readonly ClassSlot[]): WeeklyClash[] {
+  const out: WeeklyClash[] = [];
+  for (const c of classes) {
+    for (const b of blocks) {
+      if (b.weekday !== c.weekday || b.priority === 'free') continue;
+      const date = refDate(b.weekday);
+      if (overlapMinutes(spanOn(date, b.start, b.end), spanOn(date, c.start, c.end)) === 0) continue;
+      const same = out.find((x) => x.classTitle === c.title && x.blockTitle === b.title && x.classStart === c.start);
+      if (same) {
+        same.blockIds.push(b.id);
+        same.weekdays.push(b.weekday);
+      } else out.push({ classTitle: c.title, blockTitle: b.title, blockIds: [b.id], weekdays: [b.weekday], classStart: c.start, classEnd: c.end });
+    }
+  }
+  return out;
+}
+
+/** New times for a block so it clears a class: the longest piece left (if 30 minutes or more), else the same length right after the class, else right before it, whichever doesn't hit another class that day. null when nothing fits. */
+export function fitAround(block: Pick<RoutineBlock, 'start' | 'end'>, cls: { start: string; end: string }, otherClasses: readonly { start: string; end: string }[] = []): { start: string; end: string } | null {
+  const date = '2001-01-01';
+  const span = spanOn(date, block.start, block.end);
+  const c = spanOn(date, cls.start, cls.end);
+  const length = minutesBetween(span.start, span.end);
+  const longest = subtract(span, [c]).pieces.sort((a, b) => minutesBetween(b.start, b.end) - minutesBetween(a.start, a.end))[0];
+  const candidates = [
+    ...(longest && minutesBetween(longest.start, longest.end) >= 30 ? [longest] : []),
+    { start: c.end, end: addMinutes(c.end, length) },
+    { start: addMinutes(c.start, -length), end: c.start },
+  ];
+  const others = otherClasses.map((o) => spanOn(date, o.start, o.end));
+  const fit = candidates.find((s) => datePart(s.start) === date && others.every((o) => overlapMinutes(s, o) === 0));
+  return fit ? { start: fit.start.slice(11), end: fit.end.slice(11) } : null;
+}
+/** Whether time taken from a block can be made up elsewhere: its setting, and never free time. */
+const canReschedule = (b: RoutineBlock | undefined) => !!b && b.reschedulable && b.priority !== 'free';
+
 /** A leftover piece of a cut block shorter than this is dropped. */
 export const MIN_PIECE_MINUTES = 15;
 
@@ -128,7 +212,8 @@ export interface Bump {
   title: string;
   calendarId: string | null;
   minutes: number;
-  /** What took it: the events' names, "Skipped", or what replaced it. */
+  how: 'skipped' | 'replaced';
+  /** What replaced it (event names, or the to-do), for "replaced by ...". */
   by: string;
 }
 
@@ -149,8 +234,13 @@ function subtract(span: { start: string; end: string }, cuts: readonly { start: 
 /** Pieces of an item keep its details, with their own key and a "trimmed" status if anything was cut. */
 const piecesOf = (item: PlanItem, pieces: { start: string; end: string }[]): PlanItem[] => {
   const whole = pieces.length === 1 && pieces[0]!.start === item.start && pieces[0]!.end === item.end;
-  return whole ? [item] : pieces.map((p, i) => ({ ...item, ...p, key: `${item.key}#${i}`, status: 'trimmed' }));
+  return whole ? [item] : pieces.map((p, i) => ({ ...item, ...p, key: `${item.key}#${i}`, status: 'trimmed', hidden: [...item.hidden] }));
 };
+
+/** Of the items overlapping a span, the one covering most of it (it gets the "+1 hidden" marker). */
+const mostOverlap = <T extends { start: string; end: string }>(span: { start: string; end: string }, over: readonly T[]): T | undefined =>
+  [...over].sort((a, b) => overlapMinutes(span, b) - overlapMinutes(span, a))[0];
+const overlapMinutes = (a: { start: string; end: string }, b: { start: string; end: string }) => Math.max(0, minutesBetween(a.start > b.start ? a.start : b.start, a.end < b.end ? a.end : b.end));
 
 type RoutineSources = Pick<PlanSources, 'templates' | 'blocks' | 'semesters' | 'calendars' | 'overrides'>;
 
@@ -163,15 +253,16 @@ function routineOn(src: RoutineSources, date: string, bumped: Bump[]): PlanItem[
   const colorOf = (id: string | null) => (id ? (src.calendars.find((c) => c.id === id)?.color ?? NEUTRAL) : NEUTRAL);
   const item = (b: RoutineBlock, span: { start: string; end: string }, key: string, makeup = false): PlanItem => ({
     key, kind: 'routine', ...span, title: b.title, calendarId: b.calendarId, color: b.priority === 'free' ? null : colorOf(b.calendarId), priority: makeup ? 'normal' : b.priority,
-    focus: b.focus, soundtrack: b.soundtrack, altTitle: b.altTitle, altCalendarId: b.altCalendarId, sourceId: b.id, status: 'planned', replaces: [], clashes: [], makeup,
+    focus: b.focus, soundtrack: b.soundtrack, altTitle: b.altTitle, altCalendarId: b.altCalendarId, sourceId: b.id, status: 'planned', replaces: [], clashes: [], makeup, hidden: [],
   });
+  const reschedulable = (id: string | null) => canReschedule(src.blocks.find((b) => b.id === id));
   let items = src.blocks.filter((b) => b.templateId === template.id && b.weekday === weekday && (!b.schoolDaysOnly || schoolDay)).map((b) => item(b, spanOn(date, b.start, b.end), `routine:${b.id}@${date}`));
 
   for (const o of src.overrides.filter((x) => x.date === date)) {
     const target = items.find((i) => i.sourceId === o.routineBlockId);
     if ((o.action === 'skip' || o.action === 'replace') && target) {
       items = items.filter((i) => i !== target);
-      if (target.priority !== 'free') bumped.push({ blockId: target.sourceId!, date, title: target.title, calendarId: target.calendarId, minutes: minutesBetween(target.start, target.end), by: o.action === 'skip' ? 'Skipped' : (o.title ?? 'Replaced') });
+      if (reschedulable(target.sourceId)) bumped.push({ blockId: target.sourceId!, date, title: target.title, calendarId: target.calendarId, minutes: minutesBetween(target.start, target.end), how: o.action === 'skip' ? 'skipped' : 'replaced', by: o.title ?? '' });
     }
     if (o.action === 'move' && target && o.start && o.end) items = items.map((i) => (i === target ? { ...i, start: o.start!, end: o.end! } : i));
     const original = src.blocks.find((b) => b.id === o.routineBlockId);
@@ -181,7 +272,9 @@ function routineOn(src: RoutineSources, date: string, bumped: Bump[]): PlanItem[
   const kept: PlanItem[] = [];
   for (const i of [...items].sort((a, b) => RANK[a.priority!] - RANK[b.priority!])) {
     const stronger = kept.filter((k) => RANK[k.priority!] < RANK[i.priority!]);
-    kept.push(...piecesOf(i, subtract(i, stronger).pieces));
+    const { pieces } = subtract(i, stronger);
+    if (pieces.length === 0) mostOverlap(i, stronger)?.hidden.push(i.title);
+    kept.push(...piecesOf(i, pieces));
   }
   return kept;
 }
@@ -192,6 +285,7 @@ export function planDay(src: PlanSources, date: string): DayPlan {
   const { wake, bed } = dayBounds(template, date);
   const colorOf = (id: string | null) => (id ? (src.calendars.find((c) => c.id === id)?.color ?? null) : null);
   const plain = { priority: null, focus: false, soundtrack: null, altTitle: null, altCalendarId: null, status: 'planned' as const, makeup: false };
+  const reschedulable = (id: string | null) => canReschedule(src.blocks.find((b) => b.id === id));
   const bumped: Bump[] = [];
   const routine = routineOn(src, date, bumped);
 
@@ -202,33 +296,39 @@ export function planDay(src: PlanSources, date: string): DayPlan {
   const occurrences = expandOccurrences(src.events, dayStart, dayEnd);
   const events: PlanItem[] = occurrences
     .filter((o) => !o.allDay)
-    .map((o) => ({ ...plain, key: `event:${o.key}`, kind: o.event.courseId ? 'class' : 'event', start: o.start, end: o.end, title: o.event.title, calendarId: o.event.calendarId, color: o.event.color ?? colorOf(o.event.calendarId) ?? NEUTRAL, sourceId: o.key, replaces: [], clashes: [] }));
+    .map((o) => ({ ...plain, key: `event:${o.key}`, kind: o.event.courseId ? 'class' : 'event', start: o.start, end: o.end, title: o.event.title, calendarId: o.event.calendarId, color: o.event.color ?? colorOf(o.event.calendarId) ?? NEUTRAL, sourceId: o.key, replaces: [], clashes: [], hidden: [] }));
 
-  const items: PlanItem[] = [...events];
+  // Time set aside for a to-do takes its slot from the routine too, but never counts as missed: doing homework in the Homework block is the point.
+  const tasks = new Map(src.tasks.map((t) => [t.id, t]));
+  const todo: PlanItem[] = src.timeBlocks.flatMap((b) => {
+    const task = tasks.get(b.taskId);
+    if (!task || b.start >= dayEnd || b.end <= dayStart) return [];
+    return [{ ...plain, key: `task:${b.id}`, kind: 'task', start: b.start, end: b.end, title: task.title, calendarId: task.calendarId, color: colorOf(task.calendarId) ?? NEUTRAL, sourceId: b.id, replaces: [], clashes: [], hidden: [] }];
+  });
+
+  const items: PlanItem[] = [...events, ...todo];
   for (const r of routine) {
-    const over = events.filter((e) => e.start < r.end && e.end > r.start);
-    // A commitment is never replaced automatically: both stay, with the conflict shown.
+    const over = [...events, ...todo].filter((e) => e.start < r.end && e.end > r.start);
+    // A commitment is never replaced automatically: both stay, side by side, with the conflict shown.
     if (r.priority === 'commitment') {
-      for (const e of over) e.clashes.push(r.title);
+      for (const e of over) if (e.kind !== 'task') e.clashes.push(r.title);
       items.push(r);
       continue;
     }
-    const { pieces, cut } = subtract(r, over);
-    if (cut > 0 && r.priority !== 'free') {
-      const same = bumped.find((b) => b.blockId === r.sourceId && b.date === date && b.by !== 'Skipped');
+    const { pieces } = subtract(r, over);
+    // Only one-off events make a block "missed": a class that overlaps it every week means the template needs adjusting (the Week page says so).
+    const takers = over.filter((e) => e.kind === 'event');
+    const cut = subtract(r, takers).cut;
+    if (cut > 0 && reschedulable(r.sourceId)) {
+      const same = bumped.find((b) => b.blockId === r.sourceId && b.date === date && b.how === 'replaced');
       if (same) same.minutes += cut;
-      else bumped.push({ blockId: r.sourceId!, date, title: r.title, calendarId: r.calendarId, minutes: cut, by: over.map((e) => e.title).join(', ') });
+      else bumped.push({ blockId: r.sourceId!, date, title: r.title, calendarId: r.calendarId, minutes: cut, how: 'replaced', by: takers.map((e) => e.title).join(', ') });
     }
-    if (pieces.length === 0) for (const e of over) e.replaces.push(r.title);
+    if (pieces.length === 0) {
+      for (const e of over.filter((x) => x.kind !== 'task')) e.replaces.push(r.title);
+      if (over.every((x) => x.kind === 'task')) mostOverlap(r, over)?.hidden.push(r.title);
+    }
     items.push(...piecesOf(r, pieces));
-  }
-
-  // Time set aside for a to-do sits beside the routine (doing homework in the Homework block is the point).
-  const tasks = new Map(src.tasks.map((t) => [t.id, t]));
-  for (const b of src.timeBlocks) {
-    const task = tasks.get(b.taskId);
-    if (!task || b.start >= dayEnd || b.end <= dayStart) continue;
-    items.push({ ...plain, key: `task:${b.id}`, kind: 'task', start: b.start, end: b.end, title: task.title, calendarId: task.calendarId, color: colorOf(task.calendarId) ?? NEUTRAL, sourceId: b.id, replaces: [], clashes: [] });
   }
 
   items.sort(byStart);
@@ -262,18 +362,3 @@ export function openSlots(src: PlanSources, minutes: number, after: string, opti
 }
 
 
-/** For each block that a stronger block overlaps on the same day of the same template: the strongest one (it keeps the slot). */
-export function strongerOverlaps(blocks: readonly RoutineBlock[]): Map<string, RoutineBlock> {
-  const out = new Map<string, RoutineBlock>();
-  const span = (b: RoutineBlock) => spanOn('2001-01-01', b.start, b.end);
-  for (const a of blocks) {
-    const sa = span(a);
-    for (const b of blocks) {
-      if (b.templateId !== a.templateId || b.weekday !== a.weekday || RANK[b.priority] >= RANK[a.priority]) continue;
-      const sb = span(b);
-      const best = out.get(a.id);
-      if (sa.start < sb.end && sb.start < sa.end && (!best || RANK[b.priority] < RANK[best.priority])) out.set(a.id, b);
-    }
-  }
-  return out;
-}

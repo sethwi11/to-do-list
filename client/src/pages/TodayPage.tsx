@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { addDays, addMinutes, combine, isOverdue, isRolling, isoWeekNumber, openBumps, quoteFor, type PlanItem } from '@todo/shared';
+import { addMinutes, combine, isOverdue, isRolling, isoWeekNumber, openBumps, quoteFor, type PlanItem } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
 import { useAppSettings } from '../data/useApplications';
@@ -9,7 +9,7 @@ import { ItemDetail } from '../features/calendar/ItemDetail';
 import { Agenda, Legend } from '../features/today/Agenda';
 import { DayBar, MorningHeader } from '../features/today/MorningHeader';
 import { NowCard } from '../features/today/NowCard';
-import { BumpedList } from '../features/today/BumpedList';
+import { MissedList, weekOf } from '../features/today/MissedList';
 import { DayChangeDialog } from '../features/today/DayChangeDialog';
 import { greeting, summarize } from '../features/today/todayModel';
 import { useNowText, useTodayPlan } from '../features/today/useTodayPlan';
@@ -45,7 +45,7 @@ export default function TodayPage() {
   const [detail, setDetail] = useState<{ item: CalendarItem; anchor: PopoverAnchor } | null>(null);
   const { routine, src, date, plan, occurrences, current, next, during, supposed } = useTodayPlan(now);
   const [dayChange, setDayChange] = useState<PlanItem | null>(null);
-  const bumps = useMemo(() => openBumps(src, addDays(date, -7), addDays(date, 7)), [src, date]);
+  const bumps = useMemo(() => openBumps(src, ...weekOf(date)), [src, date]);
   const summary = useMemo(() => summarize(occurrences, tasks, today, plan.items.filter((i) => i.kind === 'task').length), [occurrences, tasks, today, plan.items]);
 
   // Before noon, and the first time the app opens each day, Today greets you (not during last night's late hours).
@@ -165,7 +165,7 @@ export default function TodayPage() {
 
             <div className="order-1 space-y-8 @3xl:order-2">
               <NowCard current={current} next={next} now={now} today={today} onOpen={open} during={during} supposed={supposed} />
-              <BumpedList bumps={bumps} src={src} now={now} today={now.slice(0, 10)} />
+              <MissedList bumps={bumps} src={src} now={now} />
 
               {overdue.length > 0 && (
                 <section>

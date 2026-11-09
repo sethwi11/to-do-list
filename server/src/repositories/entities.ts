@@ -197,7 +197,7 @@ export const createRoutineBlockRepository = (db: Db) =>
   new SqliteEntityRepository<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput>(db, {
     table: 'routine_blocks',
     orderBy: 'weekday, start_time',
-    bool: ['focus', 'notify', 'schoolDaysOnly'],
+    bool: ['focus', 'notify', 'schoolDaysOnly', 'reschedulable'],
     columns: { start: 'start_time', end: 'end_time' },
     softDelete: true,
     check: (v) => (v.start !== v.end ? null : 'The block must end at a different time than it starts'),
@@ -216,6 +216,7 @@ export const createRoutineBlockRepository = (db: Db) =>
       soundtrack: i.soundtrack ?? null,
       notify: i.notify ?? true,
       schoolDaysOnly: i.schoolDaysOnly ?? false,
+      reschedulable: i.reschedulable ?? false,
       notes: i.notes ?? null,
       createdAt: now,
       updatedAt: now,

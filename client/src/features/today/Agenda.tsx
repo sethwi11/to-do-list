@@ -6,6 +6,7 @@ import { calendarVars, shadeFor, shadeProps } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
 import { formatTime } from '../../lib/dates';
 import { formatTimeRange } from '../calendar/format';
+import { BlockText, blockPadding } from '../../ui/blocks';
 import { agendaRange, layoutLanes, minutesInto } from './todayModel';
 
 const PX_PER_MINUTE = 1;
@@ -37,36 +38,36 @@ export function Agenda({ plan, now, onOpen }: { plan: DayPlan; now: string; onOp
       ))}
       {plan.items.map((item) => {
         const top = y(at(item.start));
-        const height = Math.max(y(at(item.end)) - top - 2, 16);
+        const minutes = at(item.end) - at(item.start);
+        // Exactly its length; the 2px gap to the next block comes out of this one.
+        const height = minutes * PX_PER_MINUTE - 2;
         const { lane, lanes: n } = lanes.get(item.key) ?? { lane: 0, lanes: 1 };
         const look = shadeProps(item.color, shadeFor(item));
         const past = item.end <= now;
         const current = item.start <= now && now < item.end && item.kind !== 'open';
-        const style = { ...look.style, top: top + 1, height, left: `calc(${GUTTER} + (100% - ${GUTTER}) * ${lane / n})`, width: `calc((100% - ${GUTTER}) / ${n} - 3px)` } as CSSProperties;
+        const style = { ...look.style, top, height, left: `calc(${GUTTER} + (100% - ${GUTTER}) * ${lane / n})`, width: `calc((100% - ${GUTTER}) / ${n} - 3px)` } as CSSProperties;
+        const category = item.makeup ? 'Make-up' : categoryOf(item, calendarsById);
+        const time = formatTimeRange(timePart(item.start), timePart(item.end));
+        const notes = [...(item.replaces.length ? [`replaces ${item.replaces.join(', ')}`] : []), ...(item.hidden.length ? [`+${item.hidden.length} hidden: ${item.hidden.join(', ')}`] : [])];
+        const clash = item.clashes.length > 0 ? `Clashes with ${item.clashes.join(', ')}` : '';
         const body = (
-          <>
-            <p className="truncate text-meta leading-tight font-semibold">{item.title}</p>
-            {height >= 34 && (
-              <p className="truncate text-time">
-                {item.makeup ? 'Make-up' : categoryOf(item, calendarsById)} · <span className="font-mono">{formatTimeRange(timePart(item.start), timePart(item.end))}</span>
-              </p>
-            )}
-            {item.replaces.length > 0 && <p className="truncate text-time italic">replaces {item.replaces.join(', ')}</p>}
-            {item.clashes.length > 0 && (
-              <p className="flex items-center gap-1 truncate text-time font-medium">
-                <CircleAlert className="size-3.5 shrink-0" aria-hidden />
-                Clashes with {item.clashes.join(', ')}
-              </p>
-            )}
-          </>
+          <BlockText
+            title={item.title}
+            detail={category}
+            time={time}
+            minutes={minutes}
+            alert={clash && <CircleAlert className="size-3.5 shrink-0" aria-label={clash} />}
+            notes={(notes.length > 0 || clash) && minutes >= 60 && <p className="truncate text-time italic">{[clash, ...notes].filter(Boolean).join(' · ')}</p>}
+          />
         );
-        const className = cx('absolute overflow-hidden rounded-control px-2 py-1 text-left text-ink', look.className, past && 'opacity-60', current && 'outline-2 outline-offset-1 outline-accent');
+        const className = cx('absolute overflow-hidden rounded-control text-left text-ink', blockPadding(minutes), look.className, past && 'opacity-60', current && 'outline-2 outline-offset-1 outline-accent');
+        const tooltip = [item.title, category, time, clash, ...notes].filter(Boolean).join(' · ');
         return item.kind === 'open' ? (
-          <div key={item.key} style={style} className={cx(className, 'text-ink-muted')}>
+          <div key={item.key} style={style} title={tooltip} className={cx(className, 'text-ink-muted')}>
             {body}
           </div>
         ) : (
-          <button key={item.key} type="button" style={style} className={cx(className, 'transition-[filter] hover:brightness-95')} onClick={(e) => onOpen(item, e.currentTarget)} aria-current={current ? 'time' : undefined}>
+          <button key={item.key} type="button" style={style} title={tooltip} className={cx(className, 'transition-[filter] hover:brightness-95')} onClick={(e) => onOpen(item, e.currentTarget)} aria-current={current ? 'time' : undefined}>
             {body}
           </button>
         );

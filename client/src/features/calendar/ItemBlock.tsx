@@ -1,4 +1,4 @@
-import { timePart, type Task } from '@todo/shared';
+import { minutesBetween, timePart, type Task } from '@todo/shared';
 import { calendarVars } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
 import { EventBlock, TimeBlockBlock, TodoBlock } from '../../ui/blocks';
@@ -24,6 +24,7 @@ export function ItemBlock({ item, compact, month = false, onToggleTask }: ItemBl
       <TimeBlockBlock
         title={task.title}
         time={compact ? undefined : formatTimeRange(timePart(block.start), timePart(block.end))}
+        minutes={compact ? undefined : minutesBetween(block.start, block.end)}
         color={item.color}
         calendarName={item.calendarName}
         done={done}
@@ -69,7 +70,7 @@ export function ItemBlock({ item, compact, month = false, onToggleTask }: ItemBl
   const timeLabel = occurrence.allDay ? undefined : formatTimeRange(timePart(occurrence.start), timePart(occurrence.end));
 
   if (!compact) {
-    return <EventBlock title={occurrence.event.title} time={timeLabel} color={item.color} calendarName={item.calendarName} className="h-full" />;
+    return <EventBlock title={occurrence.event.title} time={timeLabel} color={item.color} calendarName={item.calendarName} minutes={minutesBetween(occurrence.start, occurrence.end)} className="h-full" />;
   }
 
   return (

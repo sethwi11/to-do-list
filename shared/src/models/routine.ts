@@ -57,6 +57,8 @@ export const RoutineBlockFieldsSchema = z.object({
   notify: z.boolean(),
   /** Hidden outside the semester and during its breaks. */
   schoolDaysOnly: z.boolean(),
+  /** Time an event or a skip takes from it can be made up on another day (study, yes; a volleyball game, no). */
+  reschedulable: z.boolean().default(false),
   notes: z.string().max(2000).nullable(),
 });
 export const RoutineBlockSchema = RoutineBlockFieldsSchema.extend({ id: z.uuid(), createdAt: z.iso.datetime(), updatedAt: z.iso.datetime() });

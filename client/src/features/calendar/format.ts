@@ -4,12 +4,11 @@ import { formatTime, parseLocalISODate } from '../../lib/dates';
 const day = (date: string, withYear = false) =>
   parseLocalISODate(date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}) });
 
-/** "10:00 AM – 11:15 AM": drops the first AM/PM when both are the same. */
+/** "4:00–4:30 PM", "11:40 AM–12:00 PM": AM/PM once when both share it. */
 export function formatTimeRange(startTime: string, endTime: string): string {
   const a = formatTime(startTime);
   const b = formatTime(endTime);
-  const meridiem = (s: string) => s.slice(-2);
-  return meridiem(a) === meridiem(b) && /AM|PM/i.test(meridiem(a)) ? `${a.slice(0, -3)} – ${b}` : `${a} – ${b}`;
+  return a.slice(-2) === b.slice(-2) ? `${a.slice(0, -3)}–${b}` : `${a}–${b}`;
 }
 
 /** A human line for when something happens: "Wed, Nov 4 · 10:00 – 11:15 AM", "Nov 4 – Nov 6 · All day". */
