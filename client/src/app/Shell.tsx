@@ -1,9 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { Menu as MenuIcon } from 'lucide-react';
-import { useDueNotifications } from '../hooks/useDueNotifications';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { useSettings } from '../hooks/useSettings';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { forgetFullscreen, useFullscreen, useFullscreenShortcut, wasFullscreen } from '../hooks/useFullscreen';
 import { Button } from '../ui/Button';
@@ -19,7 +17,6 @@ const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
 /** The frame around every page: the sidebar on the left (a 56px rail if collapsed), and the page itself on the right. */
 export function Shell() {
   const app = useApp();
-  const { settings } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = usePersistedState('voice-todo.sidebarCollapsed', false, isBoolean);
@@ -29,8 +26,6 @@ export function Shell() {
   useFullscreenShortcut();
   // Browsers need a click to enter full screen, so a window last closed in full screen offers one.
   const [offerFullscreen, setOfferFullscreen] = useState(wasFullscreen);
-
-  useDueNotifications(app.tasks, settings.notifications);
 
   // Going anywhere closes the phone drawer.
   useEffect(() => setDrawerOpen(false), [location.pathname, location.search]);

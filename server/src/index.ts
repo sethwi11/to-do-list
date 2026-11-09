@@ -1,4 +1,7 @@
+import path from 'node:path';
 import { createApp } from './app';
+import { nativeNotify } from './notify';
+import { createPopupScheduler } from './popups';
 import { openDatabase } from './db/connection';
 import { env } from './env';
 import { createRepositories } from './repositories';
@@ -6,7 +9,18 @@ import { createRepositories } from './repositories';
 // Opening the database also upgrades its schema (after backing it up first).
 const db = openDatabase(env.DB_PATH);
 const repos = createRepositories(db);
-const app = createApp(repos, { uploadsDir: env.UPLOADS_DIR });
+const sendPopup = env.POPUPS === 'on' ? nativeNotify(env.APP_URL) : undefined;
+const clientDir = env.SERVE_CLIENT === '1' ? path.resolve(import.meta.dirname, '../../client/dist') : undefined;
+const app = createApp(repos, { uploadsDir: env.UPLOADS_DIR, clientDir, sendPopup });
+
+// Pop-ups: check the plan every 20 seconds, so each one lands within its minute.
+if (sendPopup) {
+  const tick = createPopupScheduler(repos, sendPopup);
+  const run = () => void tick().catch((err: unknown) => console.error('Pop-up check failed:', err));
+  setInterval(run, 20_000);
+  run();
+  console.log(`Pop-ups on (clicking one opens ${env.APP_URL})`);
+}
 
 // Soft-deleted tasks only need to live long enough to be undone.
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;

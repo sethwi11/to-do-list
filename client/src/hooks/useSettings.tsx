@@ -3,11 +3,9 @@ import { useTheme } from './useTheme';
 
 export interface Settings {
   theme: 'system' | 'light' | 'dark';
-  /** Browser notifications when a task's due time arrives. */
-  notifications: boolean;
 }
 
-const DEFAULTS: Settings = { theme: 'system', notifications: false };
+const DEFAULTS: Settings = { theme: 'system' };
 const KEY = 'voice-todo.settings';
 
 // Settings are per-device preferences, so localStorage (not the server) is the right home.
@@ -15,9 +13,9 @@ function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return DEFAULTS;
-    // Keep only the settings that still exist (older versions saved more, e.g. voice options).
+    // Keep only the settings that still exist (older versions saved more, e.g. voice options and browser notifications).
     const saved = JSON.parse(raw) as Partial<Settings>;
-    return { theme: saved.theme ?? DEFAULTS.theme, notifications: saved.notifications ?? DEFAULTS.notifications };
+    return { theme: saved.theme ?? DEFAULTS.theme };
   } catch {
     return DEFAULTS;
   }

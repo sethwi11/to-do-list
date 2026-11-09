@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { hasFields, LocalDateSchema, NO_FIELDS_MESSAGE } from '../localTime';
 import { DEFAULT_QUOTES, QuoteSchema } from '../quotes';
+import { DEFAULT_POPUP_SETTINGS, PopupSettingsSchema } from '../popups';
 
 // ---- focus sessions -----------------------------------------------------
 
@@ -57,6 +58,7 @@ export const AppSettingsSchema = z.object({
   sundayReviewReminder: z.boolean(),
   /** The morning view shows one a day. */
   quotes: z.array(QuoteSchema).max(500),
+  popups: PopupSettingsSchema,
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -66,16 +68,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
   focus: { focusMinutes: 25, breakMinutes: 5, longBreakMinutes: 15, longBreakEvery: 4, sound: true, notify: true },
   sundayReviewReminder: false,
   quotes: DEFAULT_QUOTES,
+  popups: DEFAULT_POPUP_SETTINGS,
 };
 
 export const UpdateSettingsInputSchema = AppSettingsSchema.partial()
-  .extend({ focus: FocusSettingsSchema.partial().optional() })
+  .extend({ focus: FocusSettingsSchema.partial().optional(), popups: PopupSettingsSchema.partial().optional() })
   .refine(hasFields, NO_FIELDS_MESSAGE);
 export type UpdateSettingsInput = z.infer<typeof UpdateSettingsInputSchema>;
 
-/** Merge a stored/partial settings object over the defaults (one level deep for `focus`). */
+/** Merge a stored/partial settings object over the defaults (one level deep for `focus` and `popups`). */
 export function mergeSettings(base: AppSettings, patch: UpdateSettingsInput | Partial<AppSettings>): AppSettings {
-  return { ...base, ...patch, focus: { ...base.focus, ...(patch.focus ?? {}) } };
+  return { ...base, ...patch, focus: { ...base.focus, ...(patch.focus ?? {}) }, popups: { ...base.popups, ...(patch.popups ?? {}) } };
 }
 
 // ---- attachments --------------------------------------------------------

@@ -1,17 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { parseQuotes, quotesToText } from '@todo/shared';
+import { addMinutes, parseQuotes, popupsForDay, quotesToText, timePart } from '@todo/shared';
 import { Download, Upload } from 'lucide-react';
 import { useApp } from '../../app/AppContext';
 import { ApiError } from '../../api/client';
 import { backupApi, type ImportSummary } from '../../api/backup';
 import { useAppSettings } from '../../data/useApplications';
-import { notificationsSupported } from '../../hooks/useDueNotifications';
-import { useSettings } from '../../hooks/useSettings';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Input, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
 import { ThemeToggle } from '../../app/ThemeToggle';
+import { calendarVars } from '../../lib/calendarColors';
+import { cx } from '../../lib/cx';
+import { formatTime } from '../../lib/dates';
+import { usePlanSources, useNowText } from '../today/useTodayPlan';
+import { apiFetch } from '../../api/client';
+
+const settingsTest = () => apiFetch<void>('/popups/test', { method: 'POST' });
 
 /** "Imported 12 new items and updated 3." */
 function describeImport(summary: ImportSummary): string {
@@ -23,7 +28,6 @@ const row = 'flex items-center justify-between gap-6 border-b border-hairline py
 
 export function SettingsDialog() {
   const { dialog, closeDialog, openDialog, reload } = useApp();
-  const { settings, update } = useSettings();
   const [message, setMessage] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -55,13 +59,6 @@ export function SettingsDialog() {
     }
   }
 
-  async function toggleNotifications(on: boolean) {
-    if (!on) return update({ notifications: false });
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') update({ notifications: true });
-    else setMessage('Notifications are blocked for this site. Allow them in the browser’s site settings.');
-  }
-
   return (
     <Dialog open={dialog?.kind === 'settings'} onClose={() => closeDialog('settings')} title="Settings">
       <div className="-my-4">
@@ -70,18 +67,7 @@ export function SettingsDialog() {
           <ThemeToggle />
         </div>
 
-        <label className={`${row} cursor-pointer`}>
-          <span>
-            <span className="block text-body">Notify me when a task is due</span>
-            <span className="block text-meta text-ink-muted">{notificationsSupported() ? 'Works while the app is open in a tab.' : 'Not supported in this browser.'}</span>
-          </span>
-          <Checkbox
-            checked={settings.notifications}
-            onChange={(e) => void toggleNotifications(e.target.checked)}
-            label="Notify me when a task is due"
-            className={notificationsSupported() ? '' : 'pointer-events-none opacity-50'}
-          />
-        </label>
+        <Popups />
 
         <OfferGoal />
 
@@ -214,6 +200,115 @@ function Quotes() {
           Save quotes
         </Button>
       </span>
+    </div>
+  );
+}
+
+/** Pop-ups (sent by the server as Mac notifications): on or off, the heads-up, which categories, a pause, a test, and today's count. */
+function Popups() {
+  const { showToast, calendars } = useApp();
+  const { settings, update } = useAppSettings();
+  const p = settings.popups;
+  const now = useNowText();
+  const { src } = usePlanSources();
+  const [minutes, setMinutes] = useState(String(p.headsUpMinutes));
+  useEffect(() => setMinutes(String(p.headsUpMinutes)), [p.headsUpMinutes]);
+  const save = (changes: Partial<typeof p>, message?: string) =>
+    update({ popups: changes })
+      .then(() => message && showToast(message, () => void update({ popups: Object.fromEntries(Object.keys(changes).map((k) => [k, p[k as keyof typeof p]])) })))
+      .catch(() => showToast('Couldn’t save that. Check that the server is running.'));
+  const paused = p.pausedUntil !== null && p.pausedUntil > now;
+  const left = popupsForDay(src, now.slice(0, 10), p).filter((x) => x.at >= now);
+
+  async function test() {
+    try {
+      await settingsTest();
+      showToast('Sent a test pop-up. If nothing appeared, allow notifications for “terminal-notifier” in System Settings → Notifications.');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Couldn’t send a test pop-up.');
+    }
+  }
+
+  return (
+    <div className={`${row} flex-col items-stretch gap-3`}>
+      <label className="flex cursor-pointer items-center justify-between gap-6">
+        <span>
+          <span className="block text-body">Pop-ups</span>
+          <span className="block text-meta text-ink-muted">Mac notifications when blocks start and end, before classes and events, at due times and at bedtime. Sent by the always-on app.</span>
+        </span>
+        <Checkbox checked={p.enabled} onChange={(e) => void save({ enabled: e.target.checked }, e.target.checked ? 'Pop-ups on' : 'Pop-ups off')} label="Pop-ups" />
+      </label>
+      {p.enabled && (
+        <>
+          <p className="text-meta text-ink-muted">
+            {paused ? `Paused until ${formatTime(timePart(p.pausedUntil!))}. ` : ''}
+            {left.length === 0 ? 'No more pop-ups today.' : `${left.length} more today; next at ${formatTime(timePart(left[0]!.at))}: “${left[0]!.title}”`}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {paused ? (
+              <Button variant="secondary" onClick={() => void save({ pausedUntil: null }, 'Pop-ups resumed')}>
+                Resume
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={() => void save({ pausedUntil: addMinutes(now, 60) }, 'Pop-ups paused for an hour')}>
+                Pause for 1 hour
+              </Button>
+            )}
+            <Button variant="ghost" onClick={() => void test()}>
+              Send a test pop-up
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <label className="flex items-center gap-2 text-body">
+              Heads-up
+              <Input
+                type="number"
+                min={0}
+                max={120}
+                value={minutes}
+                className="w-16"
+                onChange={(e) => setMinutes(e.target.value)}
+                onBlur={() => {
+                  const n = Number.parseInt(minutes, 10);
+                  if (Number.isInteger(n) && n >= 0 && n <= 120 && n !== p.headsUpMinutes) void save({ headsUpMinutes: n });
+                  else setMinutes(String(p.headsUpMinutes));
+                }}
+              />
+              min before classes and events
+            </label>
+            <label className="flex cursor-pointer items-center gap-1 text-body">
+              <Checkbox checked={p.focusWarning} onChange={(e) => void save({ focusWarning: e.target.checked })} label="5 minutes left on focus blocks" />
+              5 minutes left on focus blocks
+            </label>
+            <label className="flex cursor-pointer items-center gap-1 text-body">
+              <Checkbox checked={p.bedtime} onChange={(e) => void save({ bedtime: e.target.checked })} label="Bedtime" />
+              Bedtime
+            </label>
+          </div>
+          <div>
+            <span className="mb-1.5 block text-label text-ink-muted uppercase">Pop-ups for</span>
+            <div className="flex flex-wrap gap-1.5">
+              {calendars.map((c) => {
+                const on = !p.mutedCalendarIds.includes(c.id);
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => void save({ mutedCalendarIds: on ? [...p.mutedCalendarIds, c.id] : p.mutedCalendarIds.filter((id) => id !== c.id) })}
+                    style={calendarVars(c.color)}
+                    className={cx('inline-flex h-7 items-center gap-1.5 rounded-control border px-2 text-meta transition-colors duration-150', on ? 'border-rule text-ink' : 'border-hairline text-ink-faint line-through')}
+                  >
+                    <span aria-hidden className="size-2 bg-(color:--c)" />
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-meta text-ink-muted">Each block can also turn its own pop-ups off on the Week page.</p>
+          </div>
+        </>
+      )}
     </div>
   );
 }

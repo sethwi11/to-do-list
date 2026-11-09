@@ -152,14 +152,28 @@ client/   React + Vite + Tailwind UI; TanStack Query for server data
 - **Rolling repeating to-dos.** A repeating to-do rolls over by default: past its day it's still current ("Until Tuesday"), and once its next occurrence arrives it is marked missed and replaced, so it never shows in Overdue. The server does this whenever the app loads to-dos. Missed ones stay in the database (for the coming check-in and weekly review) but leave every list.
 - **Seeding a week** from a private file: `npm run seed:week -w server` reads `.private/seed-week.json` (categories and colors, a semester and its courses, the template and its blocks, weekly reminder to-dos), backs the database up first, skips anything that already exists, and lists what was assumed.
 
+## Pop-ups and the always-on app
+
+- **One pure function** (`popupsForDay` in `shared/src/popups.ts`) turns a planned day into pop-ups, so they follow the day after its changes (a replaced Volleyball sends nothing). A start pop-up for each routine block and event ("Now: Real estate research until 10:20 AM · Next: Drive to campus · Put a new listing on Posh +1 more"; to-dos are named only for work blocks), a stop pop-up when nothing follows right away, one combined pop-up when one block ends as the next begins, "5 minutes left" on focus blocks, a heads-up before classes, events and commitments, bedtime, to-do due times (with the first line of the notes, so a reminder's message is right there) and reminders, and event reminders. Nothing pops up during a class. Same-minute pop-ups are combined.
+- **The server sends them** as native Mac notifications (`node-notifier`, through terminal-notifier; clicking one opens the app). It checks every 20 seconds and sends each pop-up once. It's off unless the server starts with `POPUPS=on`, so development servers and tests stay quiet. The browser's own due-time notifications are gone, so nothing arrives twice.
+- **Settings → Pop-ups**: on or off, the heads-up minutes, focus warnings, bedtime, which categories, Pause for 1 hour, Send a test pop-up, and how many are left today. Each block can turn its own pop-ups off on the Week page. The first pop-up may ask permission for "terminal-notifier"; allow it in System Settings → Notifications (and check Focus mode if nothing shows).
+- **The always-on app** runs `main` against your real database at `http://127.0.0.1:3030` (this Mac only): the server serves the built app, sends pop-ups, starts at login and restarts if it stops. From the main folder on `main`:
+
+```bash
+npm run app:install
+```
+
+After merging new work, `npm run app:restart`; to remove it, `npm run app:uninstall`; to read its log, `npm run app:logs` (the log is in `~/Library/Logs/Planner/`). It refuses to install from another branch, since it uses your real data. `npm run dev` (3001/5173) still works beside it.
+
 ### Full screen and the installed window
 
 The app can run as its own window with no tabs or address bar, kept in a full-screen space you swipe to:
 
-1. Open the app in Chrome (`http://localhost:5173`).
+1. Open the always-on app in Chrome (`http://127.0.0.1:3030`, after `npm run app:install`).
 2. Chrome menu (⋮) → **Cast, save and share** → **Install page as app…** (on older versions, **Install Planner…**). It opens in its own window and gets a Dock icon.
 3. In that window, press the green button (or Ctrl+⌘+F) for a macOS full-screen space; three-finger swipe moves between it and your other spaces.
 4. Inside the app, the sidebar's full-screen button (or Shift+F) uses the browser's full screen instead, and the display button opens the big Now card, clock and agenda. If the app was in full screen when you closed it, it offers a one-click way back (browsers need a click to enter full screen).
+5. To open the window at login too: System Settings → General → Login Items → + → choose **Planner** (Chrome keeps installed apps in `~/Applications/Chrome Apps`). The server is already running by then.
 
 ## Courses
 

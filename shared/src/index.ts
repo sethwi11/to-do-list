@@ -22,4 +22,5 @@ export * from './models/misc';
 export * from './models/routine';
 export * from './planDay';
 export * from './quotes';
+export * from './popups';
 export * from './backup';

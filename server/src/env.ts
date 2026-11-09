@@ -12,6 +12,12 @@ const EnvSchema = z.object({
   DB_PATH: z.string().default('data/todo.db'),
   // Where uploaded files are kept.
   UPLOADS_DIR: z.string().optional(),
+  // Send pop-ups as native notifications (the always-on app; off for development and tests).
+  POPUPS: z.enum(['on', 'off']).default('off'),
+  // Where clicking a pop-up goes.
+  APP_URL: z.string().url().default('http://localhost:5173'),
+  // Serve the built client from this server (the always-on app, one port).
+  SERVE_CLIENT: z.enum(['1', '0']).default('0'),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

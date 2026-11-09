@@ -10,7 +10,11 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "app:install": "bash scripts/app.sh install",
+    "app:restart": "bash scripts/app.sh restart",
+    "app:uninstall": "bash scripts/app.sh uninstall",
+    "app:logs": "bash scripts/app.sh logs"
   },
   "devDependencies": {
     "typescript": "^7.0.2"

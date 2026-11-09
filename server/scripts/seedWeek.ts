@@ -18,6 +18,7 @@ import {
 } from '@todo/shared';
 import { openDatabase } from '../src/db/connection';
 import { env } from '../src/env';
+import { localMinute } from '../src/popups';
 import { createRepositories } from '../src/repositories';
 
 // Loads a week from a private JSON file (default .private/seed-week.json). Safe to run twice: it backs up first and skips what exists.
@@ -65,7 +66,8 @@ const db = openDatabase(env.DB_PATH);
 const r = createRepositories(db);
 const log = (s: string) => console.log(`  ${s}`);
 const now = new Date().toISOString();
-const today = now.slice(0, 10);
+// Your date, not UTC's (in the evening UTC is already tomorrow).
+const today = localMinute().slice(0, 10);
 
 console.log('Categories');
 const calendars = await r.calendars.list();

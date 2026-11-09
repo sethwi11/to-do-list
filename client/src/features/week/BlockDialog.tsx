@@ -180,7 +180,7 @@ function BlockForm({ start, existing, onSave, onSaved }: { start: Partial<Routin
         {toggle('focus', 'Focus block', 'Pomodoro available')}
         {toggle('schoolDaysOnly', 'School days only', 'Hidden outside the semester and on breaks')}
         {f.priority !== 'free' && toggle('reschedulable', 'Can be rescheduled', 'If something takes its time, it shows in Missed this week')}
-        {toggle('notify', 'Pop-ups', 'Start and stop reminders (coming soon)')}
+        {toggle('notify', 'Pop-ups', 'Start and stop notifications for this block')}
         <Field label="Soundtrack">
           {(p) => (
             <Select {...p} value={f.soundtrack} onChange={(e) => set('soundtrack', e.target.value)}>

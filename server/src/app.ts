@@ -1,3 +1,4 @@
+import path from 'node:path';
 import express from 'express';
 import {
   CreateApplicationInputSchema,
@@ -29,6 +30,7 @@ import {
   UpdateWeeklyReviewInputSchema,
 } from '@todo/shared';
 import { errorHandler, notFound } from './middleware/errorHandler';
+import type { SendPopup } from './popups';
 import type { Repositories } from './repositories';
 import { attachmentsRouter } from './routes/attachments';
 import { backupRouter } from './routes/backup';
@@ -37,8 +39,8 @@ import { batchRouter } from './routes/batch';
 import { settingsRouter } from './routes/settings';
 import { tasksRouter } from './routes/tasks';
 
-/** Builds the Express app without starting it. */
-export function createApp(repos: Repositories, options: { uploadsDir: string }) {
+/** Builds the Express app without starting it. `clientDir` serves the built app too; `sendPopup` makes "Send a test pop-up" work. */
+export function createApp(repos: Repositories, options: { uploadsDir: string; clientDir?: string; sendPopup?: SendPopup }) {
   const app = express();
 
   // 5 MB, so a JSON backup import fits; normal requests are tiny.
@@ -69,7 +71,22 @@ export function createApp(repos: Repositories, options: { uploadsDir: string }) 
   app.use('/api/settings', settingsRouter(repos.settings));
   app.use('/api/backup', backupRouter(repos.backup));
 
+  app.post('/api/popups/test', (_req, res) => {
+    if (!options.sendPopup) {
+      res.status(409).json({ error: 'PopupsOff', message: 'Pop-ups are off in this server (start it with POPUPS=on).' });
+      return;
+    }
+    options.sendPopup({ at: '', title: 'Planner pop-ups are working', body: 'This is what a start or stop pop-up looks like.', url: '/', keys: [] });
+    res.status(204).end();
+  });
+
   app.use('/api', notFound);
+  if (options.clientDir) {
+    const dir = options.clientDir;
+    app.use(express.static(dir));
+    // Any other page (no file extension) is the single-page app: it reads the address itself.
+    app.use((req, res, next) => (req.method === 'GET' && !path.extname(req.path) ? res.sendFile('index.html', { root: dir }) : next()));
+  }
   app.use(errorHandler);
 
   return app;
