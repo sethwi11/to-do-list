@@ -6,6 +6,7 @@ import { useShortcuts } from '../hooks/useShortcuts';
 import { forgetFullscreen, useFullscreen, useFullscreenShortcut, wasFullscreen } from '../hooks/useFullscreen';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/Button';
+import { BadgeAwards } from '../features/path/BadgeAwards';
 import { Drawer } from '../ui/Drawer';
 import { useApp } from './AppContext';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -92,6 +93,8 @@ export function Shell() {
       <div className="fixed right-4 bottom-4 z-30 md:hidden">
         <NewMenu variant="fab" />
       </div>
+
+      <BadgeAwards />
     </div>
   );
 }

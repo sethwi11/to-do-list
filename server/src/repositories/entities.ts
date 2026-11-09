@@ -11,6 +11,11 @@ import {
   type CreateTemplateInput,
   type CreateTimeBlockInput,
   type CreateWeeklyReviewInput,
+  type Badge,
+  type CreateBadgeInput,
+  type CreateMilestoneInput,
+  type Milestone,
+  type UpdateMilestoneInput,
   type CreateWeekTemplateInput,
   type CreateRoutineBlockInput,
   type RoutineBlock,
@@ -197,7 +202,8 @@ export const createWeeklyReviewRepository = (db: Db) =>
   new SqliteEntityRepository<WeeklyReview, CreateWeeklyReviewInput, UpdateWeeklyReviewInput>(db, {
     table: 'weekly_reviews',
     orderBy: 'week_start DESC',
-    build: (i, { id, now }) => ({ id, weekStart: i.weekStart, notes: i.notes, createdAt: now, updatedAt: now }),
+    json: ['priorities'],
+    build: (i, { id, now }) => ({ id, weekStart: i.weekStart, notes: i.notes ?? '', priorities: i.priorities ?? [], createdAt: now, updatedAt: now }),
   });
 
 export const createWeekTemplateRepository = (db: Db) =>
@@ -312,6 +318,25 @@ export const createMoneyMoveRepository = (db: Db) =>
     build: (i, { id, now }) => ({ id, date: i.date, periodStart: i.periodStart ?? null, toType: i.toType, toId: i.toId, amountCents: i.amountCents, note: i.note ?? null, createdAt: now }),
   });
 
+// ---- the Path ----
+
+export const createMilestoneRepository = (db: Db) =>
+  new SqliteEntityRepository<Milestone, CreateMilestoneInput, UpdateMilestoneInput>(db, {
+    table: 'milestones',
+    orderBy: 'sort_order, created_at',
+    json: ['calendarIds'],
+    bool: ['trackOffers'],
+    softDelete: true,
+    build: (i, { id, now, sortOrder }) => ({ id, title: i.title, targetDate: i.targetDate ?? null, reachedOn: i.reachedOn ?? null, calendarIds: i.calendarIds ?? [], savingsGoalId: i.savingsGoalId ?? null, trackOffers: i.trackOffers ?? false, sortOrder, createdAt: now, updatedAt: now }),
+  });
+
+export const createBadgeRepository = (db: Db) =>
+  new SqliteEntityRepository<Badge, CreateBadgeInput, never>(db, {
+    table: 'badges',
+    orderBy: 'earned_on, created_at',
+    build: (i, { id, now }) => ({ id, key: i.key, title: i.title, earnedOn: i.earnedOn, createdAt: now }),
+  });
+
 export type CalendarRepo = ReturnType<typeof createCalendarRepository>;
 export type EventTypeRepo = ReturnType<typeof createEventTypeRepository>;
 export type EventRepo = ReturnType<typeof createEventRepository>;
@@ -330,3 +355,5 @@ export type ExpenseRepo = ReturnType<typeof createExpenseRepository>;
 export type SavingsGoalRepo = ReturnType<typeof createSavingsGoalRepository>;
 export type HoldingRepo = ReturnType<typeof createHoldingRepository>;
 export type MoneyMoveRepo = ReturnType<typeof createMoneyMoveRepository>;
+export type MilestoneRepo = ReturnType<typeof createMilestoneRepository>;
+export type BadgeRepo = ReturnType<typeof createBadgeRepository>;

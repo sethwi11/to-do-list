@@ -30,7 +30,7 @@ interface Props {
 }
 
 /** A dialog with a Save button tied to its form, and an optional Delete on the left. */
-function Shell({ title, formId, submit, onClose, onDelete, children }: { title: string; formId: string; submit: string; onClose: () => void; onDelete?: () => void; children: ReactNode }) {
+export function Shell({ title, formId, submit, onClose, onDelete, children }: { title: string; formId: string; submit: string; onClose: () => void; onDelete?: () => void; children: ReactNode }) {
   return (
     <Dialog
       open

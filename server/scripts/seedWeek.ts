@@ -11,6 +11,7 @@ import {
   LocalDateSchema,
   LocalTimeSchema,
   MeetingWindowSchema,
+  NorthStarSchema,
   planCourseSchedule,
   RoutineDaySchema,
   RoutinePrioritySchema,
@@ -51,6 +52,14 @@ const Seed = z.object({
   soundtracks: z.array(SoundtrackSchema).default([]),
   /** Optional: the spending budget, set only while none is set yet (the amount lives in your private file, not in the code). */
   budget: BudgetSettingsSchema.optional(),
+  /** Optional: the Path. The birthday and north star are set (with the Sunday reminder on) only while no birthday is saved; each milestone is added once, by title. */
+  path: z
+    .object({
+      birthday: LocalDateSchema,
+      northStar: z.array(NorthStarSchema),
+      milestones: z.array(z.object({ title: z.string().min(1), targetDate: LocalDateSchema.nullable().default(null), categories: z.array(z.string()).default([]), trackOffers: z.boolean().default(false) })).default([]),
+    })
+    .optional(),
   assumed: z.array(z.string()),
 });
 
@@ -169,6 +178,19 @@ console.log('Budget');
 if (seed.budget && (await r.settings.get()).budget.amountCents === 0) {
   await r.settings.update({ budget: seed.budget });
   log('set the spending budget');
+}
+
+console.log('Path');
+if (seed.path) {
+  if ((await r.settings.get()).path.birthday === null) {
+    await r.settings.update({ path: { birthday: seed.path.birthday, northStar: seed.path.northStar }, sundayReviewReminder: true });
+    log('set the birthday and north star, and turned on the Sunday review reminder');
+  }
+  const have = (await r.milestones.list()).map((m) => m.title);
+  for (const m of seed.path.milestones.filter((x) => !have.includes(x.title))) {
+    await r.milestones.create({ title: m.title, targetDate: m.targetDate, calendarIds: m.categories.flatMap((c) => cal(c) ?? []), trackOffers: m.trackOffers });
+    log(`added the milestone "${m.title}"`);
+  }
 }
 
 console.log('\nAssumed (please confirm or edit):');

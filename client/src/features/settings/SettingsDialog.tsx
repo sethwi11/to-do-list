@@ -230,7 +230,7 @@ function Popups() {
       .then(() => message && showToast(message, () => void update({ popups: Object.fromEntries(Object.keys(changes).map((k) => [k, p[k as keyof typeof p]])) })))
       .catch(() => showToast('Couldn’t save that. Check that the server is running.'));
   const paused = p.pausedUntil !== null && p.pausedUntil > now;
-  const left = popupsForDay(src, now.slice(0, 10), p).filter((x) => x.at >= now);
+  const left = popupsForDay(src, now.slice(0, 10), p, settings.sundayReviewReminder).filter((x) => x.at >= now);
 
   async function test() {
     try {
@@ -295,6 +295,10 @@ function Popups() {
             <label className="flex cursor-pointer items-center gap-1 text-body">
               <Checkbox checked={p.bedtime} onChange={(e) => void save({ bedtime: e.target.checked })} label="Bedtime" />
               Bedtime
+            </label>
+            <label className="flex cursor-pointer items-center gap-1 text-body">
+              <Checkbox checked={settings.sundayReviewReminder} onChange={(e) => void update({ sundayReviewReminder: e.target.checked }).catch(() => showToast('Couldn’t save that. Check that the server is running.'))} label="Sunday review" />
+              Sunday review at 8:30 PM
             </label>
           </div>
           <div>

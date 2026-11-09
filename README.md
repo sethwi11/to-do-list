@@ -28,15 +28,13 @@ A personal planner built from a to-do app: tasks, a calendar, courses, an intern
 - Works on a phone-width screen: the sidebar becomes a drawer, the calendar opens on the Agenda, and a + button replaces the New menu
 - **Money**: a spending budget (a month or a week), a quick way to log what you spend, where it went, the pace, last period's leftover to put to work, savings goals, and investments you update by hand (tracking only)
 - **Headlines** on Today: press a button for the day's stories from NPR, BBC, PBS or AP (AP through Google News, so headlines only); nothing is fetched until you press it
-- Data foundation for everything coming next: templates, weekly reviews
+- **Path**: your north star (each date worked out from your birthday), the stages on the way (Stage 2 stays locked until the 20th birthday), milestones that show the inputs feeding them, and a shelf of badges earned from real data
+- **Sunday review**: the week's scoreboard, what slipped, what you learned, next week's workload, three priorities, and one block to copy into a chat with Claude
+- Data foundation for later: templates
 
 ## Roadmap
 
-Built one phase at a time; each is reviewed before it's merged. Phases 1–14 are built (the sections below describe them); what's left:
-
-| Phase | What it adds |
-| --- | --- |
-| 15 | **Goals and the weekly review.** Goals and milestones, badges earned from real data, a weekly scoreboard, and a weekly review that ends with a summary to copy |
+Built one phase at a time; each is reviewed before it's merged. Phases 1–15 are built (the sections below describe them).
 
 **Later:** voice quick-add, a command palette and the full set of keyboard shortcuts; phone access as an installable app (with a login first, since the API has none); `.ics` export; a templates screen; a real estate deal calculator; live prices, if a free source with no key exists.
 
@@ -170,6 +168,15 @@ After merging new work, `npm run app:restart`; to remove it, `npm run app:uninst
 - **Close the day** (`/checkin`): opened by the pop-up when the day's last non-free block ends, or the "Close the day" link on Today in the evening. Done, Part or Skipped for each planned item (tap again to clear; unmarked stays unknown), "which one?" for blocks with an alternative, an optional "what I learned" line on focus blocks (the learning log), missed rolling to-dos, and tomorrow's first three. "Mark the rest done" makes a normal day a few taps. Each check-in copies the item's title, category and minutes (`check_ins`), so later template edits never change history.
 - **Streaks** (`shared/src/streaks.ts`): gym and LeetCode (check-ins on blocks with those names), focus (a focus session on a day with focus blocks) and nightly check-ins. A day with nothing planned for a streak doesn't break it, and today doesn't until it's over. They show on the morning view and the Now card; at 7, 14, 30, 50 and 100 days, then every 100, a few seconds of fireworks (a still picture with reduced motion), once per milestone.
 
+## The Path and the Sunday review
+
+- **The Path** (`/path`). The north star is a birthday and a few lines in your own words, each with an age ("… by 30"); every date is computed from the birthday (`shared/src/path.ts`; a Feb 29 birthday counts as Feb 28 in other years). The birthday and the lines are data, set from Path → Edit, never in the code. Stage 1 (Foundation) runs until the 20th birthday. Stage 2 is locked until that day: the page shows a countdown and nothing to open, and the server refuses to save its text before then, judged by the birthday already saved so one request can't unlock it. With no birthday it stays locked.
+- **Milestones** have a title, an optional target date and optional inputs: categories (hours done this week and in the last four weeks, from check-ins), a savings goal (its progress from Money) and the offer goal (from Applications). Mark reached, Reopen, and Delete all have Undo.
+- **Badges** (`shared/src/badges.ts`) come only from real data: a streak reaching 7, 14, 30, 50 or 100 days (then every 100), your first fully checked-in week (every planned item on all seven days has a check-in), every 25th LeetCode session, every 10th application sent, each quarter of a savings goal, each milestone marked reached, and Stage 2 unlocking. Each carries the day it was earned: the day of the thing that crossed the line, not the day the app noticed. A badge is saved once (`badges.key` is unique) and kept even if the data behind it changes later (a goal's target raised, a milestone reopened). The app files new ones when it has loaded everything they read (`BadgeAwards` in the shell: a half-loaded list could stamp a wrong date for good); old ones are filed quietly, and one earned today plays the fireworks.
+- **The weekly scoreboard** (`shared/src/scoreboard.ts`, tested with made-up weeks) adds up the plan and the check-ins for Monday to Sunday: hours planned vs done per category (Done counts in full, Part for half because the check-in doesn't ask how much, Skipped for nothing; free time isn't counted; when a block's "or instead" happened, the time goes to that category), gym days, LeetCode sessions, applications sent (from each application's status history), real estate and reading hours (by category name), spent against the budget, saved (moved to goals or kept as cash) and invested, and bumped time made up, let go or still open. Days that haven't happened yet aren't counted, so a week still going isn't scored against hours not yet lived.
+- **The Sunday review** (`/review`; switch the reminder on in Settings → Pop-ups for a pop-up at 8:30 PM on Sundays, after the check-in) shows the scoreboard, missed blocks (with Find a new time), missed rolling to-dos, the learning log, next week as the workload heatmap, three priorities and notes (saved in `weekly_reviews`), and steps back and forward by week. **Copy summary for Claude** puts it all in one Markdown block that ends with "Questions for Claude:". Sections with nothing in them are left out, a week still going is marked "so far, through …", and next week names only the days with something on them and how heavy each is.
+- **Data**: `milestones` and `badges` tables, `weekly_reviews.priorities`, and the `path` setting, all in the JSON export and import (backup version 7; older files upgrade).
+
 ## Headlines
 
 The one place the app reaches the internet, and only when you press the button (Today → Headlines). The local server fetches a fixed address for the source you chose (NPR, BBC and PBS NewsHour's own free feeds; AP through a Google News feed limited to apnews.com, which has no public feed of its own), so the page never makes a third-party request itself and nothing is fetched on load. The feeds' text is read as plain text only (`parseFeed` in `shared/src/headlines.ts`, tested with made-up feeds, including markup that must never survive), links must be `https` and open in a new tab. Each story comes with the publisher's own one-line summary where the feed has one: the app doesn't write summaries, since that would need an AI service and a key. The last result per source is kept for the day on that device. Nothing else about the app sends your data anywhere.
@@ -230,7 +237,7 @@ The app can run as its own window with no tabs or address bar, kept in a full-sc
 | `data/` | Server data (TanStack Query): one hook per kind of data, and the shared cache |
 | `api/` | The fetch calls behind those hooks |
 | `pages/` | One file per page; routes are in `main.tsx` (`/styleguide` and the `/display` view sit outside the shell) |
-| `features/` | The parts pages are built from, by subject: `calendar/`, `tasks/`, `today/`, `week/`, `courses/`, `applications/`, `import/`, `attachments/`, `events/`, `settings/` |
+| `features/` | The parts pages are built from, by subject: `calendar/`, `tasks/`, `today/`, `week/`, `courses/`, `applications/`, `money/`, `path/`, `review/`, `import/`, `attachments/`, `events/`, `settings/` |
 | `ui/` | Design-system components (buttons, fields, dialog, popover, blocks, task row...) |
 | `lib/`, `hooks/`, `styles/` | Small helpers, React hooks, and the design tokens |
 

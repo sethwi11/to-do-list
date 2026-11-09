@@ -1,16 +1,12 @@
 import { useState } from 'react';
-import { addDays, addMinutes, datePart, dayOfWeek, formatMinutes, LocalDateTimeSchema, openSlots, timePart, type Bump, type PlanSources } from '@todo/shared';
+import { addMinutes, datePart, formatMinutes, LocalDateTimeSchema, openSlots, timePart, weekRange, type Bump, type PlanSources } from '@todo/shared';
 import { useRoutine } from '../../actions/useRoutineActions';
 import { parseLocalISODate } from '../../lib/dates';
 import { Button } from '../../ui/Button';
 import { Input, SectionLabel } from '../../ui/fields';
 import { formatTimeRange } from '../calendar/format';
 
-/** Monday to Sunday of the week a date is in. */
-export const weekOf = (date: string): [string, string] => {
-  const monday = addDays(date, -((dayOfWeek(date) + 6) % 7));
-  return [monday, addDays(monday, 6)];
-};
+export const weekOf = weekRange;
 
 const weekday = (date: string) => parseLocalISODate(date).toLocaleDateString(undefined, { weekday: 'short' });
 

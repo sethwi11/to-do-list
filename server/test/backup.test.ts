@@ -33,7 +33,7 @@ describe('export / import', () => {
   it('exports every kind of data in one document', async () => {
     const app = await populatedApp();
     const { body } = await request(app).get('/api/backup/export').expect(200);
-    expect(body).toMatchObject({ app: 'voice-todo', version: 6 });
+    expect(body).toMatchObject({ app: 'voice-todo', version: 7 });
     expect(body.calendars).toHaveLength(7);
     expect(body.tasks).toHaveLength(2);
     expect(body.events).toHaveLength(3);

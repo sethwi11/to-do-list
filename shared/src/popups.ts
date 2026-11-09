@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { addDays } from './dateMath';
+import { addDays, dayOfWeek } from './dateMath';
 import { addMinutes, combine, minutesBetween, timePart } from './dateTime';
 import { expandOccurrences } from './eventSeries';
 import { LocalDateTimeSchema } from './localTime';
@@ -34,7 +34,10 @@ export const DEFAULT_REMINDER_TIME = '09:00';
 
 type Note = { at: string; rank: number; line: string; key: string; url: string };
 // Which line leads when several land in the same minute.
-const RANK = { closeDay: 0, start: 1, headsUp: 2, warning: 3, due: 4, reminder: 5, stop: 6, bedtime: 7 };
+const RANK = { closeDay: 0, review: 1, start: 2, headsUp: 3, warning: 4, due: 5, reminder: 6, stop: 7, bedtime: 8 };
+
+/** When the Sunday review reminder pops up, after the nightly check-in. */
+export const REVIEW_TIME = '20:30';
 
 const clock = (dt: string) => {
   const [h, m] = timePart(dt).split(':').map(Number);
@@ -42,7 +45,7 @@ const clock = (dt: string) => {
 };
 
 /** Every pop-up for a planned day, one per minute (lines that land together are combined). */
-export function popupsForDay(src: PlanSources, date: string, settings: PopupSettings): Popup[] {
+export function popupsForDay(src: PlanSources, date: string, settings: PopupSettings, sundayReview = false): Popup[] {
   if (!settings.enabled) return [];
   const plan = planDay(src, date);
   const dayStart = combine(date);
@@ -81,6 +84,8 @@ export function popupsForDay(src: PlanSources, date: string, settings: PopupSett
   // When the day's last non-free block ends: the one-minute check-in.
   const last = [...plan.items].reverse().find((i) => i.kind !== 'open' && i.kind !== 'task' && i.priority !== 'free');
   if (last && plan.templateId) add(last.end, RANK.closeDay, 'Close the day: a one-minute check-in', `close:${date}`, `/checkin?date=${date}`);
+
+  if (sundayReview && dayOfWeek(date) === 0) add(combine(date, REVIEW_TIME), RANK.review, 'Sunday review: look back on the week and set three priorities', `review:${date}`, '/review');
 
   if (settings.bedtime && plan.templateId) {
     const tomorrow = addDays(date, 1);

@@ -34,6 +34,17 @@ describe('pop-ups from the server', () => {
     expect(sent).toEqual([]);
   });
 
+  it('sends the Sunday review reminder at 8:30 PM only when that setting is on', async () => {
+    const { repos, sent, app } = setup();
+    const tick = createPopupScheduler(repos, (p) => sent.push(p), () => '2026-11-08T20:30');
+    await tick();
+    expect(sent).toEqual([]);
+    await request(app).patch('/api/settings').send({ sundayReviewReminder: true }).expect(200);
+    await tick();
+    await tick();
+    expect(sent.map((p) => [p.title, p.url])).toEqual([['Sunday review: look back on the week and set three priorities', '/review']]);
+  });
+
   it('sends a test pop-up on request, and says so when pop-ups are off in this server', async () => {
     const { sent, app } = setup();
     await request(app).post('/api/popups/test').expect(204);

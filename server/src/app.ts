@@ -29,6 +29,9 @@ import {
   CreateTemplateInputSchema,
   CreateTimeBlockInputSchema,
   CreateWeeklyReviewInputSchema,
+  CreateBadgeInputSchema,
+  CreateMilestoneInputSchema,
+  UpdateMilestoneInputSchema,
   UpdateApplicationInputSchema,
   UpdateCalendarInputSchema,
   UpdateCourseInputSchema,
@@ -88,6 +91,8 @@ export function createApp(repos: Repositories, options: { uploadsDir: string; cl
   app.use('/api/holdings', crudRouter(repos.holdings, { label: 'Holding', create: CreateHoldingInputSchema, update: UpdateHoldingInputSchema }));
   app.use('/api/money-moves', batchRouter(repos.moneyMoves, MoneyMoveBatchInputSchema));
   app.use('/api/money-moves', crudRouter(repos.moneyMoves, { label: 'Money move', create: CreateMoneyMoveInputSchema, update: null }));
+  app.use('/api/milestones', crudRouter(repos.milestones, { label: 'Milestone', create: CreateMilestoneInputSchema, update: UpdateMilestoneInputSchema }));
+  app.use('/api/badges', crudRouter(repos.badges, { label: 'Badge', create: CreateBadgeInputSchema, update: null }));
   app.use('/api/headlines', headlinesRouter(options.fetchFeed));
   app.use('/api/soundtracks', soundtracksRouter(repos.settings));
   app.use('/api/attachments', attachmentsRouter(repos.attachments, options.uploadsDir));

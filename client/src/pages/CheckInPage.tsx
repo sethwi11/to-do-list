@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { addDays, LocalDateSchema, minutesBetween, planDay, planningDate, timePart, CHECK_IN_STATUSES, type CheckIn, type CheckInStatus, type PlanItem, type Task } from '@todo/shared';
+import { addDays, LocalDateSchema, planDay, plannedRows, planningDate, timePart, CHECK_IN_STATUSES, type CheckIn, type CheckInStatus, type Task } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { checkInsApi } from '../api/entities';
 import { checkInHooks } from '../data/useCheckIns';
@@ -16,12 +16,7 @@ import { SkeletonRows } from '../ui/states';
 
 const LABEL: Record<CheckInStatus, string> = { done: 'Done', part: 'Part', skipped: 'Skipped' };
 
-/** One row per planned thing (a block cut into pieces counts once). */
-interface Row {
-  key: string;
-  item: PlanItem;
-  minutes: number;
-}
+type Row = ReturnType<typeof plannedRows>[number];
 
 /** Close the day: Done, Part or Skipped for each planned item, which one happened when there was a choice, a line for the learning log, missed to-dos, and tomorrow's start. Every tap saves. */
 export default function CheckInPage() {
@@ -37,16 +32,7 @@ export default function CheckInPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
-  const rows = useMemo<Row[]>(() => {
-    const out: Row[] = [];
-    for (const item of planDay(src, date).items.filter((i) => i.kind !== 'open')) {
-      const key = item.key.replace(/#\d+$/, '');
-      const same = out.find((r) => r.key === key);
-      if (same) same.minutes += minutesBetween(item.start, item.end);
-      else out.push({ key, item, minutes: minutesBetween(item.start, item.end) });
-    }
-    return out;
-  }, [src, date]);
+  const rows = useMemo(() => plannedRows(planDay(src, date).items), [src, date]);
   const tomorrow = useMemo(() => planDay(src, addDays(date, 1)).items.filter((i) => i.kind !== 'open').slice(0, 3), [src, date]);
   // Missed rolling to-dos are hidden from every list, so read them from the raw cache.
   const missed = (qc.getQueryData<Task[]>(keys.tasks) ?? []).filter((t) => t.missedAt && toLocalISODate(new Date(t.missedAt)) > addDays(date, -7) && toLocalISODate(new Date(t.missedAt)) <= date);

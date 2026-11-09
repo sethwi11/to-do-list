@@ -124,3 +124,17 @@ describe('pop-ups for a day', () => {
     }
   });
 });
+
+describe('the Sunday review pop-up', () => {
+  const SUN = '2026-11-08';
+  const reviewAt = (date: string, on: boolean) => popupsForDay(src(), date, settings, on).find((p) => p.at === `${date}T20:30`);
+
+  it('comes at 8:30 PM on Sunday and opens the review, only when the reminder is on', () => {
+    expect(reviewAt(SUN, true)).toMatchObject({ title: 'Sunday review: look back on the week and set three priorities', url: '/review', keys: [`review:${SUN}`] });
+    expect(reviewAt(SUN, false)).toBeUndefined();
+  });
+  it('is only for Sundays', () => {
+    expect(reviewAt(WED, true)).toBeUndefined();
+    expect(reviewAt('2026-11-09', true)).toBeUndefined();
+  });
+});

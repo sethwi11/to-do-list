@@ -31,11 +31,11 @@ export const localMinute = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMo
 export function createPopupScheduler(r: Repositories, send: SendPopup, now: () => string = localMinute) {
   const sent = new Set<string>();
   return async function tick(): Promise<Popup[]> {
-    const settings = (await r.settings.get()).popups;
+    const app = await r.settings.get();
     const minute = now();
     const src = await planSources(r);
     const dates = [...new Set([planningDate(src.templates, minute), datePart(minute)])];
-    const due = dates.flatMap((d) => popupsForDay(src, d, settings)).filter((p) => p.at === minute && p.keys.some((k) => !sent.has(k)));
+    const due = dates.flatMap((d) => popupsForDay(src, d, app.popups, app.sundayReviewReminder)).filter((p) => p.at === minute && p.keys.some((k) => !sent.has(k)));
     for (const p of due) {
       p.keys.forEach((k) => sent.add(k));
       send(p);

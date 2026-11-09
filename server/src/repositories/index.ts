@@ -12,6 +12,11 @@ import type {
   CreateTemplateInput,
   CreateTimeBlockInput,
   CreateWeeklyReviewInput,
+  Badge,
+  CreateBadgeInput,
+  CreateMilestoneInput,
+  Milestone,
+  UpdateMilestoneInput,
   CreateWeekTemplateInput,
   CreateRoutineBlockInput,
   RoutineBlock,
@@ -75,6 +80,8 @@ import {
   createExpenseRepository,
   createHoldingRepository,
   createMoneyMoveRepository,
+  createMilestoneRepository,
+  createBadgeRepository,
   createSavingsGoalRepository,
 } from './entities';
 import { SqliteApplicationRepository } from './SqliteApplicationRepository';
@@ -108,6 +115,8 @@ export interface Repositories {
   savingsGoals: RestorableRepository<SavingsGoal, CreateSavingsGoalInput, UpdateSavingsGoalInput>;
   holdings: RestorableRepository<Holding, CreateHoldingInput, UpdateHoldingInput>;
   moneyMoves: CrudRepository<MoneyMove, CreateMoneyMoveInput, never> & Batchable<MoneyMove>;
+  milestones: RestorableRepository<Milestone, CreateMilestoneInput, UpdateMilestoneInput>;
+  badges: CrudRepository<Badge, CreateBadgeInput, never>;
   settings: SettingsRepository;
   attachments: SqliteAttachmentRepository;
   backup: BackupRepository;
@@ -136,6 +145,8 @@ export function createRepositories(db: Db): Repositories {
     savingsGoals: createSavingsGoalRepository(db),
     holdings: createHoldingRepository(db),
     moneyMoves: createMoneyMoveRepository(db),
+    milestones: createMilestoneRepository(db),
+    badges: createBadgeRepository(db),
     settings: new SqliteSettingsRepository(db),
   };
   return { ...concrete, attachments: new SqliteAttachmentRepository(db), backup: new BackupRepository(db, concrete) };

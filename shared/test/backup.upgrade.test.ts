@@ -76,3 +76,20 @@ describe('upgradeBackup', () => {
     expect(BackupSchema.safeParse(upgradeBackup({ hello: 'world' })).success).toBe(false);
   });
 });
+
+describe('upgradeBackup from version 6', () => {
+  const week = { id: '66666666-6666-4666-8666-666666666666', weekStart: '2026-11-02', notes: 'Good week', createdAt: '2026-11-08T00:00:00.000Z', updatedAt: '2026-11-08T00:00:00.000Z' };
+  const v6 = { app: 'voice-todo', version: 6, exportedAt: '2026-11-08T12:00:00.000Z', calendars: [], tasks: [], weeklyReviews: [week] };
+
+  it('gives old weekly reviews empty priorities and starts the new tables empty', () => {
+    const upgraded = BackupSchema.parse(upgradeBackup(v6));
+    expect(upgraded.version).toBe(BACKUP_VERSION);
+    expect(upgraded.weeklyReviews).toEqual([{ ...week, priorities: [] }]);
+    expect(upgraded.milestones).toEqual([]);
+    expect(upgraded.badges).toEqual([]);
+  });
+  it('upgrades a file with no reviews at all', () => {
+    expect(BackupSchema.parse(upgradeBackup({ ...v6, weeklyReviews: undefined })).weeklyReviews).toEqual([]);
+  });
+});
+

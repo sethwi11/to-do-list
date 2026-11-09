@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { hasFields, LocalDateSchema, NO_FIELDS_MESSAGE } from '../localTime';
 import { DEFAULT_QUOTES, QuoteSchema } from '../quotes';
 import { BudgetSettingsSchema, DEFAULT_BUDGET } from './money';
+import { DEFAULT_PATH_SETTINGS, PathSettingsSchema } from './path';
 import { DEFAULT_POPUP_SETTINGS, PopupSettingsSchema } from '../popups';
 
 // ---- focus sessions -----------------------------------------------------
@@ -20,18 +21,19 @@ export type CreateFocusSessionInput = z.infer<typeof CreateFocusSessionInputSche
 
 // ---- weekly reviews -----------------------------------------------------
 
-/** The reflection notes for one week. `weekStart` is that week's Monday. */
+/** One week's review: reflection notes and up to three priorities for the week after. `weekStart` is that week's Monday. */
 export const WeeklyReviewFieldsSchema = z.object({
   weekStart: LocalDateSchema,
   notes: z.string().max(20_000),
+  priorities: z.array(z.string().trim().min(1).max(200)).max(3),
 });
 export const WeeklyReviewSchema = WeeklyReviewFieldsSchema.extend({
   id: z.uuid(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
 });
-export const CreateWeeklyReviewInputSchema = WeeklyReviewFieldsSchema.extend({ id: z.uuid().optional() });
-export const UpdateWeeklyReviewInputSchema = z.object({ notes: WeeklyReviewFieldsSchema.shape.notes });
+export const CreateWeeklyReviewInputSchema = WeeklyReviewFieldsSchema.partial({ notes: true, priorities: true }).extend({ id: z.uuid().optional() });
+export const UpdateWeeklyReviewInputSchema = WeeklyReviewFieldsSchema.pick({ notes: true, priorities: true }).partial().refine(hasFields, NO_FIELDS_MESSAGE);
 export type WeeklyReview = z.infer<typeof WeeklyReviewSchema>;
 export type CreateWeeklyReviewInput = z.infer<typeof CreateWeeklyReviewInputSchema>;
 export type UpdateWeeklyReviewInput = z.infer<typeof UpdateWeeklyReviewInputSchema>;
@@ -70,6 +72,7 @@ export const AppSettingsSchema = z.object({
   popups: PopupSettingsSchema,
   soundtracks: z.array(SoundtrackSchema).max(30),
   budget: BudgetSettingsSchema,
+  path: PathSettingsSchema,
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -82,16 +85,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
   popups: DEFAULT_POPUP_SETTINGS,
   soundtracks: ['lofi', 'news', 'house'].map((name) => ({ name, link: null, folder: null })),
   budget: DEFAULT_BUDGET,
+  path: DEFAULT_PATH_SETTINGS,
 };
 
 export const UpdateSettingsInputSchema = AppSettingsSchema.partial()
-  .extend({ focus: FocusSettingsSchema.partial().optional(), popups: PopupSettingsSchema.partial().optional(), budget: BudgetSettingsSchema.partial().optional() })
+  .extend({ focus: FocusSettingsSchema.partial().optional(), popups: PopupSettingsSchema.partial().optional(), budget: BudgetSettingsSchema.partial().optional(), path: PathSettingsSchema.partial().optional() })
   .refine(hasFields, NO_FIELDS_MESSAGE);
 export type UpdateSettingsInput = z.infer<typeof UpdateSettingsInputSchema>;
 
-/** Merge a stored/partial settings object over the defaults (one level deep for `focus`, `popups` and `budget`). */
+/** Merge a stored/partial settings object over the defaults (one level deep for `focus`, `popups`, `budget` and `path`). */
 export function mergeSettings(base: AppSettings, patch: UpdateSettingsInput | Partial<AppSettings>): AppSettings {
-  return { ...base, ...patch, focus: { ...base.focus, ...(patch.focus ?? {}) }, popups: { ...base.popups, ...(patch.popups ?? {}) }, budget: { ...base.budget, ...(patch.budget ?? {}) } };
+  return { ...base, ...patch, focus: { ...base.focus, ...(patch.focus ?? {}) }, popups: { ...base.popups, ...(patch.popups ?? {}) }, budget: { ...base.budget, ...(patch.budget ?? {}) }, path: { ...base.path, ...(patch.path ?? {}) } };
 }
 
 // ---- attachments --------------------------------------------------------

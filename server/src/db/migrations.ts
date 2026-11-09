@@ -473,6 +473,36 @@ const migrations: Migration[] = [
     const now = new Date().toISOString();
     ['Food', 'Eating out', 'Gas and transport', 'Shopping', 'Subscriptions', 'School', 'Going out', 'Business (real estate)', 'Other'].forEach((name, i) => insert.run(randomUUID(), name, (i + 1) * 1024, now));
   },
+
+  // v11: the Path. Milestones and earned badges are new tables, and each weekly review gains up to three priorities. Nothing existing changes.
+  (db) => {
+    db.exec(`
+      CREATE TABLE milestones (
+        id              TEXT PRIMARY KEY,
+        title           TEXT NOT NULL,
+        target_date     TEXT,
+        reached_on      TEXT,
+        calendar_ids    TEXT NOT NULL DEFAULT '[]',   -- JSON: categories whose hours feed it
+        savings_goal_id TEXT,                         -- no foreign key: goals are soft-deleted, and a restored backup may bring either first
+        track_offers    INTEGER NOT NULL DEFAULT 0,
+        sort_order      REAL NOT NULL,
+        created_at      TEXT NOT NULL,
+        updated_at      TEXT NOT NULL,
+        deleted_at      TEXT
+      );
+
+      -- One row per badge ever earned; key says which, so it is never awarded twice.
+      CREATE TABLE badges (
+        id         TEXT PRIMARY KEY,
+        key        TEXT NOT NULL UNIQUE,
+        title      TEXT NOT NULL,
+        earned_on  TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      ALTER TABLE weekly_reviews ADD COLUMN priorities TEXT NOT NULL DEFAULT '[]';
+    `);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

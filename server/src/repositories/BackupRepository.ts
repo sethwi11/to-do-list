@@ -19,6 +19,8 @@ import type {
   HoldingRepo,
   MoneyMoveRepo,
   SavingsGoalRepo,
+  MilestoneRepo,
+  BadgeRepo,
 } from './entities';
 import type { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import type { SqliteSettingsRepository } from './SqliteSettingsRepository';
@@ -46,6 +48,8 @@ export interface BackupSources {
   savingsGoals: SavingsGoalRepo;
   holdings: HoldingRepo;
   moneyMoves: MoneyMoveRepo;
+  milestones: MilestoneRepo;
+  badges: BadgeRepo;
   settings: SqliteSettingsRepository;
 }
 
@@ -85,6 +89,8 @@ export class BackupRepository {
       savingsGoals: r.savingsGoals.listSync(),
       holdings: r.holdings.listSync(),
       moneyMoves: r.moneyMoves.listSync(),
+      milestones: r.milestones.listSync(),
+      badges: r.badges.listSync(),
       settings: r.settings.getSync(),
     };
   }
@@ -175,6 +181,11 @@ export class BackupRepository {
       for (const g of backup.savingsGoals) count('savingsGoals', r.savingsGoals.upsertSync(g));
       for (const h of backup.holdings) count('holdings', r.holdings.upsertSync(h));
       for (const m of backup.moneyMoves) count('moneyMoves', r.moneyMoves.upsertSync(m));
+
+      for (const m of backup.milestones) count('milestones', r.milestones.upsertSync({ ...m, calendarIds: m.calendarIds.map((id) => mapCalendar(id)!) }));
+      // One badge per key: if this one was already earned here, the earlier row stays as it is.
+      const earned = new Set(r.badges.listSync().map((b) => b.key));
+      for (const b of backup.badges) if (!earned.has(b.key)) count('badges', r.badges.upsertSync(b));
 
       // One check-in per item per day: if this day's item already has one, the imported one replaces it.
       const existingCheckIns = r.checkIns.listSync();

@@ -26,6 +26,8 @@ const WeekPage = lazy(() => import('./pages/WeekPage'));
 const DisplayPage = lazy(() => import('./pages/DisplayPage'));
 const CheckInPage = lazy(() => import('./pages/CheckInPage'));
 const MoneyPage = lazy(() => import('./pages/MoneyPage'));
+const PathPage = lazy(() => import('./pages/PathPage'));
+const ReviewPage = lazy(() => import('./pages/ReviewPage'));
 
 // Providers, outside in: settings (applies the theme), the server-data cache, the router, then AppProvider (shared data, actions, dialogs, toast).
 createRoot(document.getElementById('root')!).render(
@@ -49,6 +51,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="week" element={<WeekPage />} />
               <Route path="checkin" element={<CheckInPage />} />
               <Route path="money" element={<MoneyPage />} />
+              <Route path="path" element={<PathPage />} />
+              <Route path="review" element={<ReviewPage />} />
               <Route path="tasks" element={<TasksPage />} />
               <Route path="applications" element={<ApplicationsPage />} />
               <Route path="applications/:id" element={<ApplicationPage />} />
