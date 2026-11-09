@@ -27,6 +27,7 @@ A personal planner built from a to-do app: tasks, a calendar, courses, an intern
 - Undo for delete, complete, and every calendar change; keyboard shortcuts (press `?`); dark mode; JSON export and import
 - Works on a phone-width screen: the sidebar becomes a drawer, the calendar opens on the Agenda, and a + button replaces the New menu
 - **Money**: a spending budget (a month or a week), a quick way to log what you spend, where it went, the pace, last period's leftover to put to work, savings goals, and investments you update by hand (tracking only)
+- **Headlines** on Today: press a button for the day's stories from NPR, BBC, PBS or AP (AP through Google News, so headlines only); nothing is fetched until you press it
 - Data foundation for everything coming next: templates, weekly reviews
 
 ## Roadmap
@@ -168,6 +169,10 @@ After merging new work, `npm run app:restart`; to remove it, `npm run app:uninst
 - **Soundtracks** (Settings): a name, a link and/or a folder of audio files on this Mac. A block's soundtrack shows on the Now card and in its start pop-up. Nothing loads before you press play: a link opens in a new tab; a folder plays in a small player (play/pause, next, the track name, level bars that hold still with reduced motion), read by the local server from that folder only (`/api/soundtracks/...`, nothing copied into the project).
 - **Close the day** (`/checkin`): opened by the pop-up when the day's last non-free block ends, or the "Close the day" link on Today in the evening. Done, Part or Skipped for each planned item (tap again to clear; unmarked stays unknown), "which one?" for blocks with an alternative, an optional "what I learned" line on focus blocks (the learning log), missed rolling to-dos, and tomorrow's first three. "Mark the rest done" makes a normal day a few taps. Each check-in copies the item's title, category and minutes (`check_ins`), so later template edits never change history.
 - **Streaks** (`shared/src/streaks.ts`): gym and LeetCode (check-ins on blocks with those names), focus (a focus session on a day with focus blocks) and nightly check-ins. A day with nothing planned for a streak doesn't break it, and today doesn't until it's over. They show on the morning view and the Now card; at 7, 14, 30, 50 and 100 days, then every 100, a few seconds of fireworks (a still picture with reduced motion), once per milestone.
+
+## Headlines
+
+The one place the app reaches the internet, and only when you press the button (Today → Headlines). The local server fetches a fixed address for the source you chose (NPR, BBC and PBS NewsHour's own free feeds; AP through a Google News feed limited to apnews.com, which has no public feed of its own), so the page never makes a third-party request itself and nothing is fetched on load. The feeds' text is read as plain text only (`parseFeed` in `shared/src/headlines.ts`, tested with made-up feeds, including markup that must never survive), links must be `https` and open in a new tab. Each story comes with the publisher's own one-line summary where the feed has one: the app doesn't write summaries, since that would need an AI service and a key. The last result per source is kept for the day on that device. Nothing else about the app sends your data anywhere.
 
 ## Money
 

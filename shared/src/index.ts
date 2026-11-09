@@ -26,5 +26,6 @@ export * from './popups';
 export * from './models/checkins';
 export * from './models/money';
 export * from './money';
+export * from './headlines';
 export * from './streaks';
 export * from './backup';

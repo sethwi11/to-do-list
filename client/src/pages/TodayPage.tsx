@@ -9,6 +9,7 @@ import { ItemDetail } from '../features/calendar/ItemDetail';
 import { Agenda, Legend } from '../features/today/Agenda';
 import { DayBar, MorningHeader } from '../features/today/MorningHeader';
 import { NowCard } from '../features/today/NowCard';
+import { Headlines } from '../features/today/Headlines';
 import { MissedList, weekOf } from '../features/today/MissedList';
 import { MilestoneFireworks, useStreaks } from '../features/today/Streaks';
 import { DayChangeDialog } from '../features/today/DayChangeDialog';
@@ -200,6 +201,10 @@ export default function TodayPage() {
 
               <CompletedSection tasks={doneToday} />
             </div>
+          </div>
+
+          <div className="mt-14">
+            <Headlines today={today} />
           </div>
 
           <div className="mt-14">

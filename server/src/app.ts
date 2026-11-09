@@ -48,12 +48,13 @@ import { attachmentsRouter } from './routes/attachments';
 import { backupRouter } from './routes/backup';
 import { crudRouter } from './routes/crudRouter';
 import { batchRouter } from './routes/batch';
+import { headlinesRouter, type FetchFeed } from './routes/headlines';
 import { settingsRouter } from './routes/settings';
 import { soundtracksRouter } from './routes/soundtracks';
 import { tasksRouter } from './routes/tasks';
 
 /** Builds the Express app without starting it. `clientDir` serves the built app too; `sendPopup` makes "Send a test pop-up" work. */
-export function createApp(repos: Repositories, options: { uploadsDir: string; clientDir?: string; sendPopup?: SendPopup }) {
+export function createApp(repos: Repositories, options: { uploadsDir: string; clientDir?: string; sendPopup?: SendPopup; fetchFeed?: FetchFeed }) {
   const app = express();
 
   // 5 MB, so a JSON backup import fits; normal requests are tiny.
@@ -87,6 +88,7 @@ export function createApp(repos: Repositories, options: { uploadsDir: string; cl
   app.use('/api/holdings', crudRouter(repos.holdings, { label: 'Holding', create: CreateHoldingInputSchema, update: UpdateHoldingInputSchema }));
   app.use('/api/money-moves', batchRouter(repos.moneyMoves, MoneyMoveBatchInputSchema));
   app.use('/api/money-moves', crudRouter(repos.moneyMoves, { label: 'Money move', create: CreateMoneyMoveInputSchema, update: null }));
+  app.use('/api/headlines', headlinesRouter(options.fetchFeed));
   app.use('/api/soundtracks', soundtracksRouter(repos.settings));
   app.use('/api/attachments', attachmentsRouter(repos.attachments, options.uploadsDir));
   app.use('/api/settings', settingsRouter(repos.settings));
