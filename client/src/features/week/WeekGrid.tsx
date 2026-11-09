@@ -51,7 +51,7 @@ export function WeekGrid({ blocks, classes, calendarsById, day, onOpen, onCreate
 
   // The stronger block takes the full width; a covered block shows only as "+1 hidden" on it, and a partly covered one as what's left (not draggable: click it to edit).
   const { events, hides } = useMemo(() => {
-    const layout = layoutTemplate(blocks, classes);
+    const layout = layoutTemplate(blocks);
     const out: EventInput[] = [];
     for (const b of blocks) {
       const whole = spanOn(refDate(b.weekday), b.start, b.end);
@@ -62,6 +62,7 @@ export function WeekGrid({ blocks, classes, calendarsById, day, onOpen, onCreate
     for (const c of classes) out.push({ id: c.key, start: combine(refDate(c.weekday), c.start), end: combine(refDate(c.weekday), c.end), editable: false, extendedProps: { cls: c } });
     return { events: out, hides: layout.hides };
   }, [blocks, classes]);
+
 
   function renderContent(arg: EventContentArg) {
     const { block, cls, clipped } = arg.event.extendedProps as { block?: RoutineBlock; cls?: ClassSlot; clipped?: boolean };
@@ -120,6 +121,8 @@ export function WeekGrid({ blocks, classes, calendarsById, day, onOpen, onCreate
         slotDuration="00:30:00"
         snapDuration="00:05:00"
         eventMinHeight={0}
+        // Overlapping things sit side by side, never one on top of the other.
+        slotEventOverlap={false}
         slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: true, meridiem: 'short', hour12: true }}
         selectable
         selectMirror

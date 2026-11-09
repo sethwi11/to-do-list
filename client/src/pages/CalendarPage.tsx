@@ -6,7 +6,7 @@ import { usePlanSources } from '../features/today/useTodayPlan';
 import { weekStart } from '../features/calendar/calendarModel';
 import { useApp } from '../app/AppContext';
 import { AgendaView } from '../features/calendar/AgendaView';
-import { buildItems, calendarUrl, dataRange, isCalendarView, parseCalendarQuery, shiftDate, viewTitle, type CalendarItem, type CalendarViewId } from '../features/calendar/calendarModel';
+import { attachChips, buildItems, calendarUrl, dataRange, isCalendarView, parseCalendarQuery, shiftDate, viewTitle, type CalendarItem, type CalendarViewId } from '../features/calendar/calendarModel';
 import { CalendarHeader, type Layers } from '../features/calendar/CalendarHeader';
 import { CalendarView } from '../features/calendar/CalendarView';
 import { ItemDetail } from '../features/calendar/ItemDetail';
@@ -66,6 +66,9 @@ export default function CalendarPage() {
     return days.flatMap((d) => planDay(src, d).items.filter((i) => i.kind === 'routine')).filter((i) => i.calendarId === null || !hiddenCalendarIds.has(i.calendarId));
   }, [layers.routine, view, date, src, hiddenCalendarIds]);
 
+  // To-dos with a time inside a routine block sit on top of it instead of splitting its column.
+  const { items: shown, onBlock } = useMemo(() => attachChips(items, routine), [items, routine]);
+
   // The workload map counts everything you have on, whichever calendars are hidden from view: hiding a calendar tidies the page, but it doesn't free up your week.
   const loads = useMemo(() => {
     if (!heat || view !== 'month') return null;
@@ -118,7 +121,8 @@ export default function CalendarPage() {
             <CalendarView
               view={view}
               date={date}
-              items={items}
+              items={shown}
+              chips={onBlock}
               hasSelection={selection !== null}
               onSelect={(s) => {
                 setDetail(null);

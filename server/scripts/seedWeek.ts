@@ -14,6 +14,7 @@ import {
   planCourseSchedule,
   RoutineDaySchema,
   RoutinePrioritySchema,
+  SoundtrackSchema,
   type RoutineBlock,
 } from '@todo/shared';
 import { openDatabase } from '../src/db/connection';
@@ -45,6 +46,8 @@ const Seed = z.object({
     }),
   ),
   reminders: z.array(z.object({ title: z.string().min(1), weekday: z.number().int().min(0).max(6), time: LocalTimeSchema, category: z.string(), message: z.string().nullable() })),
+  /** Optional: fills a soundtrack that has no link or folder yet (never replaces one you set). */
+  soundtracks: z.array(SoundtrackSchema).default([]),
   assumed: z.array(z.string()),
 });
 
@@ -145,6 +148,18 @@ for (const m of seed.reminders) {
   const dueDate = addDays(today, (m.weekday - dayOfWeek(today) + 7) % 7);
   await r.tasks.create({ title: m.title, notes: m.message, dueDate, dueTime: m.time, recurrence: 'weekly', calendarId: cal(m.category) });
   log(`added "${m.title}"`);
+}
+
+console.log('Soundtracks');
+if (seed.soundtracks.length > 0) {
+  const current = (await r.settings.get()).soundtracks;
+  const empty = (s: { link: string | null; folder: string | null }) => !s.link && !s.folder;
+  const merged = current.map((c) => (empty(c) ? (seed.soundtracks.find((s) => s.name === c.name) ?? c) : c));
+  for (const s of seed.soundtracks) if (!merged.some((m) => m.name === s.name)) merged.push(s);
+  if (JSON.stringify(merged) !== JSON.stringify(current)) {
+    await r.settings.update({ soundtracks: merged });
+    log(`set ${merged.filter((m, i) => JSON.stringify(m) !== JSON.stringify(current[i])).map((m) => m.name).join(', ')}`);
+  }
 }
 
 console.log('\nAssumed (please confirm or edit):');

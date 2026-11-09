@@ -133,17 +133,17 @@ export interface ClassSlot {
   end: string;
 }
 
-/** The template as drawn on the Week page: classes keep their time over everything but a commitment, the stronger block keeps an overlap, and covered parts disappear (pieces under 15 minutes dropped). Returns each block's visible pieces, and the ids of the blocks each block or class hides completely. */
-export function layoutTemplate(blocks: readonly RoutineBlock[], classes: readonly ClassSlot[]): { pieces: Map<string, { start: string; end: string }[]>; hides: Map<string, string[]> } {
+/** The template as drawn on the Week page: the stronger block keeps an overlap and covered parts disappear (pieces under 15 minutes dropped). Classes aren't part of this: a class and a block that share time sit side by side. Returns each block's visible pieces, and the ids of the blocks each block hides completely. */
+export function layoutTemplate(blocks: readonly RoutineBlock[]): { pieces: Map<string, { start: string; end: string }[]>; hides: Map<string, string[]> } {
   const pieces = new Map<string, { start: string; end: string }[]>();
   const hides = new Map<string, string[]>();
   for (let w = 0; w < 7; w++) {
     const date = refDate(w);
-    const kept: { key: string; start: string; end: string; rank: number }[] = classes.filter((c) => c.weekday === w).map((c) => ({ key: c.key, ...spanOn(date, c.start, c.end), rank: -1 }));
+    const kept: { key: string; start: string; end: string; rank: number }[] = [];
     for (const b of blocks.filter((x) => x.weekday === w).sort((a, z) => RANK[a.priority] - RANK[z.priority])) {
       const rank = RANK[b.priority];
       const span = spanOn(date, b.start, b.end);
-      const stronger = kept.filter((k) => k.rank < rank && !(k.rank === -1 && b.priority === 'commitment'));
+      const stronger = kept.filter((k) => k.rank < rank);
       const visible = subtract(span, stronger).pieces;
       pieces.set(b.id, visible);
       if (visible.length === 0) {
@@ -308,13 +308,15 @@ export function planDay(src: PlanSources, date: string): DayPlan {
 
   const items: PlanItem[] = [...events, ...todo];
   for (const r of routine) {
-    const over = [...events, ...todo].filter((e) => e.start < r.end && e.end > r.start);
+    const touching = [...events, ...todo].filter((e) => e.start < r.end && e.end > r.start);
     // A commitment is never replaced automatically: both stay, side by side, with the conflict shown.
     if (r.priority === 'commitment') {
-      for (const e of over) if (e.kind !== 'task') e.clashes.push(r.title);
+      for (const e of touching) if (e.kind !== 'task') e.clashes.push(r.title);
       items.push(r);
       continue;
     }
+    // A class doesn't cut a block either: they share the time, side by side (the Week page says when that happens every week).
+    const over = touching.filter((e) => e.kind !== 'class');
     const { pieces } = subtract(r, over);
     // Only one-off events make a block "missed": a class that overlaps it every week means the template needs adjusting (the Week page says so).
     const takers = over.filter((e) => e.kind === 'event');

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { blockMinutesFor, describeLoad, minutesBetween, selfIds, timePart, type DayLoad, type EventOccurrence, type PlanItem } from '@todo/shared';
-import { BlockText, blockPadding } from '../../ui/blocks';
+import { blockMinutesFor, combine, describeLoad, minutesBetween, selfIds, timePart, type DayLoad, type EventOccurrence, type PlanItem } from '@todo/shared';
+import { BlockText, blockPadding, TodoBlock } from '../../ui/blocks';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -13,7 +13,7 @@ import { anchorOf, type PopoverAnchor } from '../../ui/Popover';
 import '../../styles/calendar.css';
 import { describeConflicts, formatTimeRange } from './format';
 import { shadeFor, shadeProps } from '../../lib/calendarColors';
-import { localDate, localDateTime, selectionToSpan, spanFromFullCalendar, taskSpan, type CalendarItem } from './calendarModel';
+import { localDate, localDateTime, selectionToSpan, spanFromFullCalendar, taskSpan, type CalendarItem, type TaskItem } from './calendarModel';
 import { HeatTooltip } from './HeatLegend';
 import { ItemBlock } from './ItemBlock';
 import type { Selection } from './QuickCreate';
@@ -40,6 +40,7 @@ function toFullCalendarEvent(item: CalendarItem): EventInput {
 
 const itemOf = (arg: { event: { extendedProps: Record<string, unknown> } }) => arg.event.extendedProps.item as CalendarItem;
 const NO_ROUTINE: PlanItem[] = [];
+const NO_CHIPS = new Map<string, TaskItem[]>();
 
 interface CalendarViewProps {
   view: GridView;
@@ -55,10 +56,12 @@ interface CalendarViewProps {
   /** Routine blocks to draw behind everything else (read-only here; edited on the Week page). */
   routine?: readonly PlanItem[];
   onOpenRoutine?: (item: PlanItem) => void;
+  /** To-dos with a time inside a routine block, drawn on top of it, by the block's key. */
+  chips?: ReadonlyMap<string, TaskItem[]>;
 }
 
 /** Month, Week, and Day, drawn by FullCalendar (which does the hard parts: layout of overlapping events, dragging, resizing, selecting). */
-export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay, loads = null, routine = NO_ROUTINE, onOpenRoutine }: CalendarViewProps) {
+export function CalendarView({ view, date, items, hasSelection, onSelect, onOpenItem, onOpenDay, loads = null, routine = NO_ROUTINE, onOpenRoutine, chips = NO_CHIPS }: CalendarViewProps) {
   const { clashesFor, editEvent, rescheduleTask, toggleTask, tasks, scheduleTask, moveTimeBlock, showToast } = useApp();
   const [tip, setTip] = useState<{ load: DayLoad; x: number; y: number } | null>(null);
   const ref = useRef<FullCalendar>(null);
@@ -95,10 +98,18 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
 
   function handleClick(info: EventClickArg) {
     info.jsEvent.preventDefault();
+    const target = info.jsEvent.target as HTMLElement;
+    // The checkbox on a to-do does its own thing; clicking it shouldn't also open the details.
+    if (target.closest('input[type=checkbox]')) return;
+    // A to-do drawn on a routine block opens its own details, not the block's.
+    const chip = target.closest<HTMLElement>('[data-chip]');
+    if (chip) {
+      const item = [...chips.values()].flat().find((i) => i.id === chip.dataset.chip);
+      if (item) onOpenItem(item, anchorOf(chip));
+      return;
+    }
     const r = info.event.extendedProps.routine as PlanItem | undefined;
     if (r) return onOpenRoutine?.(r);
-    // The checkbox on a to-do does its own thing; clicking it shouldn't also open the details.
-    if ((info.jsEvent.target as HTMLElement).closest('input[type=checkbox]')) return;
     onOpenItem(itemOf(info), anchorOf(info.el));
   }
 
@@ -155,8 +166,14 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
       const time = formatTimeRange(timePart(r.start), timePart(r.end));
       const minutes = minutesBetween(r.start, r.end);
       return (
-        <div style={look.style} title={[r.title, 'routine', time, ...r.hidden.map((h) => `hides ${h}`)].join(' · ')} className={cx('h-full overflow-hidden rounded-control text-ink opacity-80', blockPadding(minutes), look.className)}>
+        <div style={look.style} title={[r.title, 'routine', time, ...r.hidden.map((h) => `hides ${h}`)].join(' · ')} className={cx('relative h-full overflow-hidden rounded-control text-ink opacity-80', blockPadding(minutes), look.className)}>
           <BlockText title={r.title} time={time} minutes={minutes} notes={r.hidden.length > 0 && <p className="truncate text-time italic">+{r.hidden.length} hidden: {r.hidden.join(', ')}</p>} />
+          {(chips.get(r.key) ?? []).map((i) => (
+            // At the to-do's time, over the block, so it never splits the block's column.
+            <div key={i.id} data-chip={i.id} className="absolute right-1 left-1/4" style={{ top: `min(${(minutesBetween(r.start, combine(i.task.dueDate!, i.task.dueTime!)) / minutes) * 100}%, calc(100% - 1.5rem))` }}>
+              <TodoBlock title={i.task.title} color={i.color} calendarName={i.calendarName} done={i.task.status === 'done'} onToggle={() => void toggleTask(i.task)} className="h-6 bg-paper" />
+            </div>
+          ))}
         </div>
       );
     }
@@ -206,6 +223,8 @@ export function CalendarView({ view, date, items, hasSelection, onSelect, onOpen
         slotDuration="00:30:00"
         snapDuration="00:15:00"
         eventMinHeight={0}
+        // Overlapping things sit side by side, never one on top of the other.
+        slotEventOverlap={false}
         allDayText="All day"
         slotLabelFormat={{ hour: 'numeric', minute: '2-digit', omitZeroMinute: true, meridiem: 'short', hour12: true }}
         selectable

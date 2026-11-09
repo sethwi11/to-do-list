@@ -214,10 +214,11 @@ describe('what counts as missed', () => {
     expect(plan.bumped).toEqual([]);
   });
 
-  it('a class takes the time it overlaps but never makes a block missed (that is a template to adjust)', () => {
+  it('a class shares time with a block, side by side: it never cuts the block or makes it missed', () => {
     const t = template();
     const plan = planDay(sources([t], [block(t, { start: '12:50', end: '14:00', title: 'Lunch' })], { events: [ev({ title: 'Class', courseId: id(), start: `${WED}T12:30`, end: `${WED}T13:45` })] }), WED);
-    expect(plan.items.find((i) => i.title === 'Lunch')).toMatchObject({ start: `${WED}T13:45`, status: 'trimmed' });
+    expect(plan.items.find((i) => i.title === 'Lunch')).toMatchObject({ start: `${WED}T12:50`, end: `${WED}T14:00`, status: 'planned' });
+    expect(plan.items.find((i) => i.title === 'Class')?.replaces).toEqual([]);
     expect(plan.bumped).toEqual([]);
   });
 
@@ -233,18 +234,17 @@ describe('what counts as missed', () => {
 });
 
 describe('the Week page layout', () => {
-  it('lets the stronger block take the full width and hides what it covers, with classes over everything but commitments', () => {
+  it('lets the stronger block take the full width and hides what it covers', () => {
     const t = template();
     const work = block(t, { start: '17:00', end: '17:30', title: 'Club work' });
     const game = block(t, { start: '17:00', end: '19:30', title: 'Volleyball', priority: 'high' });
     const lunch = block(t, { start: '12:50', end: '14:00', title: 'Lunch' });
     const hours = block(t, { start: '12:00', end: '13:00', title: 'Office hours', priority: 'commitment' });
-    const cls = { key: 'c1', title: 'Class', weekday: 3, start: '12:30', end: '13:45' };
-    const { pieces, hides } = layoutTemplate([work, game, lunch, hours], [cls]);
+    const { pieces, hides } = layoutTemplate([work, game, lunch, hours]);
     expect(pieces.get(work.id)).toEqual([]);
     expect(hides.get(game.id)).toEqual([work.id]);
-    expect(pieces.get(lunch.id)).toEqual([{ start: '2001-01-03T13:45', end: '2001-01-03T14:00' }]);
-    expect(pieces.get(hours.id)).toEqual([{ start: '2001-01-03T12:00', end: '2001-01-03T13:00' }]); // a commitment isn't cut by a class
+    expect(pieces.get(lunch.id)).toEqual([{ start: '2001-01-03T13:00', end: '2001-01-03T14:00' }]); // only a stronger block cuts it (the commitment here); a class never does
+    expect(pieces.get(hours.id)).toEqual([{ start: '2001-01-03T12:00', end: '2001-01-03T13:00' }]);
   });
 
   it('finds classes that overlap a block every week, grouped across days', () => {

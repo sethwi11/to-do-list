@@ -11,6 +11,7 @@ import {
   type CalendarColor,
   type Event,
   type EventOccurrence,
+  type PlanItem,
   type Task,
   type TimeBlock,
 } from '@todo/shared';
@@ -160,6 +161,22 @@ export function buildItems(src: ItemSources, rangeStart: string, rangeEnd: strin
     }
   }
   return items;
+}
+
+export type TaskItem = Extract<CalendarItem, { kind: 'task' }>;
+
+/** A to-do with a due time that falls inside a routine block is drawn on top of that block, not beside it (it would split the block's column). Returns the items still drawn as their own chips, and the chips on each block by the block's key. */
+export function attachChips(items: CalendarItem[], routine: readonly PlanItem[]): { items: CalendarItem[]; onBlock: Map<string, TaskItem[]> } {
+  const onBlock = new Map<string, TaskItem[]>();
+  const rest = items.filter((i) => {
+    if (i.kind !== 'task' || !i.task.dueDate || !i.task.dueTime) return true;
+    const at = combine(i.task.dueDate, i.task.dueTime);
+    const block = routine.find((r) => r.start <= at && at < r.end);
+    if (!block) return true;
+    onBlock.set(block.key, [...(onBlock.get(block.key) ?? []), i]);
+    return false;
+  });
+  return { items: rest, onBlock };
 }
 
 const DEFAULT_TASK_MINUTES = 30;

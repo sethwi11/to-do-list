@@ -71,7 +71,9 @@ export function popupsForDay(src: PlanSources, date: string, settings: PopupSett
     if (item.kind === 'class') continue;
     const next = nextAfter(item);
     const soundtrack = item.soundtrack ? ` · Soundtrack: ${item.soundtrack}` : '';
-    add(item.start, RANK.start, `Now: ${item.title} until ${clock(item.end)}${next ? ` · Next: ${next.title}` : ''}${matching(item)}${soundtrack}`, `start:${item.key}`);
+    // A block that starts during a class and runs past it announces itself when the class ends.
+    const startAt = classes.find((c) => c.start < item.start && item.start < c.end && item.end > c.end)?.end ?? item.start;
+    add(startAt, RANK.start, `Now: ${item.title} until ${clock(item.end)}${next ? ` · Next: ${next.title}` : ''}${matching(item)}${soundtrack}`, `start:${item.key}`);
     add(item.end, RANK.stop, `Done: ${item.title}${next && next.start > item.end ? ` · Next: ${next.title} at ${clock(next.start)}` : ''}`, `stop:${item.key}`);
     if (item.focus && settings.focusWarning && minutesBetween(item.start, item.end) >= 15) add(addMinutes(item.end, -5), RANK.warning, `5 minutes left: ${item.title}`, `warn:${item.key}`);
   }

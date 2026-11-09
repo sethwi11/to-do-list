@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildEvent, type Calendar, type Task, type TimeBlock } from '@todo/shared';
+import { buildEvent, type Calendar, type PlanItem, type Task, type TimeBlock } from '@todo/shared';
 import {
+  attachChips,
   buildItems,
   calendarUrl,
   dataRange,
@@ -10,6 +11,7 @@ import {
   newEventSpan,
   parseCalendarQuery,
   selectionToSpan,
+  type TaskItem,
   shiftDate,
   spanFromFullCalendar,
   taskSpan,
@@ -228,5 +230,31 @@ describe('newEventSpan', () => {
   });
   it('uses 9 AM on another day you are looking at', () => {
     expect(newEventSpan('2026-11-20', new Date(2026, 10, 4, 14, 20))).toEqual({ start: '2026-11-20T09:00', end: '2026-11-20T10:00' });
+  });
+});
+
+describe('to-do chips on routine blocks', () => {
+  const block = (key: string, start: string, end: string) => ({ key, start, end }) as PlanItem;
+  const chip = (title: string, dueDate: string, dueTime: string | null): TaskItem => {
+    const task = buildBlank(title, dueDate, { dueTime });
+    return { kind: 'task', id: `task:${task.id}`, task, color: 'slate' };
+  };
+  const study = block('study', '2026-11-11T09:00', '2026-11-11T11:00');
+
+  it('puts a timed to-do inside a block on top of it, and leaves it off the grid on its own', () => {
+    const inside = chip('Text the team', '2026-11-11', '10:30');
+    const { items, onBlock } = attachChips([inside], [study]);
+    expect(items).toEqual([]);
+    expect(onBlock.get('study')).toEqual([inside]);
+  });
+
+  it('leaves to-dos outside any block, without a time, or at a block’s end as their own chips', () => {
+    const outside = chip('Call', '2026-11-11', '12:00');
+    const undated = chip('Someday', '2026-11-11', null);
+    const atEnd = chip('Exactly at the end', '2026-11-11', '11:00');
+    const other = chip('Another day', '2026-11-12', '10:30');
+    const { items, onBlock } = attachChips([outside, undated, atEnd, other], [study]);
+    expect(items).toEqual([outside, undated, atEnd, other]);
+    expect(onBlock.size).toBe(0);
   });
 });
