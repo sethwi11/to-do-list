@@ -21,6 +21,21 @@ import type {
   UpdateWeekTemplateInput,
   WeekTemplate,
   RoutineOverride,
+  CreateExpenseCategoryInput,
+  CreateExpenseInput,
+  CreateHoldingInput,
+  CreateMoneyMoveInput,
+  CreateSavingsGoalInput,
+  Expense,
+  ExpenseCategory,
+  Holding,
+  MoneyMove,
+  MoneyMoveBatchInput,
+  SavingsGoal,
+  UpdateExpenseCategoryInput,
+  UpdateExpenseInput,
+  UpdateHoldingInput,
+  UpdateSavingsGoalInput,
   CheckIn,
   CreateCheckInInput,
   UpdateCheckInInput,
@@ -73,6 +88,16 @@ export const routineBlocksApi = {
 export const routineOverridesApi = createCrudApi<RoutineOverride, CreateRoutineOverrideInput, UpdateRoutineOverrideInput>('/routine-overrides');
 
 export const checkInsApi = createCrudApi<CheckIn, CreateCheckInInput, UpdateCheckInInput>('/check-ins');
+
+export const expenseCategoriesApi = createCrudApi<ExpenseCategory, CreateExpenseCategoryInput, UpdateExpenseCategoryInput>('/expense-categories');
+export const expensesApi = createCrudApi<Expense, CreateExpenseInput, UpdateExpenseInput>('/expenses');
+export const savingsGoalsApi = createCrudApi<SavingsGoal, CreateSavingsGoalInput, UpdateSavingsGoalInput>('/savings-goals');
+export const holdingsApi = createCrudApi<Holding, CreateHoldingInput, UpdateHoldingInput>('/holdings');
+export const moneyMovesApi = {
+  ...createCrudApi<MoneyMove, CreateMoneyMoveInput, never>('/money-moves'),
+  /** Write several moves (or remove them again) in one all-or-nothing request. */
+  batch: (plan: MoneyMoveBatchInput) => apiFetch<{ put: MoneyMove[]; removed: string[] }>('/money-moves/batch', { method: 'POST', body: JSON.stringify(plan) }),
+};
 
 export const settingsApi = {
   get: () => apiFetch<AppSettings>('/settings'),

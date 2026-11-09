@@ -14,6 +14,7 @@ import {
   planCourseSchedule,
   RoutineDaySchema,
   RoutinePrioritySchema,
+  BudgetSettingsSchema,
   SoundtrackSchema,
   type RoutineBlock,
 } from '@todo/shared';
@@ -48,6 +49,8 @@ const Seed = z.object({
   reminders: z.array(z.object({ title: z.string().min(1), weekday: z.number().int().min(0).max(6), time: LocalTimeSchema, category: z.string(), message: z.string().nullable() })),
   /** Optional: fills a soundtrack that has no link or folder yet (never replaces one you set). */
   soundtracks: z.array(SoundtrackSchema).default([]),
+  /** Optional: the spending budget, set only while none is set yet (the amount lives in your private file, not in the code). */
+  budget: BudgetSettingsSchema.optional(),
   assumed: z.array(z.string()),
 });
 
@@ -160,6 +163,12 @@ if (seed.soundtracks.length > 0) {
     await r.settings.update({ soundtracks: merged });
     log(`set ${merged.filter((m, i) => JSON.stringify(m) !== JSON.stringify(current[i])).map((m) => m.name).join(', ')}`);
   }
+}
+
+console.log('Budget');
+if (seed.budget && (await r.settings.get()).budget.amountCents === 0) {
+  await r.settings.update({ budget: seed.budget });
+  log('set the spending budget');
 }
 
 console.log('\nAssumed (please confirm or edit):');

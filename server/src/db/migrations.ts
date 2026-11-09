@@ -407,6 +407,72 @@ const migrations: Migration[] = [
       );
     `);
   },
+
+  // v10: money. Five new tables and your nine starting expense categories; nothing existing changes. Amounts are whole cents.
+  (db) => {
+    db.exec(`
+      CREATE TABLE expense_categories (
+        id          TEXT PRIMARY KEY,
+        name        TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        sort_order  REAL NOT NULL,
+        created_at  TEXT NOT NULL
+      );
+
+      CREATE TABLE expenses (
+        id           TEXT PRIMARY KEY,
+        amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+        what         TEXT NOT NULL,
+        category_id  TEXT REFERENCES expense_categories(id) ON DELETE SET NULL,
+        date         TEXT NOT NULL,                -- 'YYYY-MM-DD'
+        kind         TEXT NOT NULL CHECK (kind IN ('need','want')),
+        recurring    INTEGER NOT NULL DEFAULT 0,
+        created_at   TEXT NOT NULL,
+        updated_at   TEXT NOT NULL,
+        deleted_at   TEXT                          -- soft delete, which makes undo possible
+      );
+      CREATE INDEX idx_expenses_date ON expenses(date) WHERE deleted_at IS NULL;
+
+      CREATE TABLE savings_goals (
+        id           TEXT PRIMARY KEY,
+        name         TEXT NOT NULL,
+        target_cents INTEGER NOT NULL CHECK (target_cents > 0),
+        sort_order   REAL NOT NULL,
+        created_at   TEXT NOT NULL,
+        updated_at   TEXT NOT NULL,
+        deleted_at   TEXT
+      );
+
+      CREATE TABLE holdings (
+        id                   TEXT PRIMARY KEY,
+        name                 TEXT NOT NULL,
+        type                 TEXT NOT NULL CHECK (type IN ('stock','etf','crypto','savings','real-estate','other')),
+        value_cents          INTEGER NOT NULL CHECK (value_cents >= 0),
+        value_updated_on     TEXT NOT NULL,        -- 'YYYY-MM-DD': when you last typed the value
+        monthly_target_cents INTEGER,
+        sort_order           REAL NOT NULL,
+        created_at           TEXT NOT NULL,
+        updated_at           TEXT NOT NULL,
+        deleted_at           TEXT
+      );
+
+      -- Everything that went to a goal or a holding (or was kept as cash from a period's leftover). to_id points at a goal or holding, so there is no foreign key.
+      CREATE TABLE money_moves (
+        id           TEXT PRIMARY KEY,
+        date         TEXT NOT NULL,
+        period_start TEXT,                         -- the budget period whose leftover this came from; null = money you added yourself
+        to_type      TEXT NOT NULL CHECK (to_type IN ('goal','holding','kept')),
+        to_id        TEXT,
+        amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+        note         TEXT,
+        created_at   TEXT NOT NULL
+      );
+      CREATE INDEX idx_money_moves_to ON money_moves(to_id);
+    `);
+
+    const insert = db.prepare('INSERT INTO expense_categories (id, name, sort_order, created_at) VALUES (?, ?, ?, ?)');
+    const now = new Date().toISOString();
+    ['Food', 'Eating out', 'Gas and transport', 'Shopping', 'Subscriptions', 'School', 'Going out', 'Business (real estate)', 'Other'].forEach((name, i) => insert.run(randomUUID(), name, (i + 1) * 1024, now));
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

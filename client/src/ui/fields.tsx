@@ -1,4 +1,4 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { useId, type ComponentProps, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cx } from '../lib/cx';
 
@@ -42,7 +42,7 @@ export function Field({ label, hint, error, className, children }: FieldProps) {
   );
 }
 
-export function Input({ className, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ className, ...rest }: ComponentProps<'input'>) {
   return <input className={cx(control, 'h-9', 'aria-invalid:border-danger', className)} {...rest} />;
 }
 

@@ -24,5 +24,7 @@ export * from './planDay';
 export * from './quotes';
 export * from './popups';
 export * from './models/checkins';
+export * from './models/money';
+export * from './money';
 export * from './streaks';
 export * from './backup';

@@ -19,6 +19,20 @@ import {
   type WeekTemplate,
   type RoutineOverride,
   type CheckIn,
+  type CreateExpenseCategoryInput,
+  type CreateExpenseInput,
+  type CreateHoldingInput,
+  type CreateMoneyMoveInput,
+  type CreateSavingsGoalInput,
+  type Expense,
+  type ExpenseCategory,
+  type Holding,
+  type MoneyMove,
+  type SavingsGoal,
+  type UpdateExpenseCategoryInput,
+  type UpdateExpenseInput,
+  type UpdateHoldingInput,
+  type UpdateSavingsGoalInput,
   type CreateCheckInInput,
   type UpdateCheckInInput,
   type CreateRoutineOverrideInput,
@@ -257,6 +271,47 @@ export const createCheckInRepository = (db: Db) =>
     build: (i, { id, now }) => ({ id, date: i.date, itemKey: i.itemKey, title: i.title, calendarId: i.calendarId, minutes: i.minutes, status: i.status, usedAlt: i.usedAlt ?? false, learned: i.learned ?? null, createdAt: now, updatedAt: now }),
   });
 
+// ---- money ----
+
+export const createExpenseCategoryRepository = (db: Db) =>
+  new SqliteEntityRepository<ExpenseCategory, CreateExpenseCategoryInput, UpdateExpenseCategoryInput>(db, {
+    table: 'expense_categories',
+    orderBy: 'sort_order, created_at',
+    build: (i, { id, now, sortOrder }) => ({ id, name: i.name, sortOrder, createdAt: now }),
+  });
+
+export const createExpenseRepository = (db: Db) =>
+  new SqliteEntityRepository<Expense, CreateExpenseInput, UpdateExpenseInput>(db, {
+    table: 'expenses',
+    orderBy: 'date DESC, created_at DESC',
+    bool: ['recurring'],
+    softDelete: true,
+    build: (i, { id, now }) => ({ id, amountCents: i.amountCents, what: i.what, categoryId: i.categoryId ?? null, date: i.date, kind: i.kind ?? 'need', recurring: i.recurring ?? false, createdAt: now, updatedAt: now }),
+  });
+
+export const createSavingsGoalRepository = (db: Db) =>
+  new SqliteEntityRepository<SavingsGoal, CreateSavingsGoalInput, UpdateSavingsGoalInput>(db, {
+    table: 'savings_goals',
+    orderBy: 'sort_order, created_at',
+    softDelete: true,
+    build: (i, { id, now, sortOrder }) => ({ id, name: i.name, targetCents: i.targetCents, sortOrder, createdAt: now, updatedAt: now }),
+  });
+
+export const createHoldingRepository = (db: Db) =>
+  new SqliteEntityRepository<Holding, CreateHoldingInput, UpdateHoldingInput>(db, {
+    table: 'holdings',
+    orderBy: 'sort_order, created_at',
+    softDelete: true,
+    build: (i, { id, now, sortOrder }) => ({ id, name: i.name, type: i.type, valueCents: i.valueCents, valueUpdatedOn: i.valueUpdatedOn, monthlyTargetCents: i.monthlyTargetCents ?? null, sortOrder, createdAt: now, updatedAt: now }),
+  });
+
+export const createMoneyMoveRepository = (db: Db) =>
+  new SqliteEntityRepository<MoneyMove, CreateMoneyMoveInput, never>(db, {
+    table: 'money_moves',
+    orderBy: 'date, created_at',
+    build: (i, { id, now }) => ({ id, date: i.date, periodStart: i.periodStart ?? null, toType: i.toType, toId: i.toId, amountCents: i.amountCents, note: i.note ?? null, createdAt: now }),
+  });
+
 export type CalendarRepo = ReturnType<typeof createCalendarRepository>;
 export type EventTypeRepo = ReturnType<typeof createEventTypeRepository>;
 export type EventRepo = ReturnType<typeof createEventRepository>;
@@ -270,3 +325,8 @@ export type WeekTemplateRepo = ReturnType<typeof createWeekTemplateRepository>;
 export type RoutineBlockRepo = ReturnType<typeof createRoutineBlockRepository>;
 export type RoutineOverrideRepo = ReturnType<typeof createRoutineOverrideRepository>;
 export type CheckInRepo = ReturnType<typeof createCheckInRepository>;
+export type ExpenseCategoryRepo = ReturnType<typeof createExpenseCategoryRepository>;
+export type ExpenseRepo = ReturnType<typeof createExpenseRepository>;
+export type SavingsGoalRepo = ReturnType<typeof createSavingsGoalRepository>;
+export type HoldingRepo = ReturnType<typeof createHoldingRepository>;
+export type MoneyMoveRepo = ReturnType<typeof createMoneyMoveRepository>;

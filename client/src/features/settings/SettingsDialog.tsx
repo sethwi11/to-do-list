@@ -11,6 +11,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { Input, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
 import { ThemeToggle } from '../../app/ThemeToggle';
+import { BudgetEditor } from '../money/BudgetEditor';
 import { calendarVars } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
 import { formatTime } from '../../lib/dates';
@@ -71,6 +72,14 @@ export function SettingsDialog() {
         <Popups />
 
         <OfferGoal />
+
+        <div className={row}>
+          <span>
+            <span className="block text-body">Spending budget</span>
+            <span className="block text-meta text-ink-muted">Shown on the Money page.</span>
+          </span>
+          <BudgetEditor />
+        </div>
 
         <Quotes />
 
@@ -269,7 +278,7 @@ function Popups() {
                 min={0}
                 max={120}
                 value={minutes}
-                className="w-16"
+                className="w-16!"
                 onChange={(e) => setMinutes(e.target.value)}
                 onBlur={() => {
                   const n = Number.parseInt(minutes, 10);

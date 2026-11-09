@@ -10,6 +10,16 @@ import {
   CreateWeekTemplateInputSchema,
   CreateRoutineOverrideInputSchema,
   CreateCheckInInputSchema,
+  CreateExpenseCategoryInputSchema,
+  CreateExpenseInputSchema,
+  CreateHoldingInputSchema,
+  CreateMoneyMoveInputSchema,
+  CreateSavingsGoalInputSchema,
+  MoneyMoveBatchInputSchema,
+  UpdateExpenseCategoryInputSchema,
+  UpdateExpenseInputSchema,
+  UpdateHoldingInputSchema,
+  UpdateSavingsGoalInputSchema,
   UpdateCheckInInputSchema,
   UpdateRoutineOverrideInputSchema,
   EventBatchInputSchema,
@@ -71,6 +81,12 @@ export function createApp(repos: Repositories, options: { uploadsDir: string; cl
   app.use('/api/routine-blocks', crudRouter(repos.routineBlocks, { label: 'Routine block', create: CreateRoutineBlockInputSchema, update: UpdateRoutineBlockInputSchema }));
   app.use('/api/routine-overrides', crudRouter(repos.routineOverrides, { label: 'Routine change', create: CreateRoutineOverrideInputSchema, update: UpdateRoutineOverrideInputSchema }));
   app.use('/api/check-ins', crudRouter(repos.checkIns, { label: 'Check-in', create: CreateCheckInInputSchema, update: UpdateCheckInInputSchema }));
+  app.use('/api/expense-categories', crudRouter(repos.expenseCategories, { label: 'Expense category', create: CreateExpenseCategoryInputSchema, update: UpdateExpenseCategoryInputSchema }));
+  app.use('/api/expenses', crudRouter(repos.expenses, { label: 'Expense', create: CreateExpenseInputSchema, update: UpdateExpenseInputSchema }));
+  app.use('/api/savings-goals', crudRouter(repos.savingsGoals, { label: 'Savings goal', create: CreateSavingsGoalInputSchema, update: UpdateSavingsGoalInputSchema }));
+  app.use('/api/holdings', crudRouter(repos.holdings, { label: 'Holding', create: CreateHoldingInputSchema, update: UpdateHoldingInputSchema }));
+  app.use('/api/money-moves', batchRouter(repos.moneyMoves, MoneyMoveBatchInputSchema));
+  app.use('/api/money-moves', crudRouter(repos.moneyMoves, { label: 'Money move', create: CreateMoneyMoveInputSchema, update: null }));
   app.use('/api/soundtracks', soundtracksRouter(repos.settings));
   app.use('/api/attachments', attachmentsRouter(repos.attachments, options.uploadsDir));
   app.use('/api/settings', settingsRouter(repos.settings));

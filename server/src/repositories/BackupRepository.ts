@@ -14,6 +14,11 @@ import type {
   WeekTemplateRepo,
   RoutineOverrideRepo,
   CheckInRepo,
+  ExpenseCategoryRepo,
+  ExpenseRepo,
+  HoldingRepo,
+  MoneyMoveRepo,
+  SavingsGoalRepo,
 } from './entities';
 import type { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import type { SqliteSettingsRepository } from './SqliteSettingsRepository';
@@ -36,6 +41,11 @@ export interface BackupSources {
   routineBlocks: RoutineBlockRepo;
   routineOverrides: RoutineOverrideRepo;
   checkIns: CheckInRepo;
+  expenseCategories: ExpenseCategoryRepo;
+  expenses: ExpenseRepo;
+  savingsGoals: SavingsGoalRepo;
+  holdings: HoldingRepo;
+  moneyMoves: MoneyMoveRepo;
   settings: SqliteSettingsRepository;
 }
 
@@ -70,6 +80,11 @@ export class BackupRepository {
       routineBlocks: r.routineBlocks.listSync(),
       routineOverrides: r.routineOverrides.listSync(),
       checkIns: r.checkIns.listSync(),
+      expenseCategories: r.expenseCategories.listSync(),
+      expenses: r.expenses.listSync(),
+      savingsGoals: r.savingsGoals.listSync(),
+      holdings: r.holdings.listSync(),
+      moneyMoves: r.moneyMoves.listSync(),
       settings: r.settings.getSync(),
     };
   }
@@ -145,6 +160,21 @@ export class BackupRepository {
       }
 
       for (const o of backup.routineOverrides) count('routineOverrides', r.routineOverrides.upsertSync({ ...o, calendarId: mapCalendar(o.calendarId) }));
+
+      // Money. Categories are matched by name, like calendars, so the nine starting ones aren't duplicated.
+      const categoryIds = new Map<string, string>();
+      const existingCategories = r.expenseCategories.listSync();
+      for (const c of backup.expenseCategories) {
+        const match = existingCategories.find((e) => e.id === c.id) ?? existingCategories.find((e) => e.name.toLowerCase() === c.name.toLowerCase());
+        const id = match?.id ?? c.id;
+        categoryIds.set(c.id, id);
+        count('expenseCategories', r.expenseCategories.upsertSync({ ...c, id }));
+        if (!match) existingCategories.push({ ...c, id });
+      }
+      for (const e of backup.expenses) count('expenses', r.expenses.upsertSync({ ...e, categoryId: e.categoryId ? (categoryIds.get(e.categoryId) ?? e.categoryId) : null }));
+      for (const g of backup.savingsGoals) count('savingsGoals', r.savingsGoals.upsertSync(g));
+      for (const h of backup.holdings) count('holdings', r.holdings.upsertSync(h));
+      for (const m of backup.moneyMoves) count('moneyMoves', r.moneyMoves.upsertSync(m));
 
       // One check-in per item per day: if this day's item already has one, the imported one replaces it.
       const existingCheckIns = r.checkIns.listSync();

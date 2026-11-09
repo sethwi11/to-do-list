@@ -1,14 +1,15 @@
-import { CalendarPlus, ChevronDown, Briefcase, FileUp, ListPlus, Plus } from 'lucide-react';
-import { useLocation } from 'react-router';
+import { CalendarPlus, ChevronDown, Briefcase, FileUp, ListPlus, Plus, Wallet } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router';
 import { newEventSpan, parseCalendarQuery } from '../features/calendar/calendarModel';
 import { cx } from '../lib/cx';
 import { Menu, type MenuItem } from '../ui/Menu';
 import { useApp } from './AppContext';
 
-/** The "New" button and its menu: a task, an event, a file to read events from, or an internship application. */
+/** The "New" button and its menu: a task, an event, a file to read events from, an internship application, or an expense. */
 export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
   const { openDialog, today, chooseFilesToImport } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
   // Looking at a day on the calendar? A new event starts on that day.
   const lookingAt = location.pathname === '/calendar' ? parseCalendarQuery(new URLSearchParams(location.search), today).date : null;
   const items: MenuItem[] = [
@@ -16,6 +17,8 @@ export function NewMenu({ variant }: { variant: 'sidebar' | 'rail' | 'fab' }) {
     { label: 'Event', icon: CalendarPlus, onSelect: () => openDialog({ kind: 'event', mode: 'new', defaults: newEventSpan(lookingAt, new Date()) }) },
     { label: 'Import file', icon: FileUp, onSelect: chooseFilesToImport },
     { label: 'Application', icon: Briefcase, onSelect: () => openDialog({ kind: 'application', id: 'new' }) },
+    // The Money page's quick-add row is the fastest way to log one, so the menu takes you there with it focused.
+    { label: 'Expense', icon: Wallet, onSelect: () => navigate('/money?add=1') },
   ];
 
   return (

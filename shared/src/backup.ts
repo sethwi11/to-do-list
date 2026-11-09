@@ -8,9 +8,10 @@ import { EventSchema, EventTypeSchema, TimeBlockSchema } from './models/events';
 import { AppSettingsSchema, FocusSessionSchema, WeeklyReviewSchema } from './models/misc';
 import { RoutineBlockSchema, RoutineOverrideSchema, WeekTemplateSchema } from './models/routine';
 import { CheckInSchema } from './models/checkins';
+import { ExpenseCategorySchema, ExpenseSchema, HoldingSchema, MoneyMoveSchema, SavingsGoalSchema } from './models/money';
 import { TemplateSchema } from './models/templates';
 
-export const BACKUP_VERSION = 5;
+export const BACKUP_VERSION = 6;
 
 /** The JSON file format for export/import, versioned so a future format can still read old files. */
 export const BackupSchema = z.object({
@@ -32,6 +33,11 @@ export const BackupSchema = z.object({
   routineBlocks: z.array(RoutineBlockSchema).default([]),
   routineOverrides: z.array(RoutineOverrideSchema).default([]),
   checkIns: z.array(CheckInSchema).default([]),
+  expenseCategories: z.array(ExpenseCategorySchema).default([]),
+  expenses: z.array(ExpenseSchema).default([]),
+  savingsGoals: z.array(SavingsGoalSchema).default([]),
+  holdings: z.array(HoldingSchema).default([]),
+  moneyMoves: z.array(MoneyMoveSchema).default([]),
   /** Omitted in older files, and partial in files older than a setting: what's missing keeps its current value. */
   settings: AppSettingsSchema.partial().optional(),
 });

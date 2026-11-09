@@ -20,6 +20,20 @@ import type {
   WeekTemplate,
   RoutineOverride,
   CheckIn,
+  CreateExpenseCategoryInput,
+  CreateExpenseInput,
+  CreateHoldingInput,
+  CreateMoneyMoveInput,
+  CreateSavingsGoalInput,
+  Expense,
+  ExpenseCategory,
+  Holding,
+  MoneyMove,
+  SavingsGoal,
+  UpdateExpenseCategoryInput,
+  UpdateExpenseInput,
+  UpdateHoldingInput,
+  UpdateSavingsGoalInput,
   CreateCheckInInput,
   UpdateCheckInInput,
   CreateRoutineOverrideInput,
@@ -57,6 +71,11 @@ import {
   createWeekTemplateRepository,
   createRoutineOverrideRepository,
   createCheckInRepository,
+  createExpenseCategoryRepository,
+  createExpenseRepository,
+  createHoldingRepository,
+  createMoneyMoveRepository,
+  createSavingsGoalRepository,
 } from './entities';
 import { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import { SqliteAttachmentRepository } from './SqliteAttachmentRepository';
@@ -84,6 +103,11 @@ export interface Repositories {
   routineBlocks: RestorableRepository<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput> & Batchable<RoutineBlock>;
   routineOverrides: RestorableRepository<RoutineOverride, CreateRoutineOverrideInput, UpdateRoutineOverrideInput>;
   checkIns: CrudRepository<CheckIn, CreateCheckInInput, UpdateCheckInInput>;
+  expenseCategories: CrudRepository<ExpenseCategory, CreateExpenseCategoryInput, UpdateExpenseCategoryInput>;
+  expenses: RestorableRepository<Expense, CreateExpenseInput, UpdateExpenseInput>;
+  savingsGoals: RestorableRepository<SavingsGoal, CreateSavingsGoalInput, UpdateSavingsGoalInput>;
+  holdings: RestorableRepository<Holding, CreateHoldingInput, UpdateHoldingInput>;
+  moneyMoves: CrudRepository<MoneyMove, CreateMoneyMoveInput, never> & Batchable<MoneyMove>;
   settings: SettingsRepository;
   attachments: SqliteAttachmentRepository;
   backup: BackupRepository;
@@ -107,6 +131,11 @@ export function createRepositories(db: Db): Repositories {
     routineBlocks: createRoutineBlockRepository(db),
     routineOverrides: createRoutineOverrideRepository(db),
     checkIns: createCheckInRepository(db),
+    expenseCategories: createExpenseCategoryRepository(db),
+    expenses: createExpenseRepository(db),
+    savingsGoals: createSavingsGoalRepository(db),
+    holdings: createHoldingRepository(db),
+    moneyMoves: createMoneyMoveRepository(db),
     settings: new SqliteSettingsRepository(db),
   };
   return { ...concrete, attachments: new SqliteAttachmentRepository(db), backup: new BackupRepository(db, concrete) };

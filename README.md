@@ -26,19 +26,15 @@ A personal planner built from a to-do app: tasks, a calendar, courses, an intern
 - Quick-add on every page, a mini month in the sidebar (dots mark days with events or open tasks), and a New menu
 - Undo for delete, complete, and every calendar change; keyboard shortcuts (press `?`); dark mode; JSON export and import
 - Works on a phone-width screen: the sidebar becomes a drawer, the calendar opens on the Agenda, and a + button replaces the New menu
-- Data foundation for everything coming next: templates, focus sessions, weekly reviews
+- **Money**: a spending budget (a month or a week), a quick way to log what you spend, where it went, the pace, last period's leftover to put to work, savings goals, and investments you update by hand (tracking only)
+- Data foundation for everything coming next: templates, weekly reviews
 
 ## Roadmap
 
-Built one phase at a time; each is reviewed before it's merged.
+Built one phase at a time; each is reviewed before it's merged. Phases 1–14 are built (the sections below describe them); what's left:
 
 | Phase | What it adds |
 | --- | --- |
-| 10 | **Weekly routine and the Today agenda.** A week template of routine blocks (with wake and bed times, and dates it applies to), one function that plans each day from the routine, classes, events and time blocks, a color-coded Today agenda with a Now card, a morning view, and 12-hour times everywhere |
-| 11 | **When plans change.** Events take over the routine blocks they overlap, by clear priority rules; bumped time is tracked and can be made up; one-day skip / move / replace; "find a time" |
-| 12 | **Pop-ups and reminders.** Start and stop notifications for each block, and delivery of the reminders the app already stores (to-dos, events, application deadlines); the app keeps running in the background |
-| 13 | **Focus mode, streaks and the daily check-in.** The Pomodoro focus timer, click-to-play soundtracks, streaks, and a one-minute end-of-day check-in |
-| 14 | **Money.** A monthly spending budget, savings goals, and investments entered by hand (tracking only: no bank connection, no live prices, no advice) |
 | 15 | **Goals and the weekly review.** Goals and milestones, badges earned from real data, a weekly scoreboard, and a weekly review that ends with a summary to copy |
 
 **Later:** voice quick-add, a command palette and the full set of keyboard shortcuts; phone access as an installable app (with a login first, since the API has none); `.ics` export; a templates screen; a real estate deal calculator; live prices, if a free source with no key exists.
@@ -172,6 +168,17 @@ After merging new work, `npm run app:restart`; to remove it, `npm run app:uninst
 - **Soundtracks** (Settings): a name, a link and/or a folder of audio files on this Mac. A block's soundtrack shows on the Now card and in its start pop-up. Nothing loads before you press play: a link opens in a new tab; a folder plays in a small player (play/pause, next, the track name, level bars that hold still with reduced motion), read by the local server from that folder only (`/api/soundtracks/...`, nothing copied into the project).
 - **Close the day** (`/checkin`): opened by the pop-up when the day's last non-free block ends, or the "Close the day" link on Today in the evening. Done, Part or Skipped for each planned item (tap again to clear; unmarked stays unknown), "which one?" for blocks with an alternative, an optional "what I learned" line on focus blocks (the learning log), missed rolling to-dos, and tomorrow's first three. "Mark the rest done" makes a normal day a few taps. Each check-in copies the item's title, category and minutes (`check_ins`), so later template edits never change history.
 - **Streaks** (`shared/src/streaks.ts`): gym and LeetCode (check-ins on blocks with those names), focus (a focus session on a day with focus blocks) and nightly check-ins. A day with nothing planned for a streak doesn't break it, and today doesn't until it's over. They show on the morning view and the Now card; at 7, 14, 30, 50 and 100 days, then every 100, a few seconds of fireworks (a still picture with reduced motion), once per milestone.
+
+## Money
+
+Tracking only. You type in what you spend and what things are worth; nothing connects to a bank, nothing is fetched, no account number or balance is stored, and none of it is advice. Every amount is whole cents (`shared/src/money.ts`, which holds all the math and is tested with made-up data).
+
+- **The budget** is an amount and a period (a month from the 1st, or a week from Monday), in Settings. The app ships with none set; the starting amount for your own database comes from the private seed file, never from the code.
+- **Spending**: *left* is the budget minus what's spent so far in the period; *pace* is spent divided by days gone, times days in the period ("at this rate: $645 by the end of the month"). The page also shows spending by category, wants and needs, this period against the last, your three biggest "want" categories as plain numbers, and recurring costs (expenses marked "repeats monthly": each at its latest amount, with an Add now button for this month's if it isn't entered yet; nothing is added for you).
+- **Adding an expense** is a row on the Money page (also reached from New → Expense): type an amount and press Enter. "What" is optional (it becomes the category's name); the category, need or want and date stay for the next one; typing a "what" you've used before fills in its category and need or want; the row clears the moment you press Enter, so you can type the next one straight away.
+- **Leftover to put to work**: what's left when a period ends counts as saved, and stays on the page as "Move it" until you've split it between your goals and holdings. Whatever you don't allocate is logged as "kept as cash", which settles it. One Undo takes the whole move back. A period only counts from your first expense on, and an overspent one never shows.
+- **Savings goals** have a name and a target; progress is the money moved or added to them. **Investments** (stock, ETF, crypto, savings, real estate, other) have a value you update by hand with the date you did, a contributions log, and an optional monthly target ("$25 of $50 this month"). The totals are what you put in, what it's worth now, and the gain or loss in dollars and percent, with an allocation bar by type.
+- **Data**: five tables (`expense_categories`, `expenses`, `savings_goals`, `holdings`, `money_moves`), all in the JSON export and import (the nine starting categories are matched by name, so an import doesn't duplicate them). Deleting an expense, goal or holding can be undone.
 
 ### Full screen and the installed window
 
