@@ -34,7 +34,7 @@ export const DEFAULT_REMINDER_TIME = '09:00';
 
 type Note = { at: string; rank: number; line: string; key: string; url: string };
 // Which line leads when several land in the same minute.
-const RANK = { start: 0, headsUp: 1, warning: 2, due: 3, reminder: 4, stop: 5, bedtime: 6 };
+const RANK = { closeDay: 0, start: 1, headsUp: 2, warning: 3, due: 4, reminder: 5, stop: 6, bedtime: 7 };
 
 const clock = (dt: string) => {
   const [h, m] = timePart(dt).split(':').map(Number);
@@ -70,10 +70,15 @@ export function popupsForDay(src: PlanSources, date: string, settings: PopupSett
     // A class gets only the heads-up: nothing pops up during it.
     if (item.kind === 'class') continue;
     const next = nextAfter(item);
-    add(item.start, RANK.start, `Now: ${item.title} until ${clock(item.end)}${next ? ` · Next: ${next.title}` : ''}${matching(item)}`, `start:${item.key}`);
+    const soundtrack = item.soundtrack ? ` · Soundtrack: ${item.soundtrack}` : '';
+    add(item.start, RANK.start, `Now: ${item.title} until ${clock(item.end)}${next ? ` · Next: ${next.title}` : ''}${matching(item)}${soundtrack}`, `start:${item.key}`);
     add(item.end, RANK.stop, `Done: ${item.title}${next && next.start > item.end ? ` · Next: ${next.title} at ${clock(next.start)}` : ''}`, `stop:${item.key}`);
     if (item.focus && settings.focusWarning && minutesBetween(item.start, item.end) >= 15) add(addMinutes(item.end, -5), RANK.warning, `5 minutes left: ${item.title}`, `warn:${item.key}`);
   }
+
+  // When the day's last non-free block ends: the one-minute check-in.
+  const last = [...plan.items].reverse().find((i) => i.kind !== 'open' && i.kind !== 'task' && i.priority !== 'free');
+  if (last && plan.templateId) add(last.end, RANK.closeDay, 'Close the day: a one-minute check-in', `close:${date}`, `/checkin?date=${date}`);
 
   if (settings.bedtime && plan.templateId) {
     const tomorrow = addDays(date, 1);

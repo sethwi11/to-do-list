@@ -8,6 +8,8 @@ import { formatCountdown, formatDueDate, formatTime } from '../../lib/dates';
 import { tasksUrl } from '../../lib/taskParams';
 import { Checkbox } from '../../ui/Checkbox';
 import { categoryOf } from './Agenda';
+import { FocusPanel } from '../focus/FocusPanel';
+import type { Streak } from '@todo/shared';
 
 const SHOW = 5;
 
@@ -52,6 +54,13 @@ export interface UpNext {
   color: CalendarColor | null;
 }
 
+/** "Gym streak: 4 days" for a block a streak counts. */
+function streakFor(item: PlanItem, streaks: readonly Streak[]): string | null {
+  const id = /\bgym\b/i.test(item.title) ? 'gym' : /leetcode/i.test(item.title) ? 'leetcode' : item.focus ? 'focus' : null;
+  const s = streaks.find((x) => x.id === id);
+  return s && s.days > 0 ? `${s.label} streak: ${s.days} ${s.days === 1 ? 'day' : 'days'}` : null;
+}
+
 const vars = (color: CalendarColor | null) => (color ? calendarVars(color) : ({ '--c': 'var(--rule)' } as CSSProperties));
 
 interface Props {
@@ -64,10 +73,11 @@ interface Props {
   during: readonly Task[];
   /** To-dos with time set aside now, or due during the current item. */
   supposed: readonly Task[];
+  streaks?: readonly Streak[];
 }
 
 /** Now: the current item and the time left, what's next, and the top to-dos in the current category. Before or after the day: just what's next. */
-export function NowCard({ current, next, now, today, onOpen, during, supposed }: Props) {
+export function NowCard({ current, next, now, today, onOpen, during, supposed, streaks = [] }: Props) {
   const { calendarsById } = useApp();
   if (!current && !next && supposed.length === 0) return null;
   const nextLine = next && (datePart(next.start) === datePart(now) ? `at ${formatTime(timePart(next.start))}` : `${formatDueDate(datePart(next.start), today)}, ${formatTime(timePart(next.start))}`);
@@ -120,6 +130,8 @@ export function NowCard({ current, next, now, today, onOpen, during, supposed }:
           Next · <span className="text-ink">{next.title}</span> {nextLine}
         </p>
       )}
+      {streakFor(current, streaks) && <p className="mt-1 text-meta text-ink-muted">{streakFor(current, streaks)}</p>}
+      {current.kind === 'routine' && <FocusPanel item={current} />}
       {(current.kind === 'routine' || supposed.length > 0) && (
         <div className="mt-4 grid gap-4 border-t border-hairline pt-3 @md:grid-cols-2">
           {current.kind === 'routine' && <TaskLines title="During this block" tasks={during} moreHref={current.calendarId ? tasksUrl({ calendarId: current.calendarId }) : undefined} />}

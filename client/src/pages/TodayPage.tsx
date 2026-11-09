@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { addMinutes, combine, isOverdue, isRolling, isoWeekNumber, openBumps, quoteFor, type PlanItem } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { PageHeader } from '../app/PageHeader';
@@ -10,6 +10,7 @@ import { Agenda, Legend } from '../features/today/Agenda';
 import { DayBar, MorningHeader } from '../features/today/MorningHeader';
 import { NowCard } from '../features/today/NowCard';
 import { MissedList, weekOf } from '../features/today/MissedList';
+import { MilestoneFireworks, useStreaks } from '../features/today/Streaks';
 import { DayChangeDialog } from '../features/today/DayChangeDialog';
 import { greeting, summarize } from '../features/today/todayModel';
 import { useNowText, useTodayPlan } from '../features/today/useTodayPlan';
@@ -46,6 +47,7 @@ export default function TodayPage() {
   const { routine, src, date, plan, occurrences, current, next, during, supposed } = useTodayPlan(now);
   const [dayChange, setDayChange] = useState<PlanItem | null>(null);
   const bumps = useMemo(() => openBumps(src, ...weekOf(date)), [src, date]);
+  const streaks = useStreaks(src, now.slice(0, 10));
   const summary = useMemo(() => summarize(occurrences, tasks, today, plan.items.filter((i) => i.kind === 'task').length), [occurrences, tasks, today, plan.items]);
 
   // Before noon, and the first time the app opens each day, Today greets you (not during last night's late hours).
@@ -90,7 +92,7 @@ export default function TodayPage() {
   return (
     <div className="@container max-w-[1100px]">
       <PageHeader title={morning ? greeting(hour) : weekday} subtitle={morning ? fullDate(date) : day.toLocaleDateString(undefined, { month: 'long', day: 'numeric' })} aside={`WK ${isoWeekNumber(date)}`} quickAddDefaults={{ dueDate: today }}>
-        {morning ? <MorningHeader plan={plan} now={now} quote={quote} /> : <DayBar plan={plan} now={now} className="mt-5" />}
+        {morning ? <MorningHeader plan={plan} now={now} quote={quote} streaks={streaks} /> : <DayBar plan={plan} now={now} className="mt-5" />}
       </PageHeader>
 
       {error && <ErrorBanner message={error} onRetry={() => void reload()} onDismiss={dismissError} />}
@@ -99,7 +101,7 @@ export default function TodayPage() {
         <SkeletonRows count={5} />
       ) : (
         <>
-          <p className="mb-8 text-meta text-ink-muted">
+          <p className="mb-8 flex flex-wrap items-center gap-x-1 text-meta text-ink-muted">
             {date !== now.slice(0, 10) && <span className="text-ink">{weekday} night, until bedtime · </span>}
             <Num>{summary.events}</Num> {summary.events === 1 ? 'event' : 'events'}
             {summary.blocks > 0 && (
@@ -122,6 +124,11 @@ export default function TodayPage() {
                 <Num>{summary.conflicts}</Num> {summary.conflicts === 1 ? 'conflict' : 'conflicts'}
               </>
             )}
+            {Number(now.slice(11, 13)) >= 17 || date !== now.slice(0, 10) ? (
+              <Link to={`/checkin?date=${date}`} className="ml-3 font-medium text-accent-ink underline underline-offset-2">
+                Close the day
+              </Link>
+            ) : null}
           </p>
 
           <div className="grid gap-10 @3xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] @3xl:gap-14">
@@ -164,7 +171,7 @@ export default function TodayPage() {
             </section>
 
             <div className="order-1 space-y-8 @3xl:order-2">
-              <NowCard current={current} next={next} now={now} today={today} onOpen={open} during={during} supposed={supposed} />
+              <NowCard current={current} next={next} now={now} today={today} onOpen={open} during={during} supposed={supposed} streaks={streaks} />
               <MissedList bumps={bumps} src={src} now={now} />
 
               {overdue.length > 0 && (
@@ -203,6 +210,7 @@ export default function TodayPage() {
 
       {detail && <ItemDetail item={detail.item} anchor={detail.anchor} onClose={() => setDetail(null)} />}
       <DayChangeDialog item={dayChange} date={date} onClose={() => setDayChange(null)} />
+      <MilestoneFireworks streaks={streaks} />
     </div>
   );
 }

@@ -21,6 +21,9 @@ import type {
   UpdateWeekTemplateInput,
   WeekTemplate,
   RoutineOverride,
+  CheckIn,
+  CreateCheckInInput,
+  UpdateCheckInInput,
   CreateRoutineOverrideInput,
   UpdateRoutineOverrideInput,
   Event,
@@ -68,6 +71,8 @@ export const routineBlocksApi = {
 };
 
 export const routineOverridesApi = createCrudApi<RoutineOverride, CreateRoutineOverrideInput, UpdateRoutineOverrideInput>('/routine-overrides');
+
+export const checkInsApi = createCrudApi<CheckIn, CreateCheckInInput, UpdateCheckInInput>('/check-ins');
 
 export const settingsApi = {
   get: () => apiFetch<AppSettings>('/settings'),

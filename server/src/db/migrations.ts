@@ -387,6 +387,26 @@ const migrations: Migration[] = [
   (db) => {
     db.exec(`ALTER TABLE routine_blocks ADD COLUMN reschedulable INTEGER NOT NULL DEFAULT 0;`);
   },
+
+  // v9: the nightly check-in, one row per planned item per day. One new table; nothing existing changes.
+  (db) => {
+    db.exec(`
+      CREATE TABLE check_ins (
+        id          TEXT PRIMARY KEY,
+        date        TEXT NOT NULL,                -- 'YYYY-MM-DD'
+        item_key    TEXT NOT NULL,                -- the item's key in that day's plan
+        title       TEXT NOT NULL,                -- copied, so template edits never change history
+        calendar_id TEXT REFERENCES calendars(id) ON DELETE SET NULL,
+        minutes     INTEGER NOT NULL,
+        status      TEXT NOT NULL CHECK (status IN ('done','part','skipped')),
+        used_alt    INTEGER NOT NULL DEFAULT 0,
+        learned     TEXT,
+        created_at  TEXT NOT NULL,
+        updated_at  TEXT NOT NULL,
+        UNIQUE (date, item_key)
+      );
+    `);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

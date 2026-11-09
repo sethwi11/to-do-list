@@ -13,6 +13,7 @@ import type {
   RoutineBlockRepo,
   WeekTemplateRepo,
   RoutineOverrideRepo,
+  CheckInRepo,
 } from './entities';
 import type { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import type { SqliteSettingsRepository } from './SqliteSettingsRepository';
@@ -34,6 +35,7 @@ export interface BackupSources {
   weekTemplates: WeekTemplateRepo;
   routineBlocks: RoutineBlockRepo;
   routineOverrides: RoutineOverrideRepo;
+  checkIns: CheckInRepo;
   settings: SqliteSettingsRepository;
 }
 
@@ -67,6 +69,7 @@ export class BackupRepository {
       weekTemplates: r.weekTemplates.listSync(),
       routineBlocks: r.routineBlocks.listSync(),
       routineOverrides: r.routineOverrides.listSync(),
+      checkIns: r.checkIns.listSync(),
       settings: r.settings.getSync(),
     };
   }
@@ -142,6 +145,13 @@ export class BackupRepository {
       }
 
       for (const o of backup.routineOverrides) count('routineOverrides', r.routineOverrides.upsertSync({ ...o, calendarId: mapCalendar(o.calendarId) }));
+
+      // One check-in per item per day: if this day's item already has one, the imported one replaces it.
+      const existingCheckIns = r.checkIns.listSync();
+      for (const c of backup.checkIns) {
+        const same = existingCheckIns.find((e) => e.date === c.date && e.itemKey === c.itemKey);
+        count('checkIns', r.checkIns.upsertSync({ ...c, id: same?.id ?? c.id, calendarId: mapCalendar(c.calendarId) }));
+      }
 
       if (backup.settings) {
         r.settings.setSync(mergeSettings(r.settings.getSync(), backup.settings));

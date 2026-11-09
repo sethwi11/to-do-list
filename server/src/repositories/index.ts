@@ -19,6 +19,9 @@ import type {
   UpdateWeekTemplateInput,
   WeekTemplate,
   RoutineOverride,
+  CheckIn,
+  CreateCheckInInput,
+  UpdateCheckInInput,
   CreateRoutineOverrideInput,
   UpdateRoutineOverrideInput,
   Event,
@@ -53,6 +56,7 @@ import {
   createRoutineBlockRepository,
   createWeekTemplateRepository,
   createRoutineOverrideRepository,
+  createCheckInRepository,
 } from './entities';
 import { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import { SqliteAttachmentRepository } from './SqliteAttachmentRepository';
@@ -79,6 +83,7 @@ export interface Repositories {
   weekTemplates: RestorableRepository<WeekTemplate, CreateWeekTemplateInput, UpdateWeekTemplateInput>;
   routineBlocks: RestorableRepository<RoutineBlock, CreateRoutineBlockInput, UpdateRoutineBlockInput> & Batchable<RoutineBlock>;
   routineOverrides: RestorableRepository<RoutineOverride, CreateRoutineOverrideInput, UpdateRoutineOverrideInput>;
+  checkIns: CrudRepository<CheckIn, CreateCheckInInput, UpdateCheckInInput>;
   settings: SettingsRepository;
   attachments: SqliteAttachmentRepository;
   backup: BackupRepository;
@@ -101,6 +106,7 @@ export function createRepositories(db: Db): Repositories {
     weekTemplates: createWeekTemplateRepository(db),
     routineBlocks: createRoutineBlockRepository(db),
     routineOverrides: createRoutineOverrideRepository(db),
+    checkIns: createCheckInRepository(db),
     settings: new SqliteSettingsRepository(db),
   };
   return { ...concrete, attachments: new SqliteAttachmentRepository(db), backup: new BackupRepository(db, concrete) };

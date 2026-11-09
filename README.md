@@ -165,6 +165,13 @@ npm run app:install
 
 After merging new work, `npm run app:restart`; to remove it, `npm run app:uninstall`; to read its log, `npm run app:logs` (the log is in `~/Library/Logs/Planner/`). It refuses to install from another branch, since it uses your real data. `npm run dev` (3001/5173) still works beside it.
 
+## Focus, soundtracks, the check-in and streaks
+
+- **Focus**: on a focus block the Now card (and the display view) has Start focus: Pomodoro with your focus settings (25 on, 5 off, a long break every 4) until the block ends or you press Stop. Each focus interval is saved as a focus session (a stopped one too, if it ran a minute). A short chime marks each switch, made in the browser.
+- **Soundtracks** (Settings): a name, a link and/or a folder of audio files on this Mac. A block's soundtrack shows on the Now card and in its start pop-up. Nothing loads before you press play: a link opens in a new tab; a folder plays in a small player (play/pause, next, the track name, level bars that hold still with reduced motion), read by the local server from that folder only (`/api/soundtracks/...`, nothing copied into the project).
+- **Close the day** (`/checkin`): opened by the pop-up when the day's last non-free block ends, or the "Close the day" link on Today in the evening. Done, Part or Skipped for each planned item (tap again to clear; unmarked stays unknown), "which one?" for blocks with an alternative, an optional "what I learned" line on focus blocks (the learning log), missed rolling to-dos, and tomorrow's first three. "Mark the rest done" makes a normal day a few taps. Each check-in copies the item's title, category and minutes (`check_ins`), so later template edits never change history.
+- **Streaks** (`shared/src/streaks.ts`): gym and LeetCode (check-ins on blocks with those names), focus (a focus session on a day with focus blocks) and nightly check-ins. A day with nothing planned for a streak doesn't break it, and today doesn't until it's over. They show on the morning view and the Now card; at 7, 14, 30, 50 and 100 days, then every 100, a few seconds of fireworks (a still picture with reduced motion), once per milestone.
+
 ### Full screen and the installed window
 
 The app can run as its own window with no tabs or address bar, kept in a full-screen space you swipe to:

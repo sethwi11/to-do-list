@@ -81,9 +81,9 @@ describe('pop-ups for a day', () => {
   it('respects a muted category, a block with pop-ups off, and a pause', () => {
     const blocks = [block({}), block({ start: '11:00', end: '12:00', title: 'Walk', calendarId: OTHER }), block({ start: '15:00', end: '16:00', title: 'Quiet', notify: false })];
     const muted = popupsForDay(src({ blocks }), WED, { ...settings, mutedCalendarIds: [CAL] });
-    expect(muted.map((p) => p.title)).toEqual(['Now: Walk until 12:00 PM · Next: Quiet', 'Done: Walk · Next: Quiet at 3:00 PM']); // Next still names a block whose own pop-ups are off
+    expect(muted.map((p) => p.title)).toEqual(['Now: Walk until 12:00 PM · Next: Quiet', 'Done: Walk · Next: Quiet at 3:00 PM', 'Close the day: a one-minute check-in']); // Next still names a block whose own pop-ups are off
     const paused = popupsForDay(src({ blocks }), WED, { ...settings, pausedUntil: `${WED}T11:30` });
-    expect(paused.map((p) => p.at)).toEqual([`${WED}T12:00`]);
+    expect(paused.map((p) => p.at)).toEqual([`${WED}T12:00`, `${WED}T16:00`]);
     expect(popupsForDay(src({ blocks }), WED, { ...settings, enabled: false })).toEqual([]);
   });
 
@@ -94,6 +94,14 @@ describe('pop-ups for a day', () => {
     expect(at(list, '16:30')?.title).toBe('Due now: Text the team · Hey! How are the deliverables going?');
     expect(at(list, '09:00')?.title).toBe('Reminder: Essay is due 9:00 AM on 2026-11-12');
     expect(at(list, '10:00')?.title).toBe('Reminder: Interview at 10:00 AM');
+  });
+
+  it('opens the check-in when the last non-free block ends, ahead of what else lands then', () => {
+    const blocks = [block({ start: '20:00', end: '22:00', title: 'Read' }), block({ start: '22:00', end: '23:30', title: 'Free', priority: 'free', calendarId: null })];
+    const close = at(popupsForDay(src({ blocks }), WED, DEFAULT_POPUP_SETTINGS), '22:00')!;
+    expect(close.title).toBe('Close the day: a one-minute check-in');
+    expect(close.url).toBe(`/checkin?date=${WED}`);
+    expect(close.body).toContain('Now: Free until 11:30 PM');
   });
 
   it('says goodnight at bedtime with when tomorrow starts', () => {

@@ -18,6 +18,9 @@ import {
   type UpdateWeekTemplateInput,
   type WeekTemplate,
   type RoutineOverride,
+  type CheckIn,
+  type CreateCheckInInput,
+  type UpdateCheckInInput,
   type CreateRoutineOverrideInput,
   type UpdateRoutineOverrideInput,
   type Event,
@@ -246,6 +249,14 @@ export const createRoutineOverrideRepository = (db: Db) =>
     }),
   });
 
+export const createCheckInRepository = (db: Db) =>
+  new SqliteEntityRepository<CheckIn, CreateCheckInInput, UpdateCheckInInput>(db, {
+    table: 'check_ins',
+    orderBy: 'date, created_at',
+    bool: ['usedAlt'],
+    build: (i, { id, now }) => ({ id, date: i.date, itemKey: i.itemKey, title: i.title, calendarId: i.calendarId, minutes: i.minutes, status: i.status, usedAlt: i.usedAlt ?? false, learned: i.learned ?? null, createdAt: now, updatedAt: now }),
+  });
+
 export type CalendarRepo = ReturnType<typeof createCalendarRepository>;
 export type EventTypeRepo = ReturnType<typeof createEventTypeRepository>;
 export type EventRepo = ReturnType<typeof createEventRepository>;
@@ -258,3 +269,4 @@ export type WeeklyReviewRepo = ReturnType<typeof createWeeklyReviewRepository>;
 export type WeekTemplateRepo = ReturnType<typeof createWeekTemplateRepository>;
 export type RoutineBlockRepo = ReturnType<typeof createRoutineBlockRepository>;
 export type RoutineOverrideRepo = ReturnType<typeof createRoutineOverrideRepository>;
+export type CheckInRepo = ReturnType<typeof createCheckInRepository>;

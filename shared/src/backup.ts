@@ -7,9 +7,10 @@ import { CourseSchema, SemesterSchema } from './models/courses';
 import { EventSchema, EventTypeSchema, TimeBlockSchema } from './models/events';
 import { AppSettingsSchema, FocusSessionSchema, WeeklyReviewSchema } from './models/misc';
 import { RoutineBlockSchema, RoutineOverrideSchema, WeekTemplateSchema } from './models/routine';
+import { CheckInSchema } from './models/checkins';
 import { TemplateSchema } from './models/templates';
 
-export const BACKUP_VERSION = 4;
+export const BACKUP_VERSION = 5;
 
 /** The JSON file format for export/import, versioned so a future format can still read old files. */
 export const BackupSchema = z.object({
@@ -30,6 +31,7 @@ export const BackupSchema = z.object({
   weekTemplates: z.array(WeekTemplateSchema).default([]),
   routineBlocks: z.array(RoutineBlockSchema).default([]),
   routineOverrides: z.array(RoutineOverrideSchema).default([]),
+  checkIns: z.array(CheckInSchema).default([]),
   /** Omitted in older files, and partial in files older than a setting: what's missing keeps its current value. */
   settings: AppSettingsSchema.partial().optional(),
 });
@@ -53,9 +55,9 @@ function upgradeCalendars(categories: Record<string, unknown>[]) {
     });
 }
 
-/** Version 2 and 3 files only lack the newer tables, which default to empty. Version 1 files (from the original to-do app) have "categories" and tasks with a categoryId. */
+/** Files from version 2 on only lack the newer tables, which default to empty. Version 1 files (from the original to-do app) have "categories" and tasks with a categoryId. */
 export function upgradeBackup(raw: unknown): unknown {
-  if (isRecord(raw) && (raw.version === 2 || raw.version === 3)) return { ...raw, version: BACKUP_VERSION };
+  if (isRecord(raw) && typeof raw.version === 'number' && raw.version >= 2 && raw.version < BACKUP_VERSION) return { ...raw, version: BACKUP_VERSION };
   if (!isRecord(raw) || raw.version !== 1) return raw;
 
   const categories = Array.isArray(raw.categories) ? raw.categories : [];

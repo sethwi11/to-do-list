@@ -5,6 +5,7 @@ import { datePart, minutesBetween, timePart } from '@todo/shared';
 import { useApp } from '../app/AppContext';
 import { Agenda, categoryOf, Legend } from '../features/today/Agenda';
 import { TaskLines } from '../features/today/NowCard';
+import { FocusPanel } from '../features/focus/FocusPanel';
 import { agendaRange, minutesInto } from '../features/today/todayModel';
 import { useNowText, useTodayPlan } from '../features/today/useTodayPlan';
 import { useFullscreen, useFullscreenShortcut } from '../hooks/useFullscreen';
@@ -80,6 +81,8 @@ export default function DisplayPage() {
               </p>
             )}
           </section>
+
+          {current?.kind === 'routine' && <FocusPanel item={current} big />}
 
           <div className="grid gap-8 md:grid-cols-2">
             {current?.kind === 'routine' && <TaskLines big title="During this block" tasks={during} moreHref={current.calendarId ? tasksUrl({ calendarId: current.calendarId }) : undefined} />}

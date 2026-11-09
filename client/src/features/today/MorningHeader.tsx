@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
-import { timePart, type DayPlan, type Quote } from '@todo/shared';
+import { timePart, type DayPlan, type Quote, type Streak } from '@todo/shared';
+import { StreakChips } from './Streaks';
 import { calendarVars } from '../../lib/calendarColors';
 import { cx } from '../../lib/cx';
 import { formatTime } from '../../lib/dates';
@@ -25,7 +26,7 @@ export function DayBar({ plan, now, className }: { plan: DayPlan; now: string; c
 }
 
 /** The morning view: today's quote, the shape of the day and the first three things in it. */
-export function MorningHeader({ plan, now, quote }: { plan: DayPlan; now: string; quote: Quote | undefined }) {
+export function MorningHeader({ plan, now, quote, streaks = [] }: { plan: DayPlan; now: string; quote: Quote | undefined; streaks?: readonly Streak[] }) {
   const first = plan.items.filter((i) => i.kind !== 'open').slice(0, 3);
   return (
     <div className="mt-5 space-y-5">
@@ -34,6 +35,7 @@ export function MorningHeader({ plan, now, quote }: { plan: DayPlan; now: string
           “{quote.text}” <cite className="text-meta not-italic">· {quote.by}</cite>
         </blockquote>
       )}
+      <StreakChips streaks={streaks} />
       <DayBar plan={plan} now={now} />
       {first.length > 0 && (
         <ol aria-label="First up" className="flex flex-wrap gap-x-6 gap-y-1 text-meta">

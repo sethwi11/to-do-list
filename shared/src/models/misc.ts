@@ -37,6 +37,14 @@ export type UpdateWeeklyReviewInput = z.infer<typeof UpdateWeeklyReviewInputSche
 
 // ---- settings -----------------------------------------------------------
 
+/** A soundtrack: a link (opens in a new tab) and/or a folder of audio files on this Mac (played by the app). Nothing loads until you press play. */
+export const SoundtrackSchema = z.object({
+  name: z.string().trim().min(1).max(40),
+  link: z.url({ protocol: /^https?$/ }).nullable(),
+  folder: z.string().trim().min(1).max(500).nullable(),
+});
+export type Soundtrack = z.infer<typeof SoundtrackSchema>;
+
 export const FocusSettingsSchema = z.object({
   focusMinutes: z.number().int().min(1).max(180),
   breakMinutes: z.number().int().min(1).max(60),
@@ -59,6 +67,7 @@ export const AppSettingsSchema = z.object({
   /** The morning view shows one a day. */
   quotes: z.array(QuoteSchema).max(500),
   popups: PopupSettingsSchema,
+  soundtracks: z.array(SoundtrackSchema).max(30),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -69,6 +78,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   sundayReviewReminder: false,
   quotes: DEFAULT_QUOTES,
   popups: DEFAULT_POPUP_SETTINGS,
+  soundtracks: ['lofi', 'news', 'house'].map((name) => ({ name, link: null, folder: null })),
 };
 
 export const UpdateSettingsInputSchema = AppSettingsSchema.partial()

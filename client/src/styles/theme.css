@@ -81,6 +81,7 @@
   --animate-pop: pop 180ms var(--ease-out);
   --animate-breathe: breathe 2.4s ease-in-out infinite;
   --animate-drawer: drawer 180ms var(--ease-out);
+  --animate-levels: levels 0.9s ease-in-out infinite;
 
   @keyframes pop {
     from {
@@ -100,6 +101,16 @@
     to {
       opacity: 1;
       transform: none;
+    }
+  }
+  /* The soundtrack player's level bars. */
+  @keyframes levels {
+    0%,
+    100% {
+      height: 4px;
+    }
+    50% {
+      height: 12px;
     }
   }
   @keyframes breathe {

@@ -9,6 +9,8 @@ import {
   CreateRoutineBlockInputSchema,
   CreateWeekTemplateInputSchema,
   CreateRoutineOverrideInputSchema,
+  CreateCheckInInputSchema,
+  UpdateCheckInInputSchema,
   UpdateRoutineOverrideInputSchema,
   EventBatchInputSchema,
   RoutineBlockBatchInputSchema,
@@ -37,6 +39,7 @@ import { backupRouter } from './routes/backup';
 import { crudRouter } from './routes/crudRouter';
 import { batchRouter } from './routes/batch';
 import { settingsRouter } from './routes/settings';
+import { soundtracksRouter } from './routes/soundtracks';
 import { tasksRouter } from './routes/tasks';
 
 /** Builds the Express app without starting it. `clientDir` serves the built app too; `sendPopup` makes "Send a test pop-up" work. */
@@ -67,6 +70,8 @@ export function createApp(repos: Repositories, options: { uploadsDir: string; cl
   app.use('/api/routine-blocks', batchRouter(repos.routineBlocks, RoutineBlockBatchInputSchema));
   app.use('/api/routine-blocks', crudRouter(repos.routineBlocks, { label: 'Routine block', create: CreateRoutineBlockInputSchema, update: UpdateRoutineBlockInputSchema }));
   app.use('/api/routine-overrides', crudRouter(repos.routineOverrides, { label: 'Routine change', create: CreateRoutineOverrideInputSchema, update: UpdateRoutineOverrideInputSchema }));
+  app.use('/api/check-ins', crudRouter(repos.checkIns, { label: 'Check-in', create: CreateCheckInInputSchema, update: UpdateCheckInInputSchema }));
+  app.use('/api/soundtracks', soundtracksRouter(repos.settings));
   app.use('/api/attachments', attachmentsRouter(repos.attachments, options.uploadsDir));
   app.use('/api/settings', settingsRouter(repos.settings));
   app.use('/api/backup', backupRouter(repos.backup));

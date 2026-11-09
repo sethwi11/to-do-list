@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { addMinutes, parseQuotes, popupsForDay, quotesToText, timePart } from '@todo/shared';
+import { addMinutes, parseQuotes, popupsForDay, quotesToText, SoundtrackSchema, timePart, type Soundtrack } from '@todo/shared';
+import { Plus, X } from 'lucide-react';
 import { Download, Upload } from 'lucide-react';
 import { useApp } from '../../app/AppContext';
 import { ApiError } from '../../api/client';
 import { backupApi, type ImportSummary } from '../../api/backup';
 import { useAppSettings } from '../../data/useApplications';
-import { Button } from '../../ui/Button';
+import { Button, IconButton } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Input, Textarea } from '../../ui/fields';
 import { Dialog } from '../../ui/Panel';
@@ -72,6 +73,8 @@ export function SettingsDialog() {
         <OfferGoal />
 
         <Quotes />
+
+        <Soundtracks />
 
         <div className={`${row} flex-wrap`}>
           <span className="text-body">Your data</span>
@@ -309,6 +312,58 @@ function Popups() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** Soundtracks for focus blocks: a name, a link (opens in a new tab) and/or a folder of audio files on this Mac. Nothing loads until you press play. */
+function Soundtracks() {
+  const { showToast } = useApp();
+  const { settings, update } = useAppSettings();
+  const [rows, setRows] = useState<Soundtrack[]>(settings.soundtracks);
+  const [problem, setProblem] = useState<string | null>(null);
+  useEffect(() => setRows(settings.soundtracks), [settings.soundtracks]);
+  const set = (i: number, changes: Partial<Soundtrack>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...changes } : x)));
+
+  async function save() {
+    const clean = rows.map((r) => ({ name: r.name.trim(), link: r.link?.trim() || null, folder: r.folder?.trim() || null }));
+    const bad = clean.findIndex((r) => !SoundtrackSchema.safeParse(r).success);
+    if (bad >= 0) return setProblem(`Row ${bad + 1}: give it a name, and a link starting with http:// or https:// (or leave the link empty).`);
+    const previous = settings.soundtracks;
+    try {
+      await update({ soundtracks: clean });
+      setProblem(null);
+      showToast('Saved the soundtracks', () => void update({ soundtracks: previous }));
+    } catch {
+      setProblem('Couldn’t save. Check that the server is running.');
+    }
+  }
+
+  return (
+    <div className={`${row} flex-col items-stretch gap-2`}>
+      <span>
+        <span className="block text-body">Soundtracks</span>
+        <span className="block text-meta text-ink-muted">For focus blocks. A link opens in a new tab; a folder (like ~/Music/Lofi) plays right in the app. Nothing loads until you press play.</span>
+      </span>
+      <ul className="space-y-2">
+        {rows.map((r, i) => (
+          <li key={i} className="grid grid-cols-[6rem_1fr_1fr_auto] gap-2 max-sm:grid-cols-[1fr_auto]">
+            <Input aria-label="Name" value={r.name} maxLength={40} onChange={(e) => set(i, { name: e.target.value })} />
+            <Input aria-label={`${r.name} link`} placeholder="Link (https://…)" value={r.link ?? ''} onChange={(e) => set(i, { link: e.target.value })} className="max-sm:col-span-2 max-sm:row-start-2" />
+            <Input aria-label={`${r.name} folder`} placeholder="Folder (~/Music/Lofi)" value={r.folder ?? ''} onChange={(e) => set(i, { folder: e.target.value })} className="max-sm:col-span-2 max-sm:row-start-3" />
+            <IconButton icon={X} label={`Remove ${r.name}`} onClick={() => setRows((x) => x.filter((_, j) => j !== i))} />
+          </li>
+        ))}
+      </ul>
+      {problem && <p role="alert" className="text-meta text-danger">{problem}</p>}
+      <span className="flex gap-2">
+        <Button variant="ghost" icon={Plus} onClick={() => setRows((x) => [...x, { name: 'new', link: null, folder: null }])}>
+          Add one
+        </Button>
+        <Button variant="secondary" onClick={() => void save()} disabled={JSON.stringify(rows) === JSON.stringify(settings.soundtracks)}>
+          Save soundtracks
+        </Button>
+      </span>
     </div>
   );
 }

@@ -23,4 +23,6 @@ export * from './models/routine';
 export * from './planDay';
 export * from './quotes';
 export * from './popups';
+export * from './models/checkins';
+export * from './streaks';
 export * from './backup';
