@@ -503,6 +503,20 @@ const migrations: Migration[] = [
       ALTER TABLE weekly_reviews ADD COLUMN priorities TEXT NOT NULL DEFAULT '[]';
     `);
   },
+
+  // v12: the daily journal. One new table; nothing existing changes.
+  (db) => {
+    db.exec(`
+      CREATE TABLE journal_entries (
+        id         TEXT PRIMARY KEY,
+        date       TEXT NOT NULL UNIQUE,             -- 'YYYY-MM-DD': one entry per day
+        text       TEXT NOT NULL DEFAULT '',
+        rating     INTEGER CHECK (rating IS NULL OR rating BETWEEN 1 AND 10),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+  },
 ];
 
 /** How many migrations exist: the schema version a fully up-to-date database has. */

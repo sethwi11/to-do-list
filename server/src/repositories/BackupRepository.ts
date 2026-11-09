@@ -21,6 +21,7 @@ import type {
   SavingsGoalRepo,
   MilestoneRepo,
   BadgeRepo,
+  JournalEntryRepo,
 } from './entities';
 import type { SqliteApplicationRepository } from './SqliteApplicationRepository';
 import type { SqliteSettingsRepository } from './SqliteSettingsRepository';
@@ -50,6 +51,7 @@ export interface BackupSources {
   moneyMoves: MoneyMoveRepo;
   milestones: MilestoneRepo;
   badges: BadgeRepo;
+  journalEntries: JournalEntryRepo;
   settings: SqliteSettingsRepository;
 }
 
@@ -91,6 +93,7 @@ export class BackupRepository {
       moneyMoves: r.moneyMoves.listSync(),
       milestones: r.milestones.listSync(),
       badges: r.badges.listSync(),
+      journalEntries: r.journalEntries.listSync(),
       settings: r.settings.getSync(),
     };
   }
@@ -186,6 +189,14 @@ export class BackupRepository {
       // One badge per key: if this one was already earned here, the earlier row stays as it is.
       const earned = new Set(r.badges.listSync().map((b) => b.key));
       for (const b of backup.badges) if (!earned.has(b.key)) count('badges', r.badges.upsertSync(b));
+
+      // One journal entry per day: if this day already has one, the more recently edited of the two is kept, so an import never overwrites newer writing.
+      const existingEntries = r.journalEntries.listSync();
+      for (const j of backup.journalEntries) {
+        const same = existingEntries.find((e) => e.date === j.date);
+        if (same && same.updatedAt >= j.updatedAt) continue;
+        count('journalEntries', r.journalEntries.upsertSync(same ? { ...j, id: same.id } : j));
+      }
 
       // One check-in per item per day: if this day's item already has one, the imported one replaces it.
       const existingCheckIns = r.checkIns.listSync();

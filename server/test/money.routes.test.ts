@@ -89,7 +89,7 @@ describe('money in export and import', () => {
     await api().post('/api/money-moves').send({ date: '2026-11-10', toType: 'holding', toId: holding.id, amountCents: 5_000 }).expect(201);
 
     const backup = (await api().get('/api/backup/export')).body;
-    expect(backup).toMatchObject({ version: 7 });
+    expect(backup).toMatchObject({ version: 8 });
     const target = makeTestApp();
     await request(target).post('/api/backup/import').send(backup).expect(200);
 

@@ -11,6 +11,9 @@ import {
   type CreateTemplateInput,
   type CreateTimeBlockInput,
   type CreateWeeklyReviewInput,
+  type CreateJournalEntryInput,
+  type JournalEntry,
+  type UpdateJournalEntryInput,
   type Badge,
   type CreateBadgeInput,
   type CreateMilestoneInput,
@@ -337,6 +340,13 @@ export const createBadgeRepository = (db: Db) =>
     build: (i, { id, now }) => ({ id, key: i.key, title: i.title, earnedOn: i.earnedOn, createdAt: now }),
   });
 
+export const createJournalEntryRepository = (db: Db) =>
+  new SqliteEntityRepository<JournalEntry, CreateJournalEntryInput, UpdateJournalEntryInput>(db, {
+    table: 'journal_entries',
+    orderBy: 'date DESC',
+    build: (i, { id, now }) => ({ id, date: i.date, text: i.text ?? '', rating: i.rating ?? null, createdAt: now, updatedAt: now }),
+  });
+
 export type CalendarRepo = ReturnType<typeof createCalendarRepository>;
 export type EventTypeRepo = ReturnType<typeof createEventTypeRepository>;
 export type EventRepo = ReturnType<typeof createEventRepository>;
@@ -357,3 +367,4 @@ export type HoldingRepo = ReturnType<typeof createHoldingRepository>;
 export type MoneyMoveRepo = ReturnType<typeof createMoneyMoveRepository>;
 export type MilestoneRepo = ReturnType<typeof createMilestoneRepository>;
 export type BadgeRepo = ReturnType<typeof createBadgeRepository>;
+export type JournalEntryRepo = ReturnType<typeof createJournalEntryRepository>;

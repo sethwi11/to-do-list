@@ -168,9 +168,12 @@ export default function CheckInPage() {
         </ol>
       </section>
 
-      <div className="mt-8">
+      <div className="mt-8 flex flex-wrap gap-2">
         <Button variant="primary" onClick={() => navigate('/')}>
           Done for today
+        </Button>
+        <Button variant="secondary" onClick={() => navigate(`/journal?date=${date}`)}>
+          Write about the day
         </Button>
       </div>
     </div>

@@ -29,6 +29,7 @@ export * from './money';
 export * from './headlines';
 export * from './streaks';
 export * from './models/path';
+export * from './models/journal';
 export * from './path';
 export * from './scoreboard';
 export * from './badges';

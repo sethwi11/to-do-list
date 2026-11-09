@@ -126,9 +126,14 @@ export default function TodayPage() {
               </>
             )}
             {Number(now.slice(11, 13)) >= 17 || date !== now.slice(0, 10) ? (
-              <Link to={`/checkin?date=${date}`} className="ml-3 font-medium text-accent-ink underline underline-offset-2">
-                Close the day
-              </Link>
+              <>
+                <Link to={`/checkin?date=${date}`} className="ml-3 font-medium text-accent-ink underline underline-offset-2">
+                  Close the day
+                </Link>
+                <Link to={`/journal?date=${date}`} className="ml-3 font-medium text-accent-ink underline underline-offset-2">
+                  Write about it
+                </Link>
+              </>
             ) : null}
           </p>
 

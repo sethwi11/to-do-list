@@ -13,6 +13,9 @@ import type {
   CreateTemplateInput,
   CreateTimeBlockInput,
   CreateWeeklyReviewInput,
+  CreateJournalEntryInput,
+  JournalEntry,
+  UpdateJournalEntryInput,
   Badge,
   CreateBadgeInput,
   CreateMilestoneInput,
@@ -84,6 +87,7 @@ export const templatesApi = createCrudApi<Template, CreateTemplateInput, UpdateT
 export const focusSessionsApi = createCrudApi<FocusSession, CreateFocusSessionInput, never>('/focus-sessions');
 export const weeklyReviewsApi = createCrudApi<WeeklyReview, CreateWeeklyReviewInput, UpdateWeeklyReviewInput>('/weekly-reviews');
 
+export const journalApi = createCrudApi<JournalEntry, CreateJournalEntryInput, UpdateJournalEntryInput>('/journal');
 export const milestonesApi = createCrudApi<Milestone, CreateMilestoneInput, UpdateMilestoneInput>('/milestones');
 export const badgesApi = createCrudApi<Badge, CreateBadgeInput, never>('/badges');
 

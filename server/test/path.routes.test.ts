@@ -118,7 +118,7 @@ describe('backing up the Path', () => {
     await api().post('/api/weekly-reviews').send({ weekStart: '2026-11-02', priorities: ['Send 5 applications'] });
     await api().patch('/api/settings').send({ path: { birthday: '2000-01-01', northStar: [{ text: 'A goal', age: 22 }] } });
     const { body: backup } = await api().get('/api/backup/export').expect(200);
-    expect(backup.version).toBe(7);
+    expect(backup.version).toBe(8);
 
     const target = makeTestApp();
     await request(target).post('/api/backup/import').send(backup).expect(200);

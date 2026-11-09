@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router';
-import { Briefcase, CalendarCheck, CalendarDays, CalendarRange, ClipboardCheck, Compass, GraduationCap, ListTodo, Wallet, Maximize, Minimize, MonitorPlay, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
+import { Briefcase, CalendarCheck, CalendarDays, CalendarRange, ClipboardCheck, Compass, GraduationCap, ListTodo, NotebookPen, Wallet, Maximize, Minimize, MonitorPlay, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Plus, Settings } from 'lucide-react';
 import { useFullscreen } from '../hooks/useFullscreen';
 import { followUpSuggestions, isOverdue } from '@todo/shared';
 import { calendarVars } from '../lib/calendarColors';
@@ -53,6 +53,7 @@ export function SidebarContent({ collapsed = false, onToggleCollapsed, onNavigat
     { to: '/money', label: 'Money', icon: Wallet, end: false, count: 0 },
     { to: '/path', label: 'Path', icon: Compass, end: false, count: 0 },
     { to: '/review', label: 'Review', icon: ClipboardCheck, end: false, count: 0 },
+    { to: '/journal', label: 'Journal', icon: NotebookPen, end: false, count: 0 },
   ];
 
   return (

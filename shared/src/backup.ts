@@ -9,10 +9,11 @@ import { AppSettingsSchema, FocusSessionSchema, WeeklyReviewSchema } from './mod
 import { RoutineBlockSchema, RoutineOverrideSchema, WeekTemplateSchema } from './models/routine';
 import { CheckInSchema } from './models/checkins';
 import { ExpenseCategorySchema, ExpenseSchema, HoldingSchema, MoneyMoveSchema, SavingsGoalSchema } from './models/money';
+import { JournalEntrySchema } from './models/journal';
 import { BadgeSchema, MilestoneSchema } from './models/path';
 import { TemplateSchema } from './models/templates';
 
-export const BACKUP_VERSION = 7;
+export const BACKUP_VERSION = 8;
 
 /** The JSON file format for export/import, versioned so a future format can still read old files. */
 export const BackupSchema = z.object({
@@ -41,6 +42,7 @@ export const BackupSchema = z.object({
   moneyMoves: z.array(MoneyMoveSchema).default([]),
   milestones: z.array(MilestoneSchema).default([]),
   badges: z.array(BadgeSchema).default([]),
+  journalEntries: z.array(JournalEntrySchema).default([]),
   /** Omitted in older files, and partial in files older than a setting: what's missing keeps its current value. */
   settings: AppSettingsSchema.partial().optional(),
 });

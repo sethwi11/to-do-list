@@ -12,6 +12,9 @@ import type {
   CreateTemplateInput,
   CreateTimeBlockInput,
   CreateWeeklyReviewInput,
+  CreateJournalEntryInput,
+  JournalEntry,
+  UpdateJournalEntryInput,
   Badge,
   CreateBadgeInput,
   CreateMilestoneInput,
@@ -82,6 +85,7 @@ import {
   createMoneyMoveRepository,
   createMilestoneRepository,
   createBadgeRepository,
+  createJournalEntryRepository,
   createSavingsGoalRepository,
 } from './entities';
 import { SqliteApplicationRepository } from './SqliteApplicationRepository';
@@ -117,6 +121,7 @@ export interface Repositories {
   moneyMoves: CrudRepository<MoneyMove, CreateMoneyMoveInput, never> & Batchable<MoneyMove>;
   milestones: RestorableRepository<Milestone, CreateMilestoneInput, UpdateMilestoneInput>;
   badges: CrudRepository<Badge, CreateBadgeInput, never>;
+  journalEntries: CrudRepository<JournalEntry, CreateJournalEntryInput, UpdateJournalEntryInput>;
   settings: SettingsRepository;
   attachments: SqliteAttachmentRepository;
   backup: BackupRepository;
@@ -147,6 +152,7 @@ export function createRepositories(db: Db): Repositories {
     moneyMoves: createMoneyMoveRepository(db),
     milestones: createMilestoneRepository(db),
     badges: createBadgeRepository(db),
+    journalEntries: createJournalEntryRepository(db),
     settings: new SqliteSettingsRepository(db),
   };
   return { ...concrete, attachments: new SqliteAttachmentRepository(db), backup: new BackupRepository(db, concrete) };
